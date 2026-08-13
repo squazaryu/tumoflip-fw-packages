@@ -127,12 +127,16 @@ jobs:
           TITLE="Audit protected apps for Community Pack $SOURCE_TAG"
           ISSUE_NUMBER="$REQUESTED_NUMBER"
           if [[ -z "$ISSUE_NUMBER" ]]; then
-            gh issue list --repo "$GITHUB_REPOSITORY" --state all --limit 100 \
-              --json number,title,body > "$RUNNER_TEMP/issues.json"
-            ISSUE_NUMBER="$(jq -r --arg title "$TITLE" --arg marker "$MARKER" \
+            gh api "repos/$GITHUB_REPOSITORY/issues?state=all&per_page=100" \
+              --paginate --slurp > "$RUNNER_TEMP/issue-pages.json"
+            jq '[.[][] | select(.pull_request == null)]' \
+              "$RUNNER_TEMP/issue-pages.json" > "$RUNNER_TEMP/issues.json"
+            jq --arg title "$TITLE" --arg marker "$MARKER" \
               --arg source "$SOURCE_COMMIT" --arg base "$BASE_SHA" --arg extra "$EXTRA_SHA" \
               -f tools/tumoflip/protected_audit_issue_lookup.jq \
-              "$RUNNER_TEMP/issues.json" | head -n1)"
+              "$RUNNER_TEMP/issues.json" > "$RUNNER_TEMP/issue-matches.json"
+            test "$(jq 'length' "$RUNNER_TEMP/issue-matches.json")" -le 1
+            ISSUE_NUMBER="$(jq -r '.[0] // empty' "$RUNNER_TEMP/issue-matches.json")"
           fi
           if [[ -z "$ISSUE_NUMBER" ]]; then
             {
@@ -338,7 +342,7 @@ jobs:
           set -euo pipefail
           STATUS="$(jq -r .overallStatus "$RUNNER_TEMP/result.json")"
           AUDIT_TAG="$(jq -r .auditReleaseTag ../inputs/source-fixture.json)"
-          [[ "$STATUS" == verified || "$STATUS" == needsReview ]]
+          [[ "$STATUS" == verified || "$STATUS" == pending ]]
           [[ "$AUDIT_TAG" =~ ^audit-ledger-[0-9]{8}-[0-9]{3}$ ]]
           jq -n --arg status "$STATUS" --arg tag "$AUDIT_TAG" \
             --arg issue "$(jq -r .canonicalIssue.url ../inputs/source-fixture.json)" \
@@ -348,16 +352,23 @@ jobs:
             echo "status=$STATUS"
             echo "audit_tag=$AUDIT_TAG"
           } >> "$GITHUB_OUTPUT"
+      - name: Stage flat publication bundle
+        working-directory: control
+        run: |
+          set -euo pipefail
+          BUNDLE="$RUNNER_TEMP/publication-bundle"
+          test ! -e "$BUNDLE"
+          mkdir "$BUNDLE"
+          cp -R "$RUNNER_TEMP/release-assets" "$BUNDLE/release-assets"
+          cp "$RUNNER_TEMP/audit.json" "$BUNDLE/audit.json"
+          cp "$RUNNER_TEMP/summary.md" "$BUNDLE/summary.md"
+          cp "$RUNNER_TEMP/publication.json" "$BUNDLE/publication.json"
+          cp ../inputs/source-fixture.json "$BUNDLE/source-fixture.json"
       - name: Upload verified publication bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: protected-audit-publication
-          path: |
-            ${{ runner.temp }}/release-assets
-            ${{ runner.temp }}/audit.json
-            ${{ runner.temp }}/summary.md
-            ${{ runner.temp }}/publication.json
-            inputs/source-fixture.json
+          path: ${{ runner.temp }}/publication-bundle
           if-no-files-found: error
           include-hidden-files: false
           retention-days: 1
@@ -507,9 +518,12 @@ jobs:
             printf -- '- immutable audit release: `%s`\n' "$AUDIT_TAG"
             printf -- '- transitional raw commit: `%s`\n' "$RAW_COMMIT"
           } > "$RUNNER_TEMP/comment.md"
-          COMMENT_ID="$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
-            --paginate --jq '.[] | select(.body | contains("<!-- tumoflip-protected-app-audit -->")) | .id' \
-            | head -n1)"
+          gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments?per_page=100" \
+            --paginate --slurp > "$RUNNER_TEMP/comment-pages.json"
+          jq '[.[][] | select((.body // "") | contains("<!-- tumoflip-protected-app-audit -->")) | .id]' \
+            "$RUNNER_TEMP/comment-pages.json" > "$RUNNER_TEMP/comment-ids.json"
+          test "$(jq 'length' "$RUNNER_TEMP/comment-ids.json")" -le 1
+          COMMENT_ID="$(jq -r '.[0] // empty' "$RUNNER_TEMP/comment-ids.json")"
           jq -n --rawfile body "$RUNNER_TEMP/comment.md" '{body:$body}' \
             > "$RUNNER_TEMP/comment.json"
           if [[ -n "$COMMENT_ID" ]]; then

@@ -17,7 +17,7 @@ import heatshrink2
 from tools.tumoflip import protected_app_audit as audit
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = REPO_ROOT / "tools/tumoflip/protected_apps_registry.json"
 RAW_EDIT_HEAD = "d60ee2a34fa87b89c99f1ba9056737765f9f921f"
 RAW_EDIT_DECISIONS = {
@@ -27,6 +27,11 @@ RAW_EDIT_DECISIONS = {
 
 
 class ProtectedAppAuditTests(unittest.TestCase):
+    def test_registry_is_resolved_inside_the_checkout(self) -> None:
+        checkout = Path(__file__).resolve().parents[1]
+        self.assertTrue(REGISTRY_PATH.is_relative_to(checkout))
+        self.assertTrue(REGISTRY_PATH.is_file())
+
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
@@ -829,6 +834,43 @@ class ProtectedAppAuditTests(unittest.TestCase):
         args.base_sha256 = "0" * 64
         with self.assertRaisesRegex(audit.AuditError, "SHA-256 differs"):
             audit.audit_release(args)
+
+    def test_community_archive_file_size_limit_fails_before_zip_parsing(self) -> None:
+        archive = self.root / "oversized.zip"
+        archive.write_bytes(b"not a ZIP")
+        with mock.patch.object(audit, "MAX_COMMUNITY_ARCHIVE_BYTES", 4):
+            with self.assertRaisesRegex(audit.AuditError, "archive size exceeds limit"):
+                audit.load_archive(archive, audit.file_hash(archive, "sha256"))
+
+    def test_community_archive_member_count_limit_fails_closed(self) -> None:
+        archive = self.root / "too-many-members.zip"
+        with zipfile.ZipFile(archive, "w") as output:
+            output.writestr("one.fap", b"1")
+            output.writestr("two.fap", b"2")
+        with mock.patch.object(audit, "MAX_COMMUNITY_MEMBERS", 1):
+            with self.assertRaisesRegex(audit.AuditError, "member count exceeds limit"):
+                audit.load_archive(archive, audit.file_hash(archive, "sha256"))
+
+    def test_community_archive_member_and_total_limits_fail_closed(self) -> None:
+        archive = self.root / "oversized-members.zip"
+        with zipfile.ZipFile(archive, "w") as output:
+            output.writestr("one.fap", b"12")
+            output.writestr("two.fap", b"34")
+        digest = audit.file_hash(archive, "sha256")
+        with mock.patch.object(audit, "MAX_COMMUNITY_MEMBER_BYTES", 1):
+            with self.assertRaisesRegex(audit.AuditError, "member size exceeds limit"):
+                audit.load_archive(archive, digest)
+        with mock.patch.object(audit, "MAX_COMMUNITY_TOTAL_BYTES", 3):
+            with self.assertRaisesRegex(audit.AuditError, "expanded size exceeds limit"):
+                audit.load_archive(archive, digest)
+
+    def test_community_archive_compression_ratio_limit_fails_closed(self) -> None:
+        archive = self.root / "high-ratio.zip"
+        with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as output:
+            output.writestr("zeros.fap", b"\0" * 4096)
+        with mock.patch.object(audit, "MAX_COMMUNITY_COMPRESSION_RATIO", 2):
+            with self.assertRaisesRegex(audit.AuditError, "compression ratio exceeds limit"):
+                audit.load_archive(archive, audit.file_hash(archive, "sha256"))
 
     def test_missing_protected_family_member_fails_closed(self) -> None:
         family = next(app["artifactFamily"] for app in self.apps if app["id"] == "totp")

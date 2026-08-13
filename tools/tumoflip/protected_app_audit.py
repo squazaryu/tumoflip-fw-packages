@@ -44,6 +44,11 @@ UPDATER_MANIFEST_FILETYPE = "Flipper firmware upgrade configuration"
 MAX_UPDATER_MEMBERS = 64
 MAX_UPDATER_MEMBER_BYTES = 16 * 1024 * 1024
 MAX_UPDATER_TOTAL_BYTES = 32 * 1024 * 1024
+MAX_COMMUNITY_ARCHIVE_BYTES = 64 * 1024 * 1024
+MAX_COMMUNITY_MEMBERS = 10_000
+MAX_COMMUNITY_MEMBER_BYTES = 16 * 1024 * 1024
+MAX_COMMUNITY_TOTAL_BYTES = 64 * 1024 * 1024
+MAX_COMMUNITY_COMPRESSION_RATIO = 200
 MAX_RESOURCE_MEMBERS = 10_000
 MAX_RESOURCE_MEMBER_BYTES = 16 * 1024 * 1024
 MAX_RESOURCE_TOTAL_BYTES = 64 * 1024 * 1024
@@ -344,22 +349,50 @@ def _validate_artifact_spec(
 def load_archive(path: Path, expected_sha256: str) -> dict[str, bytes]:
     if not HEX_64.fullmatch(expected_sha256):
         raise AuditError(f"invalid expected SHA-256 for {path.name}")
+    try:
+        archive_bytes = path.stat().st_size
+    except OSError as error:
+        raise AuditError(f"cannot stat ZIP archive {path}: {error}") from error
+    if archive_bytes < 1 or archive_bytes > MAX_COMMUNITY_ARCHIVE_BYTES:
+        raise AuditError(f"Community Pack ZIP archive size exceeds limit: {path.name}")
     actual = file_hash(path, "sha256")
     if actual != expected_sha256:
         raise AuditError(f"archive SHA-256 differs for {path.name}: {actual} != {expected_sha256}")
     entries: dict[str, bytes] = {}
     try:
         with zipfile.ZipFile(path) as archive:
+            seen_members = 0
+            expanded_bytes = 0
             for info in archive.infolist():
                 if info.is_dir():
                     continue
+                seen_members += 1
+                if seen_members > MAX_COMMUNITY_MEMBERS:
+                    raise AuditError("Community Pack ZIP member count exceeds limit")
                 name = info.filename
                 if name.startswith("/") or ".." in Path(name).parts or "\\" in name:
                     raise AuditError(f"unsafe ZIP member: {name}")
                 if name in entries:
                     raise AuditError(f"duplicate ZIP member: {name}")
-                entries[name] = archive.read(info)
-    except (OSError, zipfile.BadZipFile) as error:
+                if info.file_size < 0 or info.file_size > MAX_COMMUNITY_MEMBER_BYTES:
+                    raise AuditError(f"Community Pack ZIP member size exceeds limit: {name}")
+                expanded_bytes += info.file_size
+                if expanded_bytes > MAX_COMMUNITY_TOTAL_BYTES:
+                    raise AuditError("Community Pack ZIP expanded size exceeds limit")
+                if info.compress_size < 0 or (
+                    info.file_size > 0
+                    and info.file_size
+                    > max(info.compress_size, 1) * MAX_COMMUNITY_COMPRESSION_RATIO
+                ):
+                    raise AuditError(f"Community Pack ZIP compression ratio exceeds limit: {name}")
+                with archive.open(info) as stream:
+                    data = stream.read(MAX_COMMUNITY_MEMBER_BYTES + 1)
+                if len(data) > MAX_COMMUNITY_MEMBER_BYTES:
+                    raise AuditError(f"Community Pack ZIP member size exceeds limit: {name}")
+                if len(data) != info.file_size:
+                    raise AuditError(f"Community Pack ZIP member size differs: {name}")
+                entries[name] = data
+    except (OSError, RuntimeError, zipfile.BadZipFile, zipfile.LargeZipFile) as error:
         raise AuditError(f"invalid ZIP archive {path}: {error}") from error
     return entries
 

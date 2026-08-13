@@ -46,6 +46,26 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertLess(text.index("Publish or resume exact immutable release"), text.index("Publish transitional raw branch"))
         self.assertLess(text.index("Publish transitional raw branch"), text.index("Reconcile canonical issue only after publication proof"))
 
+    def test_protected_audit_preserves_pending_and_flat_artifact_layout(self) -> None:
+        text = (self.root / ".github/workflows/protected-app-audit.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('[[ "$STATUS" == verified || "$STATUS" == pending ]]', text)
+        self.assertNotIn('[[ "$STATUS" == verified || "$STATUS" == needsReview ]]', text)
+        self.assertIn('BUNDLE="$RUNNER_TEMP/publication-bundle"', text)
+        self.assertIn("path: ${{ runner.temp }}/publication-bundle", text)
+        self.assertNotRegex(text, r"(?m)^\s+\$\{\{ runner\.temp \}\}/release-assets$")
+
+    def test_protected_audit_issue_lookup_is_paginated_and_unique(self) -> None:
+        text = (self.root / ".github/workflows/protected-app-audit.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('issues?state=all&per_page=100', text)
+        self.assertIn('--paginate --slurp > "$RUNNER_TEMP/issue-pages.json"', text)
+        self.assertIn("test \"$(jq 'length' \"$RUNNER_TEMP/issue-matches.json\")\" -le 1", text)
+        self.assertNotIn("gh issue list", text)
+        self.assertNotIn("head -n1", text)
+
     def test_protected_audit_uses_exact_external_checkouts(self) -> None:
         text = (self.root / ".github/workflows/protected-app-audit.yml").read_text(
             encoding="utf-8"
