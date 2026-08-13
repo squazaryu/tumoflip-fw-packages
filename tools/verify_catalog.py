@@ -28,6 +28,12 @@ except ImportError:  # Direct script execution.
 
 
 def verify_contract(root: Path) -> None:
+    try:
+        from .mirror_history import load_contract as load_history_contract
+    except ImportError:
+        from mirror_history import load_contract as load_history_contract
+
+    load_history_contract(root)
     legacy = load_json(root / "contracts/legacy-sources.json")
     lineage = load_json(root / "contracts/catalog-lineage.json")
     baselines = load_json(root / "contracts/catalog-baselines.json")

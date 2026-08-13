@@ -35,6 +35,20 @@ class WorkflowSecurityTests(unittest.TestCase):
         ]
         self.assertEqual(scheduled, ["protected-app-audit.yml"])
 
+    def test_history_mirror_is_exact_main_draft_first_and_reverified(self) -> None:
+        text = (self.root / ".github/workflows/mirror-history.yml").read_text(
+            encoding="utf-8"
+        )
+        guard = (
+            "if: github.ref == 'refs/heads/main' && "
+            "github.event.repository.default_branch == 'main'"
+        )
+        self.assertEqual(text.count(guard), 2)
+        self.assertEqual(text.count("ref: ${{ github.sha }}"), 2)
+        self.assertIn("Reverify after artifact boundary", text)
+        self.assertIn("tools/mirror_history.py publish", text)
+        self.assertNotIn("gh release create", text)
+
     def test_protected_audit_splits_privileges_and_orders_publication(self) -> None:
         text = (self.root / ".github/workflows/protected-app-audit.yml").read_text(
             encoding="utf-8"

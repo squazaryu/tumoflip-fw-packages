@@ -283,6 +283,7 @@ def _verify_remote_assets(
     release: dict[str, Any],
     *,
     require_complete: bool,
+    local_key: str | None = None,
 ) -> set[str]:
     tag = expected_contract["tag"]
     assets = _asset_map(release, tag)
@@ -291,7 +292,7 @@ def _verify_remote_assets(
     if require_complete and missing:
         raise ContractError(f"release is missing asset: {tag}/{sorted(missing)[0]}")
 
-    local = seed_root / channel
+    local = seed_root / (local_key or channel)
     with tempfile.TemporaryDirectory(prefix=f"verify-{tag}-") as temporary:
         remote = Path(temporary)
         for name, metadata in sorted(assets.items()):
@@ -358,10 +359,12 @@ def _upload_missing_assets(
     channel: str,
     tag: str,
     missing: set[str],
+    *,
+    local_key: str | None = None,
 ) -> None:
     if not missing:
         return
-    directory = seed_root / channel
+    directory = seed_root / (local_key or channel)
     for name in sorted(missing):
         asset = _json_object(
             _run(
@@ -442,6 +445,7 @@ def _verify_published_channel(
     release: dict[str, Any],
     *,
     verify_tag_target: bool = True,
+    local_key: str | None = None,
 ) -> None:
     tag = expected["tag"]
     _validate_release_metadata(
@@ -460,6 +464,7 @@ def _verify_published_channel(
         channel,
         release,
         require_complete=True,
+        local_key=local_key,
     )
     if verify_tag_target:
         _require_tag_target(
@@ -476,6 +481,8 @@ def _publish_channel(
     publisher_commit: str,
     channel: str,
     release: dict[str, Any] | None,
+    *,
+    local_key: str | None = None,
 ) -> None:
     tag = expected["tag"]
     prerelease = expected["prerelease"]
@@ -489,6 +496,7 @@ def _publish_channel(
             publisher_commit,
             channel,
             release,
+            local_key=local_key,
         )
         return
     created = release is None
@@ -523,9 +531,17 @@ def _publish_channel(
         channel,
         release,
         require_complete=False,
+        local_key=local_key,
     )
     _upload_missing_assets(
-        runner, seed_root, repository, release_id, channel, tag, missing
+        runner,
+        seed_root,
+        repository,
+        release_id,
+        channel,
+        tag,
+        missing,
+        local_key=local_key,
     )
 
     release = _release_by_id(runner, repository, release_id)
@@ -546,6 +562,7 @@ def _publish_channel(
         channel,
         release,
         require_complete=True,
+        local_key=local_key,
     )
 
     release = _publish_draft(
@@ -567,6 +584,7 @@ def _publish_channel(
         channel,
         release,
         verify_tag_target=False,
+        local_key=local_key,
     )
     _require_tag_target_eventually(
         runner, repository, tag, publisher_commit
