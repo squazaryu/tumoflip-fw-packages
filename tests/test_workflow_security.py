@@ -43,6 +43,18 @@ class WorkflowSecurityTests(unittest.TestCase):
             self.assertIn(job, text)
         self.assertIn("environment: production", text)
         self.assertIn("vars.IMMUTABLE_RELEASES_ENABLED == 'true'", text)
+        self.assertIn(
+            "actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349",
+            text,
+        )
+        self.assertIn("permission-administration: read", text)
+        self.assertIn("permission-contents: write", text)
+        self.assertGreaterEqual(
+            text.count("GH_TOKEN: ${{ steps.publisher-token.outputs.token }}"), 2
+        )
+        self.assertIn("--bootstrap-index audit/bootstrap/index.json", text)
+        self.assertIn("--bootstrap-ledger audit/bootstrap/latest.json", text)
+        self.assertIn(".publisherCommit ../publication/publication.json", text)
         self.assertLess(text.index("Publish or resume exact immutable release"), text.index("Publish transitional raw branch"))
         self.assertLess(text.index("Publish transitional raw branch"), text.index("Reconcile canonical issue only after publication proof"))
 
@@ -74,8 +86,9 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("repository: xMasterX/all-the-plugins", text)
         self.assertGreaterEqual(text.count("persist-credentials: false"), 6)
         self.assertIn("Download and verify exact release inputs by numeric ID", text)
-        self.assertIn("ls-remote --heads origin", text)
-        self.assertNotIn("if git -C \"$LEDGER\" fetch", text)
+        self.assertIn("python3 tools/audit_chain.py", text)
+        self.assertNotIn("refs/heads/protected-app-audit-ledger", text)
+        self.assertNotIn('EXISTING="$LEDGER/latest.json"', text)
         branch_publisher = (self.root / "tools/publish_audit_branch.py").read_text(
             encoding="utf-8"
         )

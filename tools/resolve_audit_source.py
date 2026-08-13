@@ -116,19 +116,6 @@ def resolve(*, current_tag: str | None, previous_tag: str | None) -> dict[str, A
         raise InputError("Community Pack publication time is invalid") from error
     current_tag_value = current["tag_name"]
     previous_tag_value = previous["tag_name"]
-    tag_match = re.fullmatch(r"([0-9]{1,2})([a-z]{3})([0-9]{4})(?:p([0-9]+))?", current_tag_value)
-    if tag_match is None:
-        raise InputError("Community Pack tag cannot be mapped to an audit release")
-    try:
-        tag_date = datetime.strptime(
-            f"{int(tag_match.group(1)):02d}{tag_match.group(2)}{tag_match.group(3)}",
-            "%d%b%Y",
-        ).strftime("%Y%m%d")
-    except ValueError as error:
-        raise InputError("Community Pack tag date is invalid") from error
-    audit_revision = int(tag_match.group(4) or "0") + 1
-    if audit_revision > 999:
-        raise InputError("Community Pack patch revision exceeds audit tag space")
     return {
         "schema": 1,
         "kind": "protectedAuditResolvedSource",
@@ -151,7 +138,6 @@ def resolve(*, current_tag: str | None, previous_tag: str | None) -> dict[str, A
             "tagCommit": _tag_commit(REPOSITORY, previous_tag_value),
         },
         "sequence": sequence,
-        "auditReleaseTag": f"audit-ledger-{tag_date}-{audit_revision:03d}",
     }
 
 

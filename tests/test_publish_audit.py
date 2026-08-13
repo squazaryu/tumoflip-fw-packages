@@ -10,7 +10,12 @@ from pathlib import Path
 from unittest import mock
 
 from tools.audit_release import ASSET_NAMES
-from tools.publish_audit import PublishError, RELEASE_NOTES, publish
+from tools.publish_audit import (
+    PublishError,
+    RELEASE_NOTES,
+    _require_immutable_releases_enabled,
+    publish,
+)
 
 
 class FakeAuditGitHub:
@@ -24,6 +29,7 @@ class FakeAuditGitHub:
         self.next_asset = 100
         self.events: list[str] = []
         self.tag_visible = False
+        self.immutable_enabled = True
 
     def _response(self, command: list[str], value: object) -> subprocess.CompletedProcess[str]:
         return subprocess.CompletedProcess(command, 0, json.dumps(value), "")
@@ -68,6 +74,9 @@ class FakeAuditGitHub:
 
     def runner(self, command: list[str] | tuple[str, ...]) -> subprocess.CompletedProcess[str]:
         command = list(command)
+        if command[:2] == ["gh", "api"] and command[-1].endswith("/immutable-releases"):
+            self.events.append("immutable-preflight")
+            return self._response(command, {"enabled": self.immutable_enabled})
         if command[:2] == ["gh", "api"] and command[2].endswith("releases?per_page=100"):
             pages = [] if self.release is None else [copy.deepcopy(self.release)]
             return self._response(command, [pages])
@@ -115,34 +124,46 @@ class AuditPublicationTests(unittest.TestCase):
         for name in ASSET_NAMES:
             (self.assets / name).write_bytes(name.encode())
         self.github = FakeAuditGitHub(self.assets, self.repository, self.commit, self.tag)
+        root = Path(__file__).resolve().parents[1]
+        self.bootstrap_index = root / "audit/bootstrap/index.json"
+        self.bootstrap_ledger = root / "audit/bootstrap/latest.json"
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
     def test_missing_release_is_drafted_uploaded_verified_and_made_immutable(self) -> None:
-        with mock.patch("tools.publish_audit.verify_release"):
+        with mock.patch("tools.publish_audit.verify_release", return_value={"audit": {"sourceTag": "12aug2026"}}), mock.patch(
+            "tools.publish_audit._verify_live_chain_state", return_value=False
+        ):
             release_id = publish(
                 assets_root=self.assets,
                 repository=self.repository,
                 tag=self.tag,
                 publisher_commit=self.commit,
+                bootstrap_index=self.bootstrap_index,
+                bootstrap_ledger=self.bootstrap_ledger,
                 runner=self.github.runner,
                 downloader=self.github.downloader,
             )
         self.assertEqual(release_id, 42)
-        self.assertEqual(self.github.events[0], "create")
+        self.assertEqual(self.github.events[0], "immutable-preflight")
+        self.assertLess(self.github.events.index("immutable-preflight"), self.github.events.index("create"))
         self.assertEqual(self.github.events[-1], "publish")
         self.assertTrue(self.github.release["immutable"])
 
     def test_existing_mutable_public_release_is_terminal(self) -> None:
         self.github.add_public(immutable=False)
-        with mock.patch("tools.publish_audit.verify_release"):
+        with mock.patch("tools.publish_audit.verify_release", return_value={"audit": {"sourceTag": "12aug2026"}}), mock.patch(
+            "tools.publish_audit._verify_live_chain_state", return_value=True
+        ):
             with self.assertRaisesRegex(PublishError, "not immutable"):
                 publish(
                     assets_root=self.assets,
                     repository=self.repository,
                     tag=self.tag,
                     publisher_commit=self.commit,
+                    bootstrap_index=self.bootstrap_index,
+                    bootstrap_ledger=self.bootstrap_ledger,
                     runner=self.github.runner,
                     downloader=self.github.downloader,
                 )
@@ -150,16 +171,103 @@ class AuditPublicationTests(unittest.TestCase):
 
     def test_existing_tampered_immutable_release_is_terminal(self) -> None:
         self.github.add_public(immutable=True, tamper=ASSET_NAMES[0])
-        with mock.patch("tools.publish_audit.verify_release"):
+        with mock.patch("tools.publish_audit.verify_release", return_value={"audit": {"sourceTag": "12aug2026"}}), mock.patch(
+            "tools.publish_audit._verify_live_chain_state", return_value=True
+        ):
             with self.assertRaisesRegex(PublishError, "size differs|digest differs"):
                 publish(
                     assets_root=self.assets,
                     repository=self.repository,
                     tag=self.tag,
                     publisher_commit=self.commit,
+                    bootstrap_index=self.bootstrap_index,
+                    bootstrap_ledger=self.bootstrap_ledger,
                     runner=self.github.runner,
                     downloader=self.github.downloader,
                 )
+
+    def test_disabled_immutable_setting_fails_before_any_release_mutation(self) -> None:
+        self.github.immutable_enabled = False
+        with mock.patch("tools.publish_audit.verify_release", return_value={"audit": {"sourceTag": "12aug2026"}}), mock.patch(
+            "tools.publish_audit._verify_live_chain_state", return_value=False
+        ) as chain:
+            with self.assertRaisesRegex(PublishError, "not enabled"):
+                publish(
+                    assets_root=self.assets,
+                    repository=self.repository,
+                    tag=self.tag,
+                    publisher_commit=self.commit,
+                    bootstrap_index=self.bootstrap_index,
+                    bootstrap_ledger=self.bootstrap_ledger,
+                    runner=self.github.runner,
+                    downloader=self.github.downloader,
+                )
+        self.assertEqual(self.github.events, ["immutable-preflight"])
+        chain.assert_called_once()
+
+    def test_immutable_setting_unauthorized_missing_or_malformed_fails_closed(self) -> None:
+        failures = (
+            subprocess.CompletedProcess([], 1, "", "HTTP 403: Forbidden"),
+            subprocess.CompletedProcess([], 1, "", "HTTP 404: Not Found"),
+            subprocess.CompletedProcess([], 0, "[]", ""),
+            subprocess.CompletedProcess([], 0, '{"enabled":"true"}', ""),
+        )
+        for result in failures:
+            with self.subTest(result=result):
+                with self.assertRaises(PublishError):
+                    _require_immutable_releases_enabled(
+                        lambda _: result, self.repository
+                    )
+
+    def test_exact_concurrent_publication_is_verified_without_a_second_patch(self) -> None:
+        calls = 0
+
+        def live_state(**_: object) -> bool:
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                assert self.github.release is not None
+                self.github.release["draft"] = False
+                self.github.release["immutable"] = True
+                self.github.tag_visible = True
+                return True
+            return False
+
+        with mock.patch("tools.publish_audit.verify_release", return_value={"audit": {"sourceTag": "12aug2026"}}), mock.patch(
+            "tools.publish_audit._verify_live_chain_state", side_effect=live_state
+        ):
+            release_id = publish(
+                assets_root=self.assets,
+                repository=self.repository,
+                tag=self.tag,
+                publisher_commit=self.commit,
+                bootstrap_index=self.bootstrap_index,
+                bootstrap_ledger=self.bootstrap_ledger,
+                runner=self.github.runner,
+                downloader=self.github.downloader,
+            )
+        self.assertEqual(release_id, 42)
+        self.assertNotIn("publish", self.github.events)
+
+    def test_changed_live_predecessor_before_publication_leaves_a_draft(self) -> None:
+        with mock.patch("tools.publish_audit.verify_release", return_value={"audit": {"sourceTag": "12aug2026"}}), mock.patch(
+            "tools.publish_audit._verify_live_chain_state",
+            side_effect=(False, PublishError("predecessor differs")),
+        ):
+            with self.assertRaisesRegex(PublishError, "predecessor differs"):
+                publish(
+                    assets_root=self.assets,
+                    repository=self.repository,
+                    tag=self.tag,
+                    publisher_commit=self.commit,
+                    bootstrap_index=self.bootstrap_index,
+                    bootstrap_ledger=self.bootstrap_ledger,
+                    runner=self.github.runner,
+                    downloader=self.github.downloader,
+                )
+        self.assertIsNotNone(self.github.release)
+        self.assertTrue(self.github.release["draft"])
+        self.assertNotIn("publish", self.github.events)
 
 
 if __name__ == "__main__":

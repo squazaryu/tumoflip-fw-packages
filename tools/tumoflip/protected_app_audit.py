@@ -117,7 +117,8 @@ def _load_heatshrink2() -> Any:
 
 
 def semantic_audit_payload(audit: dict[str, Any]) -> dict[str, Any]:
-    return {key: value for key, value in audit.items() if key != "generatedAt"}
+    normalized = normalize_audit_target_provenance(audit)
+    return {key: value for key, value in normalized.items() if key != "generatedAt"}
 
 
 def semantic_audit_sha256(audit: dict[str, Any]) -> str:
@@ -187,6 +188,24 @@ def deduplicate_target_provenance(
     )
 
 
+def normalize_audit_target_provenance(audit: dict[str, Any]) -> dict[str, Any]:
+    """Return one audit with deterministic client-visible provenance ordering."""
+    normalized = json.loads(json.dumps(audit))
+    entries = normalized.get("entries")
+    if not isinstance(entries, list):
+        return normalized
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        provenance = entry.get("targetProvenance")
+        if not isinstance(provenance, list) or not all(
+            isinstance(item, dict) for item in provenance
+        ):
+            continue
+        entry["targetProvenance"] = deduplicate_target_provenance(provenance)
+    return normalized
+
+
 def normalize_ledger_target_provenance(ledger: dict[str, Any]) -> dict[str, Any]:
     """Normalize legacy rich evidence before strict client-contract validation.
 
@@ -198,21 +217,10 @@ def normalize_ledger_target_provenance(ledger: dict[str, Any]) -> dict[str, Any]
     audits = normalized.get("audits")
     if not isinstance(audits, list):
         return normalized
-    for audit in audits:
-        if not isinstance(audit, dict):
-            continue
-        entries = audit.get("entries")
-        if not isinstance(entries, list):
-            continue
-        for entry in entries:
-            if not isinstance(entry, dict):
-                continue
-            provenance = entry.get("targetProvenance")
-            if not isinstance(provenance, list) or not all(
-                isinstance(item, dict) for item in provenance
-            ):
-                continue
-            entry["targetProvenance"] = deduplicate_target_provenance(provenance)
+    normalized["audits"] = [
+        normalize_audit_target_provenance(audit) if isinstance(audit, dict) else audit
+        for audit in audits
+    ]
     return normalized
 
 
@@ -364,14 +372,16 @@ def load_archive(path: Path, expected_sha256: str) -> dict[str, bytes]:
             seen_members = 0
             expanded_bytes = 0
             for info in archive.infolist():
-                if info.is_dir():
-                    continue
                 seen_members += 1
                 if seen_members > MAX_COMMUNITY_MEMBERS:
                     raise AuditError("Community Pack ZIP member count exceeds limit")
+                if info.is_dir():
+                    continue
                 name = info.filename
                 if name.startswith("/") or ".." in Path(name).parts or "\\" in name:
                     raise AuditError(f"unsafe ZIP member: {name}")
+                if ((info.external_attr >> 16) & 0o170000) == 0o120000:
+                    raise AuditError(f"symlink ZIP member is forbidden: {name}")
                 if name in entries:
                     raise AuditError(f"duplicate ZIP member: {name}")
                 if info.file_size < 0 or info.file_size > MAX_COMMUNITY_MEMBER_BYTES:
@@ -1568,6 +1578,7 @@ def audit_release(args: argparse.Namespace) -> tuple[dict[str, Any], str]:
         "unresolved": unresolved,
         "generatedAt": now,
     }
+    audit = normalize_audit_target_provenance(audit)
     summary = render_issue_body(audit)
     return audit, summary
 
@@ -1837,6 +1848,8 @@ def validate_ledger(
 
 
 def merge_ledger(existing: dict[str, Any] | None, audit: dict[str, Any]) -> dict[str, Any]:
+    validate_audit(audit)
+    audit = normalize_audit_target_provenance(audit)
     validate_audit(audit)
     if existing is None:
         ledger = {

@@ -160,6 +160,42 @@ def _audit_identity(value: dict[str, Any]) -> tuple[str, str, str]:
     return value["sourceTag"], archives["base"], archives["extra"]
 
 
+def validate_predecessor(document: Any) -> dict[str, Any]:
+    if not isinstance(document, dict) or document.get("schema") != 1:
+        raise AuditReleaseError("audit predecessor contract is invalid")
+    kind = document.get("kind")
+    if kind == "bootstrap":
+        if set(document) != {"schema", "kind", "indexSHA256", "ledgerSHA256"}:
+            raise AuditReleaseError("bootstrap predecessor fields differ")
+        require_digest(document.get("indexSHA256"), HEX_64, "bootstrap index SHA-256")
+        require_digest(document.get("ledgerSHA256"), HEX_64, "bootstrap ledger SHA-256")
+    elif kind == "auditRelease":
+        if set(document) != {
+            "schema",
+            "kind",
+            "tag",
+            "githubReleaseId",
+            "tagCommit",
+            "ledgerSHA256",
+            "provenanceSHA256",
+        }:
+            raise AuditReleaseError("release predecessor fields differ")
+        tag = require_string(document.get("tag"), "predecessor release tag")
+        if AUDIT_TAG.fullmatch(tag) is None:
+            raise AuditReleaseError("predecessor release tag is invalid")
+        release_id = document.get("githubReleaseId")
+        if not isinstance(release_id, int) or isinstance(release_id, bool) or release_id < 1:
+            raise AuditReleaseError("predecessor release ID is invalid")
+        require_digest(document.get("tagCommit"), HEX_40, "predecessor tag commit")
+        require_digest(document.get("ledgerSHA256"), HEX_64, "predecessor ledger SHA-256")
+        require_digest(
+            document.get("provenanceSHA256"), HEX_64, "predecessor provenance SHA-256"
+        )
+    else:
+        raise AuditReleaseError("audit predecessor kind is invalid")
+    return document
+
+
 def _audit_bound_to_evidence(
     ledger: dict[str, Any], evidence: dict[str, Any]
 ) -> dict[str, Any]:
@@ -262,6 +298,7 @@ def prepare_release(
     ledger_path: Path,
     audit_path: Path,
     evidence_path: Path,
+    predecessor_path: Path,
     output: Path,
     tag: str,
     publisher_repository: str,
@@ -274,6 +311,7 @@ def prepare_release(
     ledger = load_object(ledger_path)
     audit = load_object(audit_path)
     evidence = validate_evidence(load_object(evidence_path))
+    predecessor = validate_predecessor(load_object(predecessor_path))
     try:
         audit_tool.validate_ledger(ledger)
         audit_tool.validate_audit(audit)
@@ -302,6 +340,7 @@ def prepare_release(
         "ledgerSHA256": ledger_sha,
         "evidenceSHA256": canonical_sha256(evidence),
         "evidence": evidence,
+        "predecessor": predecessor,
     }
     provenance_asset = output / PROVENANCE_ASSET
     _write_json(provenance_asset, provenance)
@@ -337,7 +376,7 @@ def _parse_checksums(path: Path) -> dict[str, str]:
 
 def verify_release(
     *, root: Path, tag: str, publisher_repository: str, publisher_commit: str
-) -> None:
+) -> dict[str, Any]:
     if AUDIT_TAG.fullmatch(tag) is None:
         raise AuditReleaseError("audit release tag is invalid")
     if {path.name for path in root.iterdir() if path.is_file()} != set(ASSET_NAMES):
@@ -375,6 +414,17 @@ def verify_release(
     if audit_semantic_sha256 != audit_tool.semantic_audit_sha256(audit):
         raise AuditReleaseError("audit provenance semantic SHA-256 differs")
     _assert_evidence_covers_audit(ledger, audit, evidence)
+    predecessor = validate_predecessor(provenance.get("predecessor"))
+    return {
+        "schema": 1,
+        "kind": "verifiedProtectedAppAuditRelease",
+        "auditReleaseTag": tag,
+        "publisher": provenance["publisher"],
+        "predecessor": predecessor,
+        "audit": audit,
+        "ledgerSHA256": sha256(root / LEDGER_ASSET),
+        "provenanceSHA256": sha256(root / PROVENANCE_ASSET),
+    }
 
 
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
@@ -384,6 +434,7 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     prepare.add_argument("--ledger", type=Path, required=True)
     prepare.add_argument("--audit", type=Path, required=True)
     prepare.add_argument("--evidence", type=Path, required=True)
+    prepare.add_argument("--predecessor", type=Path, required=True)
     prepare.add_argument("--output", type=Path, required=True)
     prepare.add_argument("--tag", required=True)
     prepare.add_argument("--publisher-repository", required=True)
@@ -404,18 +455,20 @@ def main(argv: Iterable[str] | None = None) -> int:
                 ledger_path=args.ledger,
                 audit_path=args.audit,
                 evidence_path=args.evidence,
+                predecessor_path=args.predecessor,
                 output=args.output,
                 tag=args.tag,
                 publisher_repository=args.publisher_repository,
                 publisher_commit=args.publisher_commit,
             )
         else:
-            verify_release(
+            verified = verify_release(
                 root=args.root,
                 tag=args.tag,
                 publisher_repository=args.publisher_repository,
                 publisher_commit=args.publisher_commit,
             )
+            print(json.dumps(verified, separators=(",", ":"), ensure_ascii=False))
     except (AuditReleaseError, OSError) as error:
         print(f"audit release validation failed: {error}", file=sys.stderr)
         return 1

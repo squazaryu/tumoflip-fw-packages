@@ -33,7 +33,6 @@ jobs:
     outputs:
       source_commit: ${{ steps.identity.outputs.source_commit }}
       source_tag: ${{ steps.identity.outputs.source_tag }}
-      audit_tag: ${{ steps.identity.outputs.audit_tag }}
     steps:
       - name: Check out exact control commit
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -69,14 +68,11 @@ jobs:
           set -euo pipefail
           SOURCE_COMMIT="$(jq -r .current.tagCommit resolved-source.json)"
           SOURCE_TAG="$(jq -r .current.releaseTag resolved-source.json)"
-          AUDIT_TAG="$(jq -r .auditReleaseTag resolved-source.json)"
           [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
           [[ "$SOURCE_TAG" =~ ^[0-9]{1,2}[a-z]{3}[0-9]{4}(p[0-9]+)?$ ]]
-          [[ "$AUDIT_TAG" =~ ^audit-ledger-[0-9]{8}-[0-9]{3}$ ]]
           {
             echo "source_commit=$SOURCE_COMMIT"
             echo "source_tag=$SOURCE_TAG"
-            echo "audit_tag=$AUDIT_TAG"
           } >> "$GITHUB_OUTPUT"
       - name: Upload resolved source
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -297,38 +293,32 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          LEDGER="$RUNNER_TEMP/current-ledger"
-          git init -q "$LEDGER"
-          git -C "$LEDGER" remote add origin \
-            "https://github.com/$GITHUB_REPOSITORY.git"
-          REMOTE_HEAD="$(git -C "$LEDGER" ls-remote --heads origin \
-            refs/heads/protected-app-audit-ledger)" || {
-              echo "Cannot resolve the remote protected audit branch" >&2
-              exit 1
-            }
-          if [[ -n "$REMOTE_HEAD" ]]; then
-            [[ "$REMOTE_HEAD" =~ ^[0-9a-f]{40}[[:space:]]refs/heads/protected-app-audit-ledger$ ]]
-            REMOTE_COMMIT="${REMOTE_HEAD%%[[:space:]]*}"
-            git -C "$LEDGER" fetch --no-tags origin "$REMOTE_COMMIT"
-            git -C "$LEDGER" checkout -q FETCH_HEAD
-            test "$(git -C "$LEDGER" rev-parse HEAD)" = "$REMOTE_COMMIT"
-            EXISTING="$LEDGER/latest.json"
-          else
-            EXISTING=audit/bootstrap/latest.json
-          fi
-          python3 tools/tumoflip/protected_app_audit.py merge \
-            --existing "$EXISTING" --audit "$RUNNER_TEMP/audit.json" \
-            --output "$RUNNER_TEMP/latest.json"
-          python3 tools/tumoflip/protected_app_audit.py validate "$RUNNER_TEMP/latest.json"
-          AUDIT_TAG="$(jq -r .auditReleaseTag ../inputs/source-fixture.json)"
-          python3 tools/audit_release.py prepare \
-            --ledger "$RUNNER_TEMP/latest.json" \
+          CHAIN="$RUNNER_TEMP/audit-chain"
+          python3 tools/audit_chain.py \
+            --repository "$GITHUB_REPOSITORY" \
+            --publisher-commit "$GITHUB_SHA" \
+            --bootstrap-index audit/bootstrap/index.json \
+            --bootstrap-ledger audit/bootstrap/latest.json \
             --audit "$RUNNER_TEMP/audit.json" \
-            --evidence "$RUNNER_TEMP/audit-inputs/exact-evidence.json" \
-            --output "$RUNNER_TEMP/release-assets" \
-            --tag "$AUDIT_TAG" \
-            --publisher-repository "$GITHUB_REPOSITORY" \
-            --publisher-commit "$GITHUB_SHA"
+            --output "$CHAIN"
+          MODE="$(jq -r .mode "$CHAIN/resolution.json")"
+          AUDIT_TAG="$(jq -r .auditReleaseTag "$CHAIN/resolution.json")"
+          if [[ "$MODE" == publish ]]; then
+            python3 tools/audit_release.py prepare \
+              --ledger "$CHAIN/ledger.json" \
+              --audit "$RUNNER_TEMP/audit.json" \
+              --evidence "$RUNNER_TEMP/audit-inputs/exact-evidence.json" \
+              --predecessor "$CHAIN/predecessor.json" \
+              --output "$RUNNER_TEMP/release-assets" \
+              --tag "$AUDIT_TAG" \
+              --publisher-repository "$GITHUB_REPOSITORY" \
+              --publisher-commit "$GITHUB_SHA"
+          elif [[ "$MODE" == reuse ]]; then
+            cp -R "$CHAIN/release-assets" "$RUNNER_TEMP/release-assets"
+          else
+            echo "Unknown audit chain resolution mode: $MODE" >&2
+            exit 1
+          fi
       - name: Run fail-closed audit tests
         working-directory: control
         run: |
@@ -341,12 +331,18 @@ jobs:
         run: |
           set -euo pipefail
           STATUS="$(jq -r .overallStatus "$RUNNER_TEMP/result.json")"
-          AUDIT_TAG="$(jq -r .auditReleaseTag ../inputs/source-fixture.json)"
+          RESOLUTION="$RUNNER_TEMP/audit-chain/resolution.json"
+          AUDIT_TAG="$(jq -r .auditReleaseTag "$RESOLUTION")"
+          MODE="$(jq -r .mode "$RESOLUTION")"
+          PUBLISHER_COMMIT="$(jq -r .publisherCommit "$RESOLUTION")"
           [[ "$STATUS" == verified || "$STATUS" == pending ]]
           [[ "$AUDIT_TAG" =~ ^audit-ledger-[0-9]{8}-[0-9]{3}$ ]]
-          jq -n --arg status "$STATUS" --arg tag "$AUDIT_TAG" \
+          [[ "$MODE" == publish || "$MODE" == reuse ]]
+          [[ "$PUBLISHER_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          jq -n --arg status "$STATUS" --arg tag "$AUDIT_TAG" --arg mode "$MODE" \
+            --arg publisher "$PUBLISHER_COMMIT" \
             --arg issue "$(jq -r .canonicalIssue.url ../inputs/source-fixture.json)" \
-            '{status:$status,auditTag:$tag,issueURL:$issue}' \
+            '{status:$status,auditTag:$tag,issueURL:$issue,mode:$mode,publisherCommit:$publisher}' \
             > "$RUNNER_TEMP/publication.json"
           {
             echo "status=$STATUS"
@@ -383,7 +379,7 @@ jobs:
     timeout-minutes: 15
     environment: production
     permissions:
-      contents: write
+      contents: read
     outputs:
       release_id: ${{ steps.publish.outputs.release_id }}
       raw_commit: ${{ steps.raw.outputs.raw_commit }}
@@ -393,6 +389,16 @@ jobs:
         with:
           name: protected-audit-publication
           path: publication
+      - name: Create repository-scoped audit publisher token
+        id: publisher-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ secrets.PROTECTED_AUDIT_APP_ID }}
+          private-key: ${{ secrets.PROTECTED_AUDIT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-administration: read
+          permission-contents: write
       - name: Check out exact publisher control commit
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -410,24 +416,30 @@ jobs:
         run: |
           set -euo pipefail
           AUDIT_TAG="$(jq -r .auditTag ../publication/publication.json)"
+          PUBLISHER_COMMIT="$(jq -r .publisherCommit ../publication/publication.json)"
+          [[ "$PUBLISHER_COMMIT" =~ ^[0-9a-f]{40}$ ]]
           python3 tools/audit_release.py verify \
             --root ../publication/release-assets \
             --tag "$AUDIT_TAG" \
             --publisher-repository "$GITHUB_REPOSITORY" \
-            --publisher-commit "$GITHUB_SHA"
+            --publisher-commit "$PUBLISHER_COMMIT" \
+            > "$RUNNER_TEMP/release-bound.json"
       - name: Publish or resume exact immutable release
         id: publish
         working-directory: control
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.publisher-token.outputs.token }}
         run: |
           set -euo pipefail
           AUDIT_TAG="$(jq -r .auditTag ../publication/publication.json)"
+          PUBLISHER_COMMIT="$(jq -r .publisherCommit ../publication/publication.json)"
           python3 tools/publish_audit.py publish \
             --assets ../publication/release-assets \
             --repository "$GITHUB_REPOSITORY" \
             --tag "$AUDIT_TAG" \
-            --publisher-commit "$GITHUB_SHA" \
+            --publisher-commit "$PUBLISHER_COMMIT" \
+            --bootstrap-index audit/bootstrap/index.json \
+            --bootstrap-ledger audit/bootstrap/latest.json \
             > "$RUNNER_TEMP/release.json"
           echo "release_id=$(jq -r .releaseId "$RUNNER_TEMP/release.json")" \
             >> "$GITHUB_OUTPUT"
@@ -435,14 +447,15 @@ jobs:
         id: raw
         working-directory: control
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.publisher-token.outputs.token }}
         run: |
           set -euo pipefail
           AUDIT_TAG="$(jq -r .auditTag ../publication/publication.json)"
+          PUBLISHER_COMMIT="$(jq -r .publisherCommit ../publication/publication.json)"
           gh auth setup-git
           python3 tools/publish_audit_branch.py \
             --repository "$GITHUB_REPOSITORY" \
-            --publisher-commit "$GITHUB_SHA" \
+            --publisher-commit "$PUBLISHER_COMMIT" \
             --tag "$AUDIT_TAG" \
             --release-assets ../publication/release-assets \
             --audit ../publication/audit.json \
@@ -483,11 +496,18 @@ jobs:
           set -euo pipefail
           [[ "$RAW_COMMIT" =~ ^[0-9a-f]{40}$ ]]
           AUDIT_TAG="$(jq -r .auditTag ../publication/publication.json)"
+          PUBLISHER_COMMIT="$(jq -r .publisherCommit ../publication/publication.json)"
           python3 tools/publish_audit.py verify \
             --assets ../publication/release-assets \
             --repository "$GITHUB_REPOSITORY" \
             --tag "$AUDIT_TAG" \
-            --publisher-commit "$GITHUB_SHA"
+            --publisher-commit "$PUBLISHER_COMMIT"
+          python3 tools/audit_release.py verify \
+            --root ../publication/release-assets \
+            --tag "$AUDIT_TAG" \
+            --publisher-repository "$GITHUB_REPOSITORY" \
+            --publisher-commit "$PUBLISHER_COMMIT" \
+            > "$RUNNER_TEMP/release-bound.json"
           VERIFY="$RUNNER_TEMP/raw-verify"
           git init -q "$VERIFY"
           git -C "$VERIFY" remote add origin \
@@ -504,10 +524,12 @@ jobs:
           RAW_COMMIT: ${{ needs.publish.outputs.raw_commit }}
         run: |
           set -euo pipefail
-          ISSUE_NUMBER="$(jq -r .canonicalIssue.number publication/source-fixture.json)"
-          ISSUE_URL="$(jq -r .canonicalIssue.url publication/source-fixture.json)"
-          STATUS="$(jq -r .status publication/publication.json)"
+          ISSUE_URL="$(jq -r .audit.auditIssue "$RUNNER_TEMP/release-bound.json")"
+          ISSUE_NUMBER="${ISSUE_URL##*/}"
+          STATUS="$(jq -r .audit.overallStatus "$RUNNER_TEMP/release-bound.json")"
           AUDIT_TAG="$(jq -r .auditTag publication/publication.json)"
+          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          [[ "$STATUS" == verified || "$STATUS" == pending ]]
           CURRENT="$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
             --json state,url --jq '.state + " " + .url')"
           [[ "$CURRENT" == "OPEN $ISSUE_URL" || "$CURRENT" == "CLOSED $ISSUE_URL" ]]

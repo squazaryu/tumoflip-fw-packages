@@ -219,14 +219,25 @@ class AuditControlPlaneTests(unittest.TestCase):
         root = Path(temporary)
         audit_path = root / "audit.json"
         evidence_path = root / "evidence.json"
+        predecessor_path = root / "predecessor.json"
         release_path = root / "release"
         audit_tool.write_json(audit_path, audit)
         audit_tool.write_json(evidence_path, evidence)
+        audit_tool.write_json(
+            predecessor_path,
+            {
+                "schema": 1,
+                "kind": "bootstrap",
+                "indexSHA256": sha256(self.root / "audit/bootstrap/index.json"),
+                "ledgerSHA256": sha256(ledger_path),
+            },
+        )
         tag = "audit-ledger-20260812-001"
         prepare_release(
             ledger_path=ledger_path,
             audit_path=audit_path,
             evidence_path=evidence_path,
+            predecessor_path=predecessor_path,
             output=release_path,
             tag=tag,
             publisher_repository=repository,
@@ -300,14 +311,43 @@ class AuditControlPlaneTests(unittest.TestCase):
                     publisher_commit=commit,
                 )
 
+    def test_release_verifier_returns_the_release_bound_audit_and_predecessor(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            release, repository, commit = self._prepared_release(temporary)
+            verified = verify_release(
+                root=release,
+                tag="audit-ledger-20260812-001",
+                publisher_repository=repository,
+                publisher_commit=commit,
+            )
+            self.assertEqual(verified["audit"]["sourceTag"], "12aug2026")
+            self.assertEqual(verified["predecessor"]["kind"], "bootstrap")
+            self.assertEqual(verified["publisher"]["commit"], commit)
+
+    def test_release_verifier_rejects_missing_predecessor(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            release, repository, commit = self._prepared_release(temporary)
+            self._rewrite_provenance(
+                release, lambda provenance: provenance.pop("predecessor")
+            )
+            with self.assertRaisesRegex(AuditReleaseError, "predecessor contract"):
+                verify_release(
+                    root=release,
+                    tag="audit-ledger-20260812-001",
+                    publisher_repository=repository,
+                    publisher_commit=commit,
+                )
+
     def test_prepare_tree_is_idempotent_for_existing_semantic_audit(self) -> None:
         ledger = json.loads((self.root / "audit/bootstrap/latest.json").read_text())
         audit = ledger["audits"][-1]
         with tempfile.TemporaryDirectory() as temporary:
             tree = Path(temporary)
             (tree / "history").mkdir()
+            normalized = audit_tool.merge_ledger(ledger, audit)
             (tree / "latest.json").write_text(
-                json.dumps(ledger, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+                json.dumps(normalized, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
             )
             (tree / "history/existing.json").write_text(
                 json.dumps(audit, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
@@ -315,7 +355,6 @@ class AuditControlPlaneTests(unittest.TestCase):
             audit_path = tree / "audit.json"
             audit_path.write_text(json.dumps(audit, indent=2) + "\n", encoding="utf-8")
             released = tree / "released.json"
-            normalized = audit_tool.merge_ledger(ledger, audit)
             audit_tool.write_json(released, normalized)
             self.assertEqual(
                 prepare_tree(root=tree, audit_path=audit_path, released_ledger=released),

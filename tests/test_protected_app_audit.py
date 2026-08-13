@@ -851,6 +851,24 @@ class ProtectedAppAuditTests(unittest.TestCase):
             with self.assertRaisesRegex(audit.AuditError, "member count exceeds limit"):
                 audit.load_archive(archive, audit.file_hash(archive, "sha256"))
 
+    def test_community_archive_counts_directories_and_rejects_symlinks(self) -> None:
+        directories = self.root / "too-many-directory-records.zip"
+        with zipfile.ZipFile(directories, "w") as output:
+            output.writestr("one/", b"")
+            output.writestr("two/", b"")
+        with mock.patch.object(audit, "MAX_COMMUNITY_MEMBERS", 1):
+            with self.assertRaisesRegex(audit.AuditError, "member count exceeds limit"):
+                audit.load_archive(directories, audit.file_hash(directories, "sha256"))
+
+        symlink = self.root / "symlink.zip"
+        info = zipfile.ZipInfo("linked.fap")
+        info.create_system = 3
+        info.external_attr = 0o120777 << 16
+        with zipfile.ZipFile(symlink, "w") as output:
+            output.writestr(info, b"target.fap")
+        with self.assertRaisesRegex(audit.AuditError, "symlink ZIP member"):
+            audit.load_archive(symlink, audit.file_hash(symlink, "sha256"))
+
     def test_community_archive_member_and_total_limits_fail_closed(self) -> None:
         archive = self.root / "oversized-members.zip"
         with zipfile.ZipFile(archive, "w") as output:

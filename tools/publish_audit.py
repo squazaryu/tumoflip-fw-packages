@@ -14,8 +14,15 @@ from typing import Any, Callable, Iterable, Sequence
 from urllib.parse import quote
 
 try:
+    from .audit_chain import (
+        ChainError,
+        allocate_tag,
+        bootstrap_identity,
+        resolve_remote_chain,
+    )
     from .audit_release import ASSET_NAMES, AuditReleaseError, sha256, verify_release
 except ImportError:  # Direct script execution.
+    from audit_chain import ChainError, allocate_tag, bootstrap_identity, resolve_remote_chain
     from audit_release import ASSET_NAMES, AuditReleaseError, sha256, verify_release
 
 
@@ -69,6 +76,75 @@ def _object(payload: str, label: str) -> dict[str, Any]:
 
 def _title(tag: str) -> str:
     return f"Protected App Audit {tag}"
+
+
+def _require_immutable_releases_enabled(runner: Runner, repository: str) -> None:
+    result = runner(
+        (
+            "gh",
+            "api",
+            "-H",
+            "Accept: application/vnd.github+json",
+            "-H",
+            "X-GitHub-Api-Version: 2026-03-10",
+            f"repos/{repository}/immutable-releases",
+        )
+    )
+    if result.returncode != 0:
+        raise PublishError(
+            "cannot prove immutable releases are enabled before mutation: "
+            f"{_detail(result)}"
+        )
+    value = _object(result.stdout, "immutable release setting")
+    if value.get("enabled") is not True:
+        raise PublishError("immutable releases are not enabled")
+
+
+def _verify_live_chain_state(
+    *,
+    local_verified: dict[str, Any],
+    repository: str,
+    tag: str,
+    bootstrap_index: Path,
+    bootstrap_ledger: Path,
+    runner: Runner,
+    downloader: Downloader,
+) -> bool:
+    """Return True only when this exact release is already the verified head."""
+    with tempfile.TemporaryDirectory(prefix="audit-publisher-chain-") as temporary:
+        try:
+            chain = resolve_remote_chain(
+                repository=repository,
+                bootstrap_index=bootstrap_index,
+                bootstrap_ledger=bootstrap_ledger,
+                root=Path(temporary),
+                runner=runner,
+                downloader=downloader,
+            )
+        except ChainError as error:
+            raise PublishError(str(error)) from error
+        matches = [item for item in chain if item.tag == tag]
+        if matches:
+            current = matches[0]
+            if current is not chain[-1]:
+                raise PublishError("requested audit release is not the immutable chain head")
+            for key in ("ledgerSHA256", "provenanceSHA256", "predecessor"):
+                if local_verified.get(key) != current.verified.get(key):
+                    raise PublishError(f"local audit release differs from chain head: {key}")
+            return True
+        predecessor = (
+            chain[-1].predecessor_identity()
+            if chain
+            else bootstrap_identity(bootstrap_index, bootstrap_ledger)
+        )
+        if local_verified.get("predecessor") != predecessor:
+            raise PublishError("audit release predecessor differs from immutable chain head")
+        expected_tag = allocate_tag(local_verified["audit"]["sourceTag"], chain)
+        if tag != expected_tag:
+            raise PublishError(
+                f"audit release tag is not the next chain revision: expected {expected_tag}"
+            )
+        return False
 
 
 def _list_releases(runner: Runner, repository: str) -> list[dict[str, Any]]:
@@ -367,11 +443,13 @@ def publish(
     repository: str,
     tag: str,
     publisher_commit: str,
+    bootstrap_index: Path,
+    bootstrap_ledger: Path,
     runner: Runner = default_runner,
     downloader: Downloader = default_downloader,
 ) -> int:
     try:
-        verify_release(
+        local_verified = verify_release(
             root=assets_root,
             tag=tag,
             publisher_repository=repository,
@@ -379,9 +457,20 @@ def publish(
         )
     except AuditReleaseError as error:
         raise PublishError(str(error)) from error
+    already_published = _verify_live_chain_state(
+        local_verified=local_verified,
+        repository=repository,
+        tag=tag,
+        bootstrap_index=bootstrap_index,
+        bootstrap_ledger=bootstrap_ledger,
+        runner=runner,
+        downloader=downloader,
+    )
     releases = _list_releases(runner, repository)
     release = _find_release(releases, tag)
     if release is not None and release.get("draft") is False:
+        if not already_published:
+            raise PublishError("public audit release is absent from the verified chain")
         return verify_remote(
             assets_root=assets_root,
             repository=repository,
@@ -390,6 +479,9 @@ def publish(
             runner=runner,
             downloader=downloader,
         )
+    if already_published:
+        raise PublishError("verified chain head has no matching public release")
+    _require_immutable_releases_enabled(runner, repository)
     if release is None:
         release = _create_draft(runner, repository, tag, publisher_commit)
     release_id = _release_id(release, tag)
@@ -419,6 +511,27 @@ def publish(
         release,
         require_complete=True,
     )
+    # Close the release-allocation race after uploads but before the irreversible
+    # public transition. A competing release must force this run to stop as a
+    # harmless draft rather than create a fork.
+    if _verify_live_chain_state(
+        local_verified=local_verified,
+        repository=repository,
+        tag=tag,
+        bootstrap_index=bootstrap_index,
+        bootstrap_ledger=bootstrap_ledger,
+        runner=runner,
+        downloader=downloader,
+    ):
+        return verify_remote(
+            assets_root=assets_root,
+            repository=repository,
+            tag=tag,
+            publisher_commit=publisher_commit,
+            runner=runner,
+            downloader=downloader,
+        )
+    _require_immutable_releases_enabled(runner, repository)
     _publish_draft(runner, repository, release_id, tag, publisher_commit)
     for attempt in range(5):
         if _tag_target(runner, repository, tag) == publisher_commit:
@@ -443,20 +556,33 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--repository", required=True)
     parser.add_argument("--tag", required=True)
     parser.add_argument("--publisher-commit", required=True)
+    parser.add_argument("--bootstrap-index", type=Path)
+    parser.add_argument("--bootstrap-ledger", type=Path)
     return parser.parse_args(list(argv))
 
 
 def main(argv: Iterable[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     try:
-        operation = publish if args.command == "publish" else verify_remote
-        release_id = operation(
-            assets_root=args.assets,
-            repository=args.repository,
-            tag=args.tag,
-            publisher_commit=args.publisher_commit,
-        )
-    except (PublishError, OSError, ValueError) as error:
+        if args.command == "publish":
+            if args.bootstrap_index is None or args.bootstrap_ledger is None:
+                raise PublishError("publish requires bootstrap index and ledger")
+            release_id = publish(
+                assets_root=args.assets,
+                repository=args.repository,
+                tag=args.tag,
+                publisher_commit=args.publisher_commit,
+                bootstrap_index=args.bootstrap_index,
+                bootstrap_ledger=args.bootstrap_ledger,
+            )
+        else:
+            release_id = verify_remote(
+                assets_root=args.assets,
+                repository=args.repository,
+                tag=args.tag,
+                publisher_commit=args.publisher_commit,
+            )
+    except (ChainError, PublishError, OSError, ValueError) as error:
         print(f"audit publication failed: {error}", file=sys.stderr)
         return 1
     print(json.dumps({"tag": args.tag, "releaseId": release_id}, separators=(",", ":")))

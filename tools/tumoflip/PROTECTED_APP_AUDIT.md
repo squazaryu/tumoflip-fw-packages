@@ -14,10 +14,15 @@ not an identity: the audit key is the tag plus the named SHA-256 of both ZIPs.
    ref. A full `protectedKeys` inventory makes a new protected FAP/FAL that lacks
    a registry route fail closed as an unregistered intersection.
 3. Reviewed and unresolved entries are merged into a strict cumulative schema-2
-   ledger. The exact ledger, checksums, and full evidence are published as one
-   immutable `audit-ledger-YYYYMMDD-NNN` release. Only after that proof succeeds
-   may the workflow fast-forward the transitional
-   `protected-app-audit-ledger` raw branch.
+   ledger. The authoritative predecessor is the latest verified immutable audit
+   release (or the content-addressed bootstrap for genesis), never the mutable raw
+   branch. Every release binds its predecessor tag, numeric release ID, tag
+   commit, ledger digest and provenance digest. The resolver rejects gaps, forks,
+   or historical rewrites before allocating the next
+   `audit-ledger-YYYYMMDD-NNN` revision. An exact semantic rerun reuses the
+   existing immutable head; a changed target audit for the same Community Pack
+   receives the next revision. Only after immutable proof succeeds may the
+   workflow fast-forward the transitional `protected-app-audit-ledger` mirror.
 4. A target-bearing entry is accepted only when its target bytes occur in an
    exact released FW Packages manifest *and* the corresponding ZIP. The scanner
    checks path, byte count, MD5, SHA-256, clean source commit, revision and tag.
@@ -32,7 +37,8 @@ not an identity: the audit key is the tag plus the named SHA-256 of both ZIPs.
 6. A separate least-privilege job re-downloads the immutable release, compares
    the raw ledger byte-for-byte, and only then reconciles the issue. The issue
    remains open while any artifact is unresolved; only a fully verified scan
-   closes it automatically.
+   closes it automatically. Status and issue identity are read from the verified,
+   release-bound audit rather than from an untrusted inter-job summary.
 
 The immutable history files are content-addressed by the semantic audit payload
 (excluding only `generatedAt`), so a scheduled no-op never creates churn and new
