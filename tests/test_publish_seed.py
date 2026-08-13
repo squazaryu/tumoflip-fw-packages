@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 from unittest import mock
 
 from tools.catalog_contract import ContractError
@@ -23,6 +24,11 @@ class FakeGitHub:
         self.next_release_id = 100
         self.next_asset_id = 1_000
         self.events: list[tuple[str, str, tuple[str, ...]]] = []
+        self.release_list_calls = 0
+        self.hide_created_releases_from_list = False
+        self.hidden_from_release_list: set[str] = set()
+        self.published_tag_visibility_delay = 0
+        self.pending_tags: dict[str, tuple[str, int]] = {}
 
     @staticmethod
     def channel(tag: str) -> str:
@@ -94,73 +100,117 @@ class FakeGitHub:
     def _response(command: list[str], value: object) -> subprocess.CompletedProcess[str]:
         return subprocess.CompletedProcess(command, 0, json.dumps(value), "")
 
+    @staticmethod
+    def _fields(command: list[str]) -> dict[str, str]:
+        values: dict[str, str] = {}
+        for index, item in enumerate(command[:-1]):
+            if item not in {"--field", "--raw-field"}:
+                continue
+            key, separator, value = command[index + 1].partition("=")
+            if not separator:
+                raise AssertionError(f"invalid API field: {command[index + 1]}")
+            values[key] = value
+        return values
+
     def runner(self, command: list[str] | tuple[str, ...]) -> subprocess.CompletedProcess[str]:
         command = list(command)
         if command[:2] == ["gh", "api"]:
             if len(command) >= 3 and command[2].endswith("/releases?per_page=100"):
-                releases = [copy.deepcopy(item) for item in self.releases.values()]
+                self.release_list_calls += 1
+                releases = [
+                    copy.deepcopy(item)
+                    for tag, item in self.releases.items()
+                    if tag not in self.hidden_from_release_list
+                ]
                 return self._response(command, [releases])
             endpoint = command[2]
+            method = (
+                self._flag_value(command, "--method")
+                if "--method" in command
+                else "GET"
+            )
+            if endpoint == f"repos/{self.repository}/releases" and method == "POST":
+                fields = self._fields(command)
+                tag = fields["tag_name"]
+                if tag in self.releases or fields.get("draft") != "true":
+                    raise AssertionError("release must be created once and as a draft")
+                self.events.append(("create-draft", tag, ()))
+                release = self.add_release(
+                    tag,
+                    draft=True,
+                    target=fields["target_commitish"],
+                    name=fields["name"],
+                )
+                release["body"] = fields["body"]
+                release["prerelease"] = fields["prerelease"] == "true"
+                if self.hide_created_releases_from_list:
+                    self.hidden_from_release_list.add(tag)
+                return self._response(command, copy.deepcopy(release))
+            if endpoint.startswith("https://uploads.github.com/") and method == "POST":
+                parsed = urlsplit(endpoint)
+                release_id = int(parsed.path.split("/releases/", 1)[1].split("/", 1)[0])
+                name_values = parse_qs(parsed.query).get("name", [])
+                if len(name_values) != 1:
+                    raise AssertionError("asset upload must have exactly one name")
+                name = name_values[0]
+                release = self._release_for_id(release_id)
+                tag = str(release["tag_name"])
+                if release["draft"] is not True:
+                    raise AssertionError("publisher attempted to upload to a public release")
+                existing = {
+                    item["name"]
+                    for item in release["assets"]  # type: ignore[index]
+                    if isinstance(item, dict)
+                }
+                if name in existing:
+                    return subprocess.CompletedProcess(command, 1, "", "already_exists")
+                path = Path(self._flag_value(command, "--input"))
+                self._add_asset(release, name, path.read_bytes())
+                self.events.append(("upload", tag, (name,)))
+                assets = release["assets"]
+                assert isinstance(assets, list)
+                return self._response(command, copy.deepcopy(assets[-1]))
             if "/git/ref/tags/" in endpoint:
                 tag = endpoint.rsplit("/", 1)[-1]
+                pending = self.pending_tags.get(tag)
+                if pending is not None:
+                    target, remaining = pending
+                    if remaining > 0:
+                        self.pending_tags[tag] = (target, remaining - 1)
+                    else:
+                        self.tags[tag] = target
+                        del self.pending_tags[tag]
                 target = self.tags.get(tag)
                 if target is None:
                     return subprocess.CompletedProcess(command, 1, "", "HTTP 404: Not Found")
                 return self._response(command, {"object": {"type": "commit", "sha": target}})
+            if "/releases/" in endpoint and method == "PATCH":
+                release_id = int(endpoint.rsplit("/", 1)[-1])
+                release = self._release_for_id(release_id)
+                if release["draft"] is not True:
+                    raise AssertionError("only a verified draft may be published")
+                fields = self._fields(command)
+                if fields.get("draft") != "false" or fields.get("make_latest") != "false":
+                    raise AssertionError("release patch fields are not fail-closed")
+                tag = fields["tag_name"]
+                self.events.append(("publish", tag, ()))
+                release["target_commitish"] = fields["target_commitish"]
+                release["name"] = fields["name"]
+                release["body"] = fields["body"]
+                release["draft"] = False
+                release["prerelease"] = fields["prerelease"] == "true"
+                target = str(release["target_commitish"])
+                if self.published_tag_visibility_delay:
+                    self.pending_tags[tag] = (
+                        target,
+                        self.published_tag_visibility_delay,
+                    )
+                else:
+                    self.tags[tag] = target
+                return self._response(command, copy.deepcopy(release))
             if "/releases/" in endpoint:
                 release_id = int(endpoint.rsplit("/", 1)[-1])
                 return self._response(command, copy.deepcopy(self._release_for_id(release_id)))
-        if command[:3] == ["gh", "release", "create"]:
-            tag = command[3]
-            if "--draft" not in command or tag in self.releases:
-                raise AssertionError("release must be created once and as a draft")
-            self.events.append(("create-draft", tag, ()))
-            release = self.add_release(
-                tag,
-                draft=True,
-                target=self._flag_value(command, "--target"),
-                name=self._flag_value(command, "--title"),
-            )
-            release["body"] = self._flag_value(command, "--notes")
-            release["prerelease"] = "--prerelease" in command
-            return subprocess.CompletedProcess(command, 0, "created", "")
-        if command[:3] == ["gh", "release", "upload"]:
-            tag = command[3]
-            release = self.releases[tag]
-            if release["draft"] is not True:
-                raise AssertionError("publisher attempted to upload to a public release")
-            repo_index = command.index("--repo")
-            paths = [Path(value) for value in command[4:repo_index]]
-            uploaded = tuple(path.name for path in paths)
-            self.events.append(("upload", tag, uploaded))
-            existing = {
-                item["name"]
-                for item in release["assets"]  # type: ignore[index]
-                if isinstance(item, dict)
-            }
-            for path in paths:
-                if path.name in existing:
-                    return subprocess.CompletedProcess(command, 1, "", "already_exists")
-                self._add_asset(release, path.name, path.read_bytes())
-            return subprocess.CompletedProcess(command, 0, "uploaded", "")
-        if command[:3] == ["gh", "release", "edit"]:
-            tag = command[3]
-            release = self.releases[tag]
-            if release["draft"] is not True:
-                raise AssertionError("only a verified draft may be published")
-            if "--draft=false" not in command or "--latest=false" not in command:
-                raise AssertionError("release edit flags are not fail-closed")
-            prerelease_flag = next(
-                item for item in command if item.startswith("--prerelease=")
-            )
-            self.events.append(("publish", tag, ()))
-            release["target_commitish"] = self._flag_value(command, "--target")
-            release["name"] = self._flag_value(command, "--title")
-            release["body"] = self._flag_value(command, "--notes")
-            release["draft"] = False
-            release["prerelease"] = prerelease_flag == "--prerelease=true"
-            self.tags[tag] = str(release["target_commitish"])
-            return subprocess.CompletedProcess(command, 0, "published", "")
         raise AssertionError(f"unexpected command: {command}")
 
     def _release_for_id(self, release_id: int) -> dict[str, object]:
@@ -225,6 +275,7 @@ class AtomicPublicationTests(unittest.TestCase):
         with (
             mock.patch("tools.publish_seed.verify_release_directory"),
             mock.patch("tools.publish_seed.verify_migration_provenance"),
+            mock.patch("tools.publish_seed.time.sleep"),
         ):
             publish_seed(
                 self.root / "seed",
@@ -248,7 +299,10 @@ class AtomicPublicationTests(unittest.TestCase):
             dev_events,
             [
                 ("create-draft", self.dev_tag, ()),
-                ("upload", self.dev_tag, tuple(self.names(self.dev_tag))),
+                *[
+                    ("upload", self.dev_tag, (name,))
+                    for name in self.names(self.dev_tag)
+                ],
                 ("publish", self.dev_tag, ()),
             ],
         )
@@ -265,10 +319,52 @@ class AtomicPublicationTests(unittest.TestCase):
         self.assertEqual(
             [event for event in self.github.events if event[1] == self.dev_tag],
             [
-                ("upload", self.dev_tag, missing),
+                *[("upload", self.dev_tag, (name,)) for name in missing],
                 ("publish", self.dev_tag, ()),
             ],
         )
+
+    def test_empty_draft_from_previous_publisher_commit_is_resumed_by_id(self) -> None:
+        self.add_exact_published(self.stable_tag)
+        draft = self.github.add_release(
+            self.dev_tag,
+            draft=True,
+            target="b" * 40,
+        )
+        draft_id = draft["id"]
+
+        self.publish()
+
+        self.assertEqual(self.github.releases[self.dev_tag]["id"], draft_id)
+        self.assertEqual(
+            self.github.releases[self.dev_tag]["target_commitish"],
+            self.publisher_commit,
+        )
+        self.assertFalse(self.github.releases[self.dev_tag]["draft"])
+
+    def test_create_response_is_authoritative_when_release_list_lags(self) -> None:
+        self.add_exact_published(self.dev_tag)
+        self.github.hide_created_releases_from_list = True
+
+        self.publish()
+
+        self.assertIn(self.stable_tag, self.github.hidden_from_release_list)
+        self.assertEqual(self.github.release_list_calls, 1)
+        stable_events = [
+            event for event in self.github.events if event[1] == self.stable_tag
+        ]
+        self.assertEqual(stable_events[0], ("create-draft", self.stable_tag, ()))
+        self.assertEqual(stable_events[-1], ("publish", self.stable_tag, ()))
+        self.assertFalse(self.github.releases[self.stable_tag]["draft"])
+
+    def test_published_tag_visibility_is_retried_by_exact_target(self) -> None:
+        self.add_exact_published(self.stable_tag)
+        self.github.published_tag_visibility_delay = 2
+
+        self.publish()
+
+        self.assertEqual(self.github.tags[self.dev_tag], self.publisher_commit)
+        self.assertNotIn(self.dev_tag, self.github.pending_tags)
 
     def test_exact_published_releases_verify_and_skip_all_mutation(self) -> None:
         self.add_exact_published(self.stable_tag)
