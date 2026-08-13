@@ -3,7 +3,7 @@
 ## Phase 0 - freeze and inventory
 
 1. Keep every existing `fw-packages-*` release and tag in
-   `squazaryu/tumoflip` immutable.
+   `squazaryu/tumoflip` immutable until its byte-for-byte mirror is accepted.
 2. Record the exact `stable-001` and `dev-008` manifest, archive, checksum,
    release ID, tag commit, and asset digests in `contracts/legacy-sources.json`.
 3. Keep firmware releases and their base `tumoflip-packages.*` snapshot assets
@@ -26,6 +26,14 @@ The mirror release carries the original three package assets plus
 the provenance file binds that publisher commit to the original repository,
 tag commit, source commit, and exact asset hashes. Mirroring must not regenerate
 or re-zip either package.
+
+Before removing the legacy GitHub releases, mirror the remaining Dev 001-005
+and Dev 007 history through `mirror-history.yml`. The exact source release IDs,
+tag commits, manifest release IDs and asset hashes are pinned in
+`contracts/legacy-history.json`. Each mirror is created as a draft, reverified
+after the artifact/job boundary, and made public only after all four assets
+(the original three plus provenance) match. Source tags remain in the firmware
+repository after the old GitHub releases are removed.
 
 ## Phase 2 - dual-read client
 
@@ -59,9 +67,11 @@ no release plan. Do not grant write permission or connect
 `tools/publish_native.py` until the candidate passes legacy-composition
 equivalence review and physical-device package installation/verification.
 
-Only after both channel heads install and verify on physical hardware may the
-legacy package workflow be disabled. Do not remove old releases or client
-fallback in this phase.
+TumoCompanion 1.10.28 has accepted the mirrored channel heads on physical
+hardware. Once all historical mirrors are independently verified, disable the
+legacy package workflow and remove only the old GitHub releases. Versions of
+TumoCompanion older than 1.10.28 are outside the independent-package support
+boundary; firmware releases and all source tags remain untouched.
 
 ## Phase 4 - independent protected audit
 

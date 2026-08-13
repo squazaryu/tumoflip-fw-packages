@@ -1,0 +1,108 @@
+name: Mirror immutable legacy FW Packages history
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type MIRROR-ALL-LEGACY-FW-PACKAGES
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fw-packages-history-mirror
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main' && github.event.repository.default_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check confirmation
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: test "$CONFIRM" = "MIRROR-ALL-LEGACY-FW-PACKAGES"
+      - name: Check out exact control commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Prove exact default-branch control commit
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Download and verify all historical releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 tools/mirror_history.py prepare \
+            --root history \
+            --publisher-repository "$GITHUB_REPOSITORY" \
+            --publisher-commit "$GITHUB_SHA"
+          python3 tools/mirror_history.py verify \
+            --root history \
+            --publisher-repository "$GITHUB_REPOSITORY" \
+            --publisher-commit "$GITHUB_SHA"
+      - name: Upload verified immutable history
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: verified-legacy-history
+          path: history
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    if: github.ref == 'refs/heads/main' && github.event.repository.default_branch == 'main'
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified immutable history
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: verified-legacy-history
+          path: history
+      - name: Check out exact publisher commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          path: control
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Prove exact default-branch publisher commit
+        working-directory: control
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+      - name: Reverify after artifact boundary
+        run: |
+          set -euo pipefail
+          python3 control/tools/mirror_history.py verify \
+            --contract-root control \
+            --root history \
+            --publisher-repository "$GITHUB_REPOSITORY" \
+            --publisher-commit "$GITHUB_SHA"
+      - name: Publish or resume exact immutable mirrors
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 control/tools/mirror_history.py publish \
+            --contract-root control \
+            --root history \
+            --publisher-repository "$GITHUB_REPOSITORY" \
+            --publisher-commit "$GITHUB_SHA"
