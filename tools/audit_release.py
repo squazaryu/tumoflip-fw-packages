@@ -71,6 +71,8 @@ def require_digest(value: Any, pattern: re.Pattern[str], label: str) -> str:
 
 
 def validate_evidence(document: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(document, dict):
+        raise AuditReleaseError("audit evidence must be an object")
     if document.get("schema") != 1 or document.get("kind") != "protectedAppAuditEvidence":
         raise AuditReleaseError("audit evidence contract is invalid")
     control = document.get("control")
@@ -156,6 +158,30 @@ def validate_evidence(document: dict[str, Any]) -> dict[str, Any]:
 def _audit_identity(value: dict[str, Any]) -> tuple[str, str, str]:
     archives = {item["pack"]: item["sha256"] for item in value["archives"]}
     return value["sourceTag"], archives["base"], archives["extra"]
+
+
+def _audit_bound_to_evidence(
+    ledger: dict[str, Any], evidence: dict[str, Any]
+) -> dict[str, Any]:
+    community = evidence["community"]
+    issue = evidence["issue"]
+    expected_identity = (
+        community["tag"],
+        community["archives"]["base"]["sha256"],
+        community["archives"]["extra"]["sha256"],
+    )
+    matches = [
+        audit
+        for audit in ledger["audits"]
+        if _audit_identity(audit) == expected_identity
+        and audit["sourceCommit"] == community["commit"]
+        and audit["auditIssue"] == issue["url"]
+    ]
+    if len(matches) != 1:
+        raise AuditReleaseError(
+            "cumulative ledger does not contain exactly one audit bound to release evidence"
+        )
+    return matches[0]
 
 
 def _assert_evidence_covers_audit(
@@ -340,6 +366,15 @@ def verify_release(
     evidence = validate_evidence(provenance.get("evidence"))
     if provenance.get("evidenceSHA256") != canonical_sha256(evidence):
         raise AuditReleaseError("audit provenance evidence digest differs")
+    audit_semantic_sha256 = require_digest(
+        provenance.get("auditSemanticSHA256"),
+        HEX_64,
+        "audit provenance semantic SHA-256",
+    )
+    audit = _audit_bound_to_evidence(ledger, evidence)
+    if audit_semantic_sha256 != audit_tool.semantic_audit_sha256(audit):
+        raise AuditReleaseError("audit provenance semantic SHA-256 differs")
+    _assert_evidence_covers_audit(ledger, audit, evidence)
 
 
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:

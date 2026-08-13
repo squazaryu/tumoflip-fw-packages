@@ -5,10 +5,21 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any, Callable
 
 from tools.audit_bootstrap import BootstrapError, validate_index, verify
 from tools.audit_inputs import InputError, validate_source_fixture, validate_targets
-from tools.audit_release import AuditReleaseError, validate_evidence
+from tools.audit_release import (
+    CHECKSUM_ASSET,
+    LEDGER_ASSET,
+    PROVENANCE_ASSET,
+    AuditReleaseError,
+    canonical_sha256,
+    prepare_release,
+    sha256,
+    validate_evidence,
+    verify_release,
+)
 from tools.publish_audit_branch import BranchError, prepare_tree
 from tools.resolve_audit_source import resolve
 from tools.tumoflip import protected_app_audit as audit_tool
@@ -123,6 +134,171 @@ class AuditControlPlaneTests(unittest.TestCase):
         evidence["packages"][0]["packageRelease"]["source_commit"] = "9" * 40
         with self.assertRaisesRegex(AuditReleaseError, "provenance differs"):
             validate_evidence(evidence)
+
+    def _prepared_release(self, temporary: str) -> tuple[Path, str, str]:
+        ledger_path = self.root / "audit/bootstrap/latest.json"
+        ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+        audit = ledger["audits"][-1]
+        targets = json.loads(
+            (self.root / "contracts/protected-audit-targets.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        packages = []
+        for target in targets["packages"]:
+            compatible: dict[tuple[str, str, str], dict[str, str]] = {}
+            for entry in audit["entries"]:
+                for provenance in entry.get("targetProvenance", []):
+                    if (
+                        provenance["containerKind"] == "fwPackagesCompatibleBuild"
+                        and provenance.get("compatibilityCatalogTag")
+                        == target["releaseTag"]
+                    ):
+                        source = {
+                            "release_tag": provenance["releaseTag"],
+                            "manifest_sha256": provenance["manifestSHA256"],
+                            "source_commit": provenance["targetSourceCommit"],
+                        }
+                        compatible[tuple(source.values())] = source
+            packages.append(
+                {
+                    "repository": target["repository"],
+                    "releaseTag": target["releaseTag"],
+                    "githubReleaseId": target["githubReleaseId"],
+                    "tagCommit": target["tagCommit"],
+                    "sourceCommit": target["manifestSourceCommit"],
+                    "manifestReleaseId": target["manifestReleaseId"],
+                    "manifestSHA256": target["assets"]["manifest"]["sha256"],
+                    "archiveSHA256": target["assets"]["archive"]["sha256"],
+                    "packageRelease": {
+                        "catalog_release_tag": target["releaseTag"],
+                        "source_commit": target["manifestSourceCommit"],
+                        "compatible_releases": list(compatible.values()),
+                    },
+                }
+            )
+        firmware = [
+            {
+                "repository": target["repository"],
+                "releaseTag": target["releaseTag"],
+                "githubReleaseId": target["githubReleaseId"],
+                "tagCommit": target["tagCommit"],
+                "updaterSHA256": target["asset"]["sha256"],
+                "resourceManifestSHA256": target["resourceManifestSHA256"],
+                "resourcesSHA256": target["resourcesSHA256"],
+            }
+            for target in targets["firmware"]
+        ]
+        archives = {item["pack"]: item for item in audit["archives"]}
+        repository = "squazaryu/tumoflip-fw-packages"
+        commit = "a" * 40
+        evidence = {
+            "schema": 1,
+            "kind": "protectedAppAuditEvidence",
+            "control": {"repository": repository, "commit": commit},
+            "implementation": targets["implementation"],
+            "community": {
+                "repository": audit_tool.SOURCE_REPOSITORY,
+                "tag": audit["sourceTag"],
+                "commit": audit["sourceCommit"],
+                "archives": {
+                    pack: {
+                        "fileName": archives[pack]["fileName"],
+                        "sha256": archives[pack]["sha256"],
+                    }
+                    for pack in ("base", "extra")
+                },
+            },
+            "issue": {
+                "number": int(audit["auditIssue"].rsplit("/", 1)[-1]),
+                "url": audit["auditIssue"],
+            },
+            "packages": packages,
+            "firmware": firmware,
+        }
+        root = Path(temporary)
+        audit_path = root / "audit.json"
+        evidence_path = root / "evidence.json"
+        release_path = root / "release"
+        audit_tool.write_json(audit_path, audit)
+        audit_tool.write_json(evidence_path, evidence)
+        tag = "audit-ledger-20260812-001"
+        prepare_release(
+            ledger_path=ledger_path,
+            audit_path=audit_path,
+            evidence_path=evidence_path,
+            output=release_path,
+            tag=tag,
+            publisher_repository=repository,
+            publisher_commit=commit,
+        )
+        return release_path, repository, commit
+
+    @staticmethod
+    def _rewrite_provenance(
+        root: Path, mutate: Callable[[dict[str, Any]], object]
+    ) -> None:
+        path = root / PROVENANCE_ASSET
+        provenance = json.loads(path.read_text(encoding="utf-8"))
+        mutate(provenance)
+        provenance["evidenceSHA256"] = canonical_sha256(provenance["evidence"])
+        path.write_text(
+            json.dumps(provenance, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        (root / CHECKSUM_ASSET).write_text(
+            f"{sha256(root / LEDGER_ASSET)}  {LEDGER_ASSET}\n"
+            f"{sha256(path)}  {PROVENANCE_ASSET}\n",
+            encoding="utf-8",
+        )
+
+    def test_release_verifier_requires_semantic_audit_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            release, repository, commit = self._prepared_release(temporary)
+            self._rewrite_provenance(
+                release, lambda provenance: provenance.pop("auditSemanticSHA256")
+            )
+            with self.assertRaisesRegex(AuditReleaseError, "semantic SHA-256.*invalid"):
+                verify_release(
+                    root=release,
+                    tag="audit-ledger-20260812-001",
+                    publisher_repository=repository,
+                    publisher_commit=commit,
+                )
+
+    def test_release_verifier_rejects_wrong_semantic_audit_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            release, repository, commit = self._prepared_release(temporary)
+            self._rewrite_provenance(
+                release,
+                lambda provenance: provenance.__setitem__(
+                    "auditSemanticSHA256", "0" * 64
+                ),
+            )
+            with self.assertRaisesRegex(AuditReleaseError, "semantic SHA-256 differs"):
+                verify_release(
+                    root=release,
+                    tag="audit-ledger-20260812-001",
+                    publisher_repository=repository,
+                    publisher_commit=commit,
+                )
+
+    def test_release_verifier_rejects_evidence_for_unrelated_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            release, repository, commit = self._prepared_release(temporary)
+            self._rewrite_provenance(
+                release,
+                lambda provenance: provenance["evidence"]["community"].__setitem__(
+                    "commit", "0" * 40
+                ),
+            )
+            with self.assertRaisesRegex(AuditReleaseError, "exactly one audit bound"):
+                verify_release(
+                    root=release,
+                    tag="audit-ledger-20260812-001",
+                    publisher_repository=repository,
+                    publisher_commit=commit,
+                )
 
     def test_prepare_tree_is_idempotent_for_existing_semantic_audit(self) -> None:
         ledger = json.loads((self.root / "audit/bootstrap/latest.json").read_text())
