@@ -5,11 +5,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Any, Callable, Sequence
+from urllib.parse import quote
 
 try:
     from .catalog_contract import (
@@ -94,7 +97,7 @@ def _canonical_names(tag: str) -> set[str]:
     }
 
 
-def _find_release(runner: Runner, repository: str, tag: str) -> dict[str, Any] | None:
+def _list_releases(runner: Runner, repository: str) -> list[dict[str, Any]]:
     payload = _run(
         runner,
         (
@@ -121,6 +124,12 @@ def _find_release(runner: Runner, repository: str, tag: str) -> dict[str, Any] |
             releases.extend(page)
     if not all(isinstance(item, dict) for item in releases):
         raise ContractError("GitHub release-list item is invalid")
+    return releases
+
+
+def _find_release(
+    releases: Sequence[dict[str, Any]], tag: str
+) -> dict[str, Any] | None:
     matches = [item for item in releases if item.get("tag_name") == tag]
     if len(matches) > 1:
         raise ContractError(f"multiple GitHub releases use tag {tag}")
@@ -148,6 +157,8 @@ def _validate_release_metadata(
     tag: str,
     prerelease: bool,
     draft: bool,
+    *,
+    allow_draft_target_drift: bool = False,
 ) -> None:
     _release_id(release, tag)
     expected = {
@@ -159,6 +170,11 @@ def _validate_release_metadata(
         "prerelease": prerelease,
     }
     for key, value in expected.items():
+        if key == "target_commitish" and allow_draft_target_drift:
+            target = release.get(key)
+            if not isinstance(target, str) or re.fullmatch(r"[0-9a-f]{40}", target) is None:
+                raise ContractError(f"release metadata differs: {tag}/{key}")
+            continue
         if release.get(key) != value:
             raise ContractError(f"release metadata differs: {tag}/{key}")
 
@@ -194,6 +210,27 @@ def _require_tag_target(
         return
     if target != publisher_commit:
         raise ContractError(f"release tag target differs: {tag}")
+
+
+def _require_tag_target_eventually(
+    runner: Runner,
+    repository: str,
+    tag: str,
+    publisher_commit: str,
+    *,
+    attempts: int = 5,
+) -> None:
+    if attempts < 1:
+        raise ValueError("attempts must be positive")
+    for attempt in range(attempts):
+        target = _tag_target_or_none(runner, repository, tag)
+        if target == publisher_commit:
+            return
+        if target is not None:
+            raise ContractError(f"release tag target differs: {tag}")
+        if attempt + 1 < attempts:
+            time.sleep(2**attempt)
+    raise ContractError(f"release tag was not visible after publish: {tag}")
 
 
 def _asset_map(release: dict[str, Any], tag: str) -> dict[str, dict[str, Any]]:
@@ -287,25 +324,26 @@ def _create_draft(
 ) -> dict[str, Any]:
     command: list[str] = [
         "gh",
-        "release",
-        "create",
-        tag,
-        "--repo",
-        repository,
-        "--target",
-        publisher_commit,
-        "--title",
-        _release_title(channel, tag),
-        "--notes",
-        RELEASE_NOTES,
-        "--draft",
+        "api",
+        f"repos/{repository}/releases",
+        "--method",
+        "POST",
+        "--raw-field",
+        f"tag_name={tag}",
+        "--raw-field",
+        f"target_commitish={publisher_commit}",
+        "--raw-field",
+        f"name={_release_title(channel, tag)}",
+        "--raw-field",
+        f"body={RELEASE_NOTES}",
+        "--field",
+        "draft=true",
+        "--field",
+        f"prerelease={str(prerelease).lower()}",
+        "--raw-field",
+        "make_latest=false",
     ]
-    if prerelease:
-        command.append("--prerelease")
-    _run(runner, command)
-    release = _find_release(runner, repository, tag)
-    if release is None:
-        raise ContractError(f"created draft cannot be found: {tag}")
+    release = _json_object(_run(runner, command), f"created release {tag}")
     _validate_release_metadata(
         release, publisher_commit, channel, tag, prerelease, draft=True
     )
@@ -316,6 +354,7 @@ def _upload_missing_assets(
     runner: Runner,
     seed_root: Path,
     repository: str,
+    release_id: int,
     channel: str,
     tag: str,
     missing: set[str],
@@ -323,18 +362,31 @@ def _upload_missing_assets(
     if not missing:
         return
     directory = seed_root / channel
-    _run(
-        runner,
-        (
-            "gh",
-            "release",
-            "upload",
-            tag,
-            *(str(directory / name) for name in sorted(missing)),
-            "--repo",
-            repository,
-        ),
-    )
+    for name in sorted(missing):
+        asset = _json_object(
+            _run(
+                runner,
+                (
+                    "gh",
+                    "api",
+                    (
+                        f"https://uploads.github.com/repos/{repository}/releases/"
+                        f"{release_id}/assets?name={quote(name, safe='')}"
+                    ),
+                    "--method",
+                    "POST",
+                    "--header",
+                    "Content-Type: application/octet-stream",
+                    "--input",
+                    str(directory / name),
+                ),
+            ),
+            f"uploaded asset {tag}/{name}",
+        )
+        if asset.get("name") != name:
+            raise ContractError(f"uploaded asset name differs: {tag}/{name}")
+        if asset.get("size") != (directory / name).stat().st_size:
+            raise ContractError(f"uploaded asset size differs: {tag}/{name}")
 
 
 def _publish_draft(
@@ -346,27 +398,37 @@ def _publish_draft(
     tag: str,
     prerelease: bool,
 ) -> dict[str, Any]:
-    _run(
-        runner,
-        (
-            "gh",
-            "release",
-            "edit",
-            tag,
-            "--repo",
-            repository,
-            "--target",
-            publisher_commit,
-            "--title",
-            _release_title(channel, tag),
-            "--notes",
-            RELEASE_NOTES,
-            "--draft=false",
-            f"--prerelease={str(prerelease).lower()}",
-            "--latest=false",
+    release = _json_object(
+        _run(
+            runner,
+            (
+                "gh",
+                "api",
+                f"repos/{repository}/releases/{release_id}",
+                "--method",
+                "PATCH",
+                "--raw-field",
+                f"tag_name={tag}",
+                "--raw-field",
+                f"target_commitish={publisher_commit}",
+                "--raw-field",
+                f"name={_release_title(channel, tag)}",
+                "--raw-field",
+                f"body={RELEASE_NOTES}",
+                "--field",
+                "draft=false",
+                "--field",
+                f"prerelease={str(prerelease).lower()}",
+                "--raw-field",
+                "make_latest=false",
+            ),
         ),
+        f"published release {tag}",
     )
-    return _release_by_id(runner, repository, release_id)
+    _validate_release_metadata(
+        release, publisher_commit, channel, tag, prerelease, draft=False
+    )
+    return release
 
 
 def _verify_published_channel(
@@ -378,6 +440,8 @@ def _verify_published_channel(
     publisher_commit: str,
     channel: str,
     release: dict[str, Any],
+    *,
+    verify_tag_target: bool = True,
 ) -> None:
     tag = expected["tag"]
     _validate_release_metadata(
@@ -397,9 +461,10 @@ def _verify_published_channel(
         release,
         require_complete=True,
     )
-    _require_tag_target(
-        runner, repository, tag, publisher_commit, allow_missing=False
-    )
+    if verify_tag_target:
+        _require_tag_target(
+            runner, repository, tag, publisher_commit, allow_missing=False
+        )
 
 
 def _publish_channel(
@@ -410,10 +475,10 @@ def _publish_channel(
     repository: str,
     publisher_commit: str,
     channel: str,
+    release: dict[str, Any] | None,
 ) -> None:
     tag = expected["tag"]
     prerelease = expected["prerelease"]
-    release = _find_release(runner, repository, tag)
     if release is not None and release.get("draft") is False:
         _verify_published_channel(
             runner,
@@ -426,6 +491,7 @@ def _publish_channel(
             release,
         )
         return
+    created = release is None
     if release is None:
         release = _create_draft(
             runner, repository, publisher_commit, channel, tag, prerelease
@@ -434,11 +500,21 @@ def _publish_channel(
     release_id = _release_id(release, tag)
     release = _release_by_id(runner, repository, release_id)
     _validate_release_metadata(
-        release, publisher_commit, channel, tag, prerelease, draft=True
+        release,
+        publisher_commit,
+        channel,
+        tag,
+        prerelease,
+        draft=True,
+        allow_draft_target_drift=not created,
     )
-    _require_tag_target(
-        runner, repository, tag, publisher_commit, allow_missing=True
-    )
+    # A pre-existing draft may already have a tag; prove it before mutation.
+    # A newly created draft is authoritative by its POST response and ID, and
+    # must not be rediscovered through eventually consistent list/tag APIs.
+    if not created:
+        _require_tag_target(
+            runner, repository, tag, publisher_commit, allow_missing=True
+        )
     missing = _verify_remote_assets(
         downloader,
         seed_root,
@@ -448,14 +524,19 @@ def _publish_channel(
         release,
         require_complete=False,
     )
-    _upload_missing_assets(runner, seed_root, repository, channel, tag, missing)
+    _upload_missing_assets(
+        runner, seed_root, repository, release_id, channel, tag, missing
+    )
 
     release = _release_by_id(runner, repository, release_id)
     _validate_release_metadata(
-        release, publisher_commit, channel, tag, prerelease, draft=True
-    )
-    _require_tag_target(
-        runner, repository, tag, publisher_commit, allow_missing=True
+        release,
+        publisher_commit,
+        channel,
+        tag,
+        prerelease,
+        draft=True,
+        allow_draft_target_drift=not created,
     )
     _verify_remote_assets(
         downloader,
@@ -485,6 +566,10 @@ def _publish_channel(
         publisher_commit,
         channel,
         release,
+        verify_tag_target=False,
+    )
+    _require_tag_target_eventually(
+        runner, repository, tag, publisher_commit
     )
 
 
@@ -498,6 +583,7 @@ def publish_seed(
 ) -> None:
     legacy = load_json(contract_root / "contracts/legacy-sources.json")
     verify_migration_provenance(seed_root, legacy, repository, publisher_commit)
+    releases = _list_releases(runner, repository)
     for channel in ("stable", "dev"):
         expected = legacy["channels"][channel]
         verify_release_directory(seed_root / channel, expected)
@@ -509,6 +595,7 @@ def publish_seed(
             repository,
             publisher_commit,
             channel,
+            _find_release(releases, expected["tag"]),
         )
 
 
