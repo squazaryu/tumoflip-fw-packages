@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/squazaryu/tumoflip-fw-packages/schemas/protected-audit-ledger-v2.schema.json",
+  "title": "Tumoflip protected-app audit ledger",
+  "type": "object",
+  "required": ["schema", "sourceRepository", "generatedAt", "audits"],
+  "properties": {
+    "schema": {"const": 2},
+    "sourceRepository": {"const": "xMasterX/all-the-plugins"},
+    "generatedAt": {"type": "string", "minLength": 1},
+    "audits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["sourceTag", "sourceCommit", "overallStatus", "entries"],
+        "properties": {
+          "sourceTag": {"type": "string", "minLength": 1},
+          "sourceCommit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+          "overallStatus": {"enum": ["pending", "verified"]},
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "targetProvenance": {
+                  "type": "array",
+                  "items": {"$ref": "#/$defs/provenance"}
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "required": ["targetMD5", "channel", "releaseTag", "manifestSHA256"],
+      "properties": {
+        "targetMD5": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+        "channel": {"enum": ["stable", "dev"]},
+        "releaseTag": {"type": "string", "minLength": 1},
+        "manifestSHA256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,54 @@
+name: Protected app audit contract
+
+on:
+  workflow_dispatch:
+    inputs:
+      community_tag:
+        required: true
+        type: string
+      community_commit:
+        required: true
+        type: string
+      firmware_commit:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  exact-inputs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Validate exact commits
+        env:
+          COMMUNITY_COMMIT: ${{ inputs.community_commit }}
+          FIRMWARE_COMMIT: ${{ inputs.firmware_commit }}
+        run: |
+          case "$COMMUNITY_COMMIT" in (*[!0-9a-f]*|'') exit 1;; esac
+          case "$FIRMWARE_COMMIT" in (*[!0-9a-f]*|'') exit 1;; esac
+          test "${#COMMUNITY_COMMIT}" -eq 40
+          test "${#FIRMWARE_COMMIT}" -eq 40
+      - name: Check out exact firmware implementation
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: squazaryu/tumoflip
+          ref: ${{ inputs.firmware_commit }}
+          path: firmware
+          persist-credentials: false
+      - name: Check out exact Community Pack source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: xMasterX/all-the-plugins
+          ref: ${{ inputs.community_commit }}
+          path: community
+          persist-credentials: false
+      - name: Prove exact checkouts
+        env:
+          COMMUNITY_COMMIT: ${{ inputs.community_commit }}
+          FIRMWARE_COMMIT: ${{ inputs.firmware_commit }}
+        run: |
+          test "$(git -C firmware rev-parse HEAD)" = "$FIRMWARE_COMMIT"
+          test "$(git -C community rev-parse HEAD)" = "$COMMUNITY_COMMIT"
+          echo "Audit publication remains disabled until registry, decisions, and exact release inputs are migrated."

@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "firmwareRepository": "squazaryu/tumoflip",
+  "channels": {
+    "stable": {
+      "firmwareTag": "v1.0.4",
+      "firmwareVersion": "t-flppr-fw-004",
+      "firmwareCommit": "b5f8f76ea564fe0e4d447b1f3d85dbac168bad25",
+      "api": "88.0",
+      "target": 7
+    },
+    "dev": {
+      "firmwareTag": "t-dev-004-015",
+      "firmwareVersion": "t-dev-004-015",
+      "firmwareCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
+      "api": "88.0",
+      "target": 7
+    }
+  }
+}

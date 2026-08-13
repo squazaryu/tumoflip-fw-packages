@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "packages": {
+    "primaryRepository": "squazaryu/tumoflip-fw-packages",
+    "legacyRepository": "squazaryu/tumoflip",
+    "identityFields": ["catalog_channel", "catalog_revision", "release_id"],
+    "fallbackOn": ["transport", "http404", "compatibleChannelAbsent"],
+    "terminalFailures": [
+      "malformedPrimary",
+      "digestMismatch",
+      "revisionCollision",
+      "rollback",
+      "incompatibleEvidence"
+    ]
+  },
+  "audit": {
+    "primaryReleaseRepository": "squazaryu/tumoflip-fw-packages",
+    "primaryAsset": "protected-app-audit-ledger.json",
+    "transitionalRaw": "https://raw.githubusercontent.com/squazaryu/tumoflip-fw-packages/protected-app-audit-ledger/latest.json",
+    "legacyRaw": "https://raw.githubusercontent.com/squazaryu/tumoflip/protected-app-audit-ledger/latest.json",
+    "fallbackOn": ["transport", "http404"],
+    "terminalFailures": ["malformedPrimary", "digestMismatch", "clientIdentityCollision"]
+  }
+}

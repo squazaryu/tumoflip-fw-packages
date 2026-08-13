@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "publisherRepository": "squazaryu/tumoflip-fw-packages",
+  "sourceRepository": "squazaryu/tumoflip",
+  "channels": {
+    "stable": {
+      "currentTag": "fw-packages-stable-001",
+      "currentRevision": 1,
+      "nextNativeRevision": 2,
+      "nextNativeTag": "fw-packages-stable-002",
+      "seededFromLegacy": true
+    },
+    "dev": {
+      "currentTag": "fw-packages-dev-008",
+      "currentRevision": 8,
+      "nextNativeRevision": 9,
+      "nextNativeTag": "fw-packages-dev-009",
+      "seededFromLegacy": true
+    }
+  }
+}

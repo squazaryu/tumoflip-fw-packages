@@ -1,0 +1,96 @@
+name: Seed immutable legacy heads
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type SEED-stable001-dev008
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fw-packages-seed
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check confirmation
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: test "$CONFIRM" = "SEED-stable001-dev008"
+      - name: Check out control repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Download and verify exact legacy bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/seed_legacy.py --root . --output seed
+          python3 tools/verify_catalog.py seed --root seed --contract-root .
+          python3 tools/render_migration_provenance.py \
+            --seed seed \
+            --publisher-repository "$GITHUB_REPOSITORY" \
+            --publisher-commit "$GITHUB_SHA"
+      - name: Upload verified seed
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: verified-legacy-seed
+          path: seed
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified seed
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: verified-legacy-seed
+          path: seed
+      - name: Check out verifier
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          path: control
+          persist-credentials: false
+      - name: Reverify after job boundary
+        run: python3 control/tools/verify_catalog.py seed --root seed --contract-root control
+      - name: Publish immutable mirrors
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test -f seed/stable/migration-provenance.json
+          test -f seed/dev/migration-provenance.json
+          ! gh release view fw-packages-stable-001 --repo "$GITHUB_REPOSITORY"
+          ! gh release view fw-packages-dev-008 --repo "$GITHUB_REPOSITORY"
+          gh release create fw-packages-stable-001 \
+            seed/stable/tumoflip-packages.json \
+            seed/stable/tumoflip-packages.zip \
+            seed/stable/fw-packages-stable-001-SHA256SUMS \
+            seed/stable/migration-provenance.json \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "FW Packages stable 001 (legacy mirror)" \
+            --notes "Byte-for-byte migration mirror from squazaryu/tumoflip. See migration-provenance.json."
+          gh release create fw-packages-dev-008 \
+            seed/dev/tumoflip-packages.json \
+            seed/dev/tumoflip-packages.zip \
+            seed/dev/fw-packages-dev-008-SHA256SUMS \
+            seed/dev/migration-provenance.json \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title "FW Packages dev 008 (legacy mirror)" \
+            --notes "Byte-for-byte migration mirror from squazaryu/tumoflip. See migration-provenance.json."

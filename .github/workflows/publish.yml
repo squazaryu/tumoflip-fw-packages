@@ -1,0 +1,88 @@
+name: Native package release contract
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        required: true
+        type: choice
+        options: [stable, dev]
+      revision:
+        required: true
+        type: number
+      source_commit:
+        description: Exact squazaryu/tumoflip package-source commit
+        required: true
+        type: string
+      target_firmware_tag:
+        required: true
+        type: string
+      target_firmware_commit:
+        required: true
+        type: string
+      dry_run:
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fw-packages-native-${{ inputs.channel }}
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Validate immutable inputs
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          TARGET_COMMIT: ${{ inputs.target_firmware_commit }}
+          CHANNEL: ${{ inputs.channel }}
+          REVISION: ${{ inputs.revision }}
+        run: |
+          case "$SOURCE_COMMIT" in (*[!0-9a-f]*|'') exit 1;; esac
+          case "$TARGET_COMMIT" in (*[!0-9a-f]*|'') exit 1;; esac
+          test "${#SOURCE_COMMIT}" -eq 40
+          test "${#TARGET_COMMIT}" -eq 40
+          test "$REVISION" -ge 1
+          printf 'requested tag: fw-packages-%s-%03d\n' "$CHANNEL" "$REVISION"
+      - name: Check out control repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          path: control
+          persist-credentials: false
+      - name: Validate control contracts
+        run: python3 control/tools/verify_catalog.py contract --root control
+      - name: Check out exact firmware source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: squazaryu/tumoflip
+          ref: ${{ inputs.source_commit }}
+          path: firmware
+          submodules: recursive
+          persist-credentials: false
+      - name: Prove exact source checkout
+        env:
+          EXPECTED: ${{ inputs.source_commit }}
+        run: test "$(git -C firmware rev-parse HEAD)" = "$EXPECTED"
+      - name: Report migration gate
+        run: |
+          echo "Exact source checkout and control contract are valid."
+          echo "The native builder/publisher is intentionally disabled until the migrated builder passes equivalence tests."
+
+  publish-gate:
+    if: ${{ !inputs.dry_run }}
+    needs: contract
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: write
+    steps:
+      - name: Fail closed until native publisher is enabled
+        run: |
+          echo "Native publishing is not enabled in the bootstrap repository." >&2
+          exit 1

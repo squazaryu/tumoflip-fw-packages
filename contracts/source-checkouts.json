@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "firmwareRepository": "squazaryu/tumoflip",
+  "refPolicy": "full-commit-sha-only",
+  "commitPattern": "^[0-9a-f]{40}$",
+  "buildParallelism": 2,
+  "publisherRepository": "squazaryu/tumoflip-fw-packages",
+  "releaseTagPatterns": {
+    "stable": "^fw-packages-stable-[0-9]{3}$",
+    "dev": "^fw-packages-dev-[0-9]{3}$",
+    "audit": "^audit-ledger-[0-9]{8}-[0-9]{3}$"
+  }
+}

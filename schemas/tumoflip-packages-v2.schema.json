@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/squazaryu/tumoflip-fw-packages/schemas/tumoflip-packages-v2.schema.json",
+  "title": "Tumoflip FW Packages manifest",
+  "type": "object",
+  "required": ["schema", "release_id", "firmware", "packages", "cleanup"],
+  "properties": {
+    "schema": {"const": 2},
+    "release_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "firmware": {
+      "type": "object",
+      "required": ["version", "api", "target"],
+      "properties": {
+        "version": {"type": "string", "minLength": 1},
+        "api": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+$"},
+        "target": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": true
+    },
+    "package_release": {
+      "type": "object",
+      "required": [
+        "catalog_channel",
+        "catalog_revision",
+        "catalog_release_tag",
+        "source_commit",
+        "source_dirty"
+      ],
+      "properties": {
+        "catalog_channel": {"enum": ["stable", "dev"]},
+        "catalog_revision": {"type": "integer", "minimum": 1},
+        "catalog_release_tag": {
+          "type": "string",
+          "pattern": "^fw-packages-(stable|dev)-[0-9]{3}$"
+        },
+        "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "source_dirty": {"const": false}
+      },
+      "additionalProperties": true
+    },
+    "packages": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "array",
+        "items": {"$ref": "#/$defs/package"}
+      }
+    },
+    "cleanup": {"type": "array"}
+  },
+  "$defs": {
+    "package": {
+      "type": "object",
+      "required": ["source", "target", "sha256", "bytes"],
+      "properties": {
+        "source": {"type": "string", "minLength": 1},
+        "target": {"type": "string", "pattern": "^/ext/"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "md5": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+        "bytes": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
