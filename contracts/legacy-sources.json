@@ -6,6 +6,7 @@
     "stable": {
       "tag": "fw-packages-stable-001",
       "revision": 1,
+      "prerelease": false,
       "releaseId": "c433e50a25f7d33213fd75b908cae27b14b4c102526b41103877c7783f5d0b35",
       "tagCommit": "49b47de9044c1b135b31c0612740f4533c8d6eef",
       "sourceCommit": "49b47de9044c1b135b31c0612740f4533c8d6eef",
@@ -20,6 +21,7 @@
     "dev": {
       "tag": "fw-packages-dev-008",
       "revision": 8,
+      "prerelease": true,
       "releaseId": "18b1d93f4a8a2e1fecee08753cf5e0701302a7dad9470a8d5024581cf691723c",
       "tagCommit": "cf5f27221bf42d3dd98a5634c62feaabf305e34b",
       "sourceCommit": "cf5f27221bf42d3dd98a5634c62feaabf305e34b",

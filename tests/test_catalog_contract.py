@@ -7,7 +7,13 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from tools.catalog_contract import ContractError, manifest_release_id, verify_release_directory
+from tools.catalog_contract import (
+    ContractError,
+    manifest_release_id,
+    sha256,
+    verify_migration_provenance,
+    verify_release_directory,
+)
 from tools.verify_catalog import verify_contract
 
 
@@ -92,6 +98,112 @@ class CatalogContractTests(unittest.TestCase):
     def test_repository_contracts_are_consistent(self) -> None:
         repository = Path(__file__).resolve().parents[1]
         verify_contract(repository)
+
+
+class MigrationProvenanceTests(unittest.TestCase):
+    publisher_repository = "squazaryu/tumoflip-fw-packages"
+    publisher_commit = "9" * 40
+
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        self.root = Path(self.temporary.name)
+        self.contract = {
+            "schema": 1,
+            "repository": "squazaryu/tumoflip",
+            "channels": {},
+        }
+        index = {
+            "schema": 1,
+            "sourceRepository": "squazaryu/tumoflip",
+            "channels": {},
+        }
+        for offset, (channel, revision) in enumerate((("stable", 1), ("dev", 8)), 1):
+            tag = f"fw-packages-{channel}-{revision:03d}"
+            directory = self.root / channel
+            directory.mkdir()
+            names = (
+                "tumoflip-packages.json",
+                "tumoflip-packages.zip",
+                f"{tag}-SHA256SUMS",
+            )
+            assets = {}
+            pinned = {}
+            for asset_offset, name in enumerate(names, 1):
+                path = directory / name
+                path.write_bytes(f"{channel}:{name}".encode())
+                digest = sha256(path)
+                pinned[name] = digest
+                assets[name] = {
+                    "bytes": path.stat().st_size,
+                    "sha256": digest,
+                    "githubAssetId": offset * 10 + asset_offset,
+                }
+            source_commit = str(offset) * 40
+            release_id = str(offset + 2) * 64
+            tag_commit = str(offset + 4) * 40
+            legacy_release_id = offset * 100
+            release_url = f"https://github.com/squazaryu/tumoflip/releases/tag/{tag}"
+            self.contract["channels"][channel] = {
+                "tag": tag,
+                "revision": revision,
+                "prerelease": channel == "dev",
+                "releaseId": release_id,
+                "tagCommit": tag_commit,
+                "sourceCommit": source_commit,
+                "assets": pinned,
+            }
+            index["channels"][channel] = {
+                "tag": tag,
+                "legacyReleaseId": legacy_release_id,
+                "legacyReleaseURL": release_url,
+                "legacyTagCommit": tag_commit,
+                "sourceCommit": source_commit,
+                "manifestReleaseId": release_id,
+                "assets": assets,
+            }
+            provenance = {
+                "schema": 1,
+                "kind": "legacyByteMirror",
+                "channel": channel,
+                "publisher": {
+                    "repository": self.publisher_repository,
+                    "commit": self.publisher_commit,
+                },
+                "legacy": {
+                    "repository": self.contract["repository"],
+                    "tag": tag,
+                    "releaseId": legacy_release_id,
+                    "releaseURL": release_url,
+                    "tagCommit": tag_commit,
+                },
+                "firmwareSourceCommit": source_commit,
+                "manifestReleaseId": release_id,
+                "assets": assets,
+            }
+            (directory / "migration-provenance.json").write_text(
+                json.dumps(provenance), encoding="utf-8"
+            )
+        (self.root / "seed-index.json").write_text(json.dumps(index), encoding="utf-8")
+
+    def tearDown(self) -> None:
+        self.temporary.cleanup()
+
+    def _verify(self) -> None:
+        verify_migration_provenance(
+            self.root,
+            self.contract,
+            self.publisher_repository,
+            self.publisher_commit,
+        )
+
+    def test_exact_migration_provenance_is_accepted(self) -> None:
+        self._verify()
+
+    def test_asset_tampering_after_artifact_boundary_is_rejected(self) -> None:
+        with (self.root / "dev/tumoflip-packages.zip").open("ab") as stream:
+            stream.write(b"tamper")
+        with self.assertRaisesRegex(ContractError, "bytes changed after verification"):
+            self._verify()
 
 
 if __name__ == "__main__":

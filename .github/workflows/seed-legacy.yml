@@ -42,6 +42,10 @@ jobs:
             --seed seed \
             --publisher-repository "$GITHUB_REPOSITORY" \
             --publisher-commit "$GITHUB_SHA"
+          python3 tools/verify_catalog.py migration \
+            --root seed --contract-root . \
+            --publisher-repository "$GITHUB_REPOSITORY" \
+            --publisher-commit "$GITHUB_SHA"
       - name: Upload verified seed
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -69,28 +73,20 @@ jobs:
           path: control
           persist-credentials: false
       - name: Reverify after job boundary
-        run: python3 control/tools/verify_catalog.py seed --root seed --contract-root control
+        env:
+          PUBLISHER_REPOSITORY: ${{ github.repository }}
+          PUBLISHER_COMMIT: ${{ github.sha }}
+        run: |
+          python3 control/tools/verify_catalog.py seed --root seed --contract-root control
+          python3 control/tools/verify_catalog.py migration \
+            --root seed --contract-root control \
+            --publisher-repository "$PUBLISHER_REPOSITORY" \
+            --publisher-commit "$PUBLISHER_COMMIT"
       - name: Publish immutable mirrors
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          test -f seed/stable/migration-provenance.json
-          test -f seed/dev/migration-provenance.json
-          ! gh release view fw-packages-stable-001 --repo "$GITHUB_REPOSITORY"
-          ! gh release view fw-packages-dev-008 --repo "$GITHUB_REPOSITORY"
-          gh release create fw-packages-stable-001 \
-            seed/stable/tumoflip-packages.json \
-            seed/stable/tumoflip-packages.zip \
-            seed/stable/fw-packages-stable-001-SHA256SUMS \
-            seed/stable/migration-provenance.json \
-            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "FW Packages stable 001 (legacy mirror)" \
-            --notes "Byte-for-byte migration mirror from squazaryu/tumoflip. See migration-provenance.json."
-          gh release create fw-packages-dev-008 \
-            seed/dev/tumoflip-packages.json \
-            seed/dev/tumoflip-packages.zip \
-            seed/dev/fw-packages-dev-008-SHA256SUMS \
-            seed/dev/migration-provenance.json \
-            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
-            --title "FW Packages dev 008 (legacy mirror)" \
-            --notes "Byte-for-byte migration mirror from squazaryu/tumoflip. See migration-provenance.json."
+          python3 control/tools/publish_seed.py \
+            --seed seed --contract-root control \
+            --repository "$GITHUB_REPOSITORY" \
+            --publisher-commit "$GITHUB_SHA"

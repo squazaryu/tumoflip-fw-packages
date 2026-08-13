@@ -63,6 +63,8 @@ def main() -> int:
             expected = contract["channels"][channel]
             tag = expected["tag"]
             metadata = release_metadata(repository, tag)
+            if metadata.get("prerelease") is not expected.get("prerelease"):
+                raise ContractError(f"legacy prerelease state differs for {tag}")
             tag_reference = json.loads(
                 run("gh", "api", f"repos/{repository}/git/ref/tags/{tag}")
             )

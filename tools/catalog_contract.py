@@ -248,3 +248,130 @@ def verify_release_directory(directory: Path, expected: dict[str, Any] | None = 
             path = directory / name
             if not path.is_file() or sha256(path) != digest:
                 raise ContractError(f"legacy asset differs from pinned contract: {name}")
+
+
+def _require_exact_keys(value: dict[str, Any], keys: set[str], label: str) -> None:
+    actual = set(value)
+    if actual != keys:
+        raise ContractError(
+            f"{label} keys differ: missing={sorted(keys - actual)}, extra={sorted(actual - keys)}"
+        )
+
+
+def verify_migration_provenance(
+    seed_root: Path,
+    legacy_contract: dict[str, Any],
+    publisher_repository: str,
+    publisher_commit: str,
+) -> None:
+    """Revalidate mirror provenance and bytes after an artifact/job boundary."""
+
+    if re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", publisher_repository) is None:
+        raise ContractError("publisher repository must be owner/name")
+    if HEX_40.fullmatch(publisher_commit) is None:
+        raise ContractError("publisher commit must be an exact SHA")
+    index = load_json(seed_root / "seed-index.json")
+    _require_exact_keys(index, {"schema", "sourceRepository", "channels"}, "seed index")
+    if index.get("schema") != 1 or index.get("sourceRepository") != legacy_contract.get(
+        "repository"
+    ):
+        raise ContractError("seed index does not match legacy source contract")
+    index_channels = index.get("channels")
+    if not isinstance(index_channels, dict) or set(index_channels) != {"stable", "dev"}:
+        raise ContractError("seed index channels must be exactly stable and dev")
+    for channel in ("stable", "dev"):
+        expected = legacy_contract["channels"][channel]
+        source = index_channels[channel]
+        if not isinstance(source, dict):
+            raise ContractError(f"seed index {channel} must be an object")
+        _require_exact_keys(
+            source,
+            {
+                "tag",
+                "legacyReleaseId",
+                "legacyReleaseURL",
+                "legacyTagCommit",
+                "sourceCommit",
+                "manifestReleaseId",
+                "assets",
+            },
+            f"seed index {channel}",
+        )
+        provenance = load_json(seed_root / channel / "migration-provenance.json")
+        _require_exact_keys(
+            provenance,
+            {
+                "schema",
+                "kind",
+                "channel",
+                "publisher",
+                "legacy",
+                "firmwareSourceCommit",
+                "manifestReleaseId",
+                "assets",
+            },
+            f"{channel} migration provenance",
+        )
+        if provenance.get("schema") != 1 or provenance.get("kind") != "legacyByteMirror":
+            raise ContractError(f"{channel} migration provenance type is invalid")
+        if provenance.get("channel") != channel:
+            raise ContractError(f"{channel} migration provenance channel differs")
+        publisher = provenance.get("publisher")
+        legacy = provenance.get("legacy")
+        if not isinstance(publisher, dict) or not isinstance(legacy, dict):
+            raise ContractError(f"{channel} migration provenance identity is incomplete")
+        _require_exact_keys(publisher, {"repository", "commit"}, f"{channel} publisher")
+        _require_exact_keys(
+            legacy,
+            {"repository", "tag", "releaseId", "releaseURL", "tagCommit"},
+            f"{channel} legacy source",
+        )
+        if publisher != {
+            "repository": publisher_repository,
+            "commit": publisher_commit,
+        }:
+            raise ContractError(f"{channel} publisher identity differs")
+        expected_legacy = {
+            "repository": legacy_contract["repository"],
+            "tag": expected["tag"],
+            "releaseId": source["legacyReleaseId"],
+            "releaseURL": source["legacyReleaseURL"],
+            "tagCommit": expected["tagCommit"],
+        }
+        if legacy != expected_legacy:
+            raise ContractError(f"{channel} legacy release identity differs")
+        if source["legacyTagCommit"] != expected["tagCommit"]:
+            raise ContractError(f"{channel} seed tag commit differs")
+        if source["sourceCommit"] != expected["sourceCommit"]:
+            raise ContractError(f"{channel} seed source commit differs")
+        if provenance.get("firmwareSourceCommit") != expected["sourceCommit"]:
+            raise ContractError(f"{channel} firmware source commit differs")
+        if source["manifestReleaseId"] != expected["releaseId"]:
+            raise ContractError(f"{channel} seed manifest release ID differs")
+        if provenance.get("manifestReleaseId") != expected["releaseId"]:
+            raise ContractError(f"{channel} manifest release ID differs")
+        assets = provenance.get("assets")
+        if not isinstance(assets, dict) or assets != source.get("assets"):
+            raise ContractError(f"{channel} provenance assets differ from seed index")
+        if set(assets) != set(expected["assets"]):
+            raise ContractError(f"{channel} provenance asset names differ")
+        for name, evidence in assets.items():
+            if not isinstance(evidence, dict):
+                raise ContractError(f"{channel}/{name} provenance must be an object")
+            _require_exact_keys(
+                evidence,
+                {"bytes", "sha256", "githubAssetId"},
+                f"{channel}/{name} provenance",
+            )
+            path = seed_root / channel / name
+            if not path.is_file():
+                raise ContractError(f"{channel} migration asset is missing: {name}")
+            if evidence.get("sha256") != expected["assets"][name]:
+                raise ContractError(f"{channel}/{name} pinned SHA-256 differs")
+            if evidence.get("sha256") != sha256(path):
+                raise ContractError(f"{channel}/{name} bytes changed after verification")
+            if evidence.get("bytes") != path.stat().st_size:
+                raise ContractError(f"{channel}/{name} size differs")
+            asset_id = evidence.get("githubAssetId")
+            if not isinstance(asset_id, int) or isinstance(asset_id, bool) or asset_id < 1:
+                raise ContractError(f"{channel}/{name} GitHub asset ID is invalid")

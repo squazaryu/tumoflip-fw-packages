@@ -33,6 +33,12 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("Native publishing is not enabled", text)
         self.assertIn("environment: production", text)
 
+    def test_seed_workflow_uses_resumable_verified_publisher(self) -> None:
+        text = (self.root / ".github/workflows/seed-legacy.yml").read_text(encoding="utf-8")
+        self.assertIn("control/tools/publish_seed.py", text)
+        self.assertNotIn("gh release create", text)
+        self.assertIn("verify_catalog.py migration", text)
+
 
 if __name__ == "__main__":
     unittest.main()

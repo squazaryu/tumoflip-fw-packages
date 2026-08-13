@@ -10,9 +10,21 @@ import sys
 from pathlib import Path
 
 try:
-    from .catalog_contract import ContractError, PACKAGE_TAG, load_json, verify_release_directory
+    from .catalog_contract import (
+        ContractError,
+        PACKAGE_TAG,
+        load_json,
+        verify_migration_provenance,
+        verify_release_directory,
+    )
 except ImportError:  # Direct script execution.
-    from catalog_contract import ContractError, PACKAGE_TAG, load_json, verify_release_directory
+    from catalog_contract import (
+        ContractError,
+        PACKAGE_TAG,
+        load_json,
+        verify_migration_provenance,
+        verify_release_directory,
+    )
 
 
 def verify_contract(root: Path) -> None:
@@ -69,6 +81,8 @@ def verify_contract(root: Path) -> None:
             raise ContractError(f"invalid legacy {channel} tag")
         if int(tag_match.group(2)) != legacy_channel["revision"]:
             raise ContractError(f"legacy {channel} revision differs")
+        if legacy_channel.get("prerelease") is not (channel == "dev"):
+            raise ContractError(f"legacy {channel} prerelease state differs")
         if lineage_channel["currentTag"] != legacy_channel["tag"]:
             raise ContractError(f"lineage {channel} head differs from seed")
         if lineage_channel["currentRevision"] != legacy_channel["revision"]:
@@ -101,6 +115,16 @@ def verify_seed(root: Path, contract_root: Path) -> None:
         raise ContractError("seed index source differs")
 
 
+def verify_migration(
+    root: Path,
+    contract_root: Path,
+    publisher_repository: str,
+    publisher_commit: str,
+) -> None:
+    legacy = load_json(contract_root / "contracts/legacy-sources.json")
+    verify_migration_provenance(root, legacy, publisher_repository, publisher_commit)
+
+
 def parser() -> argparse.ArgumentParser:
     value = argparse.ArgumentParser()
     sub = value.add_subparsers(dest="command", required=True)
@@ -111,6 +135,11 @@ def parser() -> argparse.ArgumentParser:
     seed = sub.add_parser("seed")
     seed.add_argument("--root", type=Path, required=True)
     seed.add_argument("--contract-root", type=Path, default=Path("."))
+    migration = sub.add_parser("migration")
+    migration.add_argument("--root", type=Path, required=True)
+    migration.add_argument("--contract-root", type=Path, default=Path("."))
+    migration.add_argument("--publisher-repository", required=True)
+    migration.add_argument("--publisher-commit", required=True)
     return value
 
 
@@ -121,8 +150,15 @@ def main() -> int:
             verify_contract(args.root)
         elif args.command == "release":
             verify_release_directory(args.directory)
-        else:
+        elif args.command == "seed":
             verify_seed(args.root, args.contract_root)
+        else:
+            verify_migration(
+                args.root,
+                args.contract_root,
+                args.publisher_repository,
+                args.publisher_commit,
+            )
     except (ContractError, KeyError, TypeError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
