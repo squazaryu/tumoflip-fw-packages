@@ -58,6 +58,25 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertLess(text.index("Publish or resume exact immutable release"), text.index("Publish transitional raw branch"))
         self.assertLess(text.index("Publish transitional raw branch"), text.index("Reconcile canonical issue only after publication proof"))
 
+    def test_resource_decoder_build_backend_is_pinned_and_installed_first(self) -> None:
+        build_requirements = (
+            self.root / "tools/tumoflip/protected_audit_build_requirements.txt"
+        ).read_text(encoding="utf-8")
+        self.assertRegex(
+            build_requirements,
+            r"setuptools==[0-9]+\.[0-9]+\.[0-9]+ --hash=sha256:[0-9a-f]{64}",
+        )
+        self.assertEqual(build_requirements.count("--hash=sha256:"), 1)
+
+        for workflow_name in ("validate.yml", "protected-app-audit.yml"):
+            text = (self.root / ".github/workflows" / workflow_name).read_text(
+                encoding="utf-8"
+            )
+            backend = "protected_audit_build_requirements.txt"
+            decoder = "protected_audit_requirements.txt"
+            self.assertIn("--only-binary=:all:", text)
+            self.assertLess(text.index(backend), text.index(decoder))
+
     def test_protected_audit_preserves_pending_and_flat_artifact_layout(self) -> None:
         text = (self.root / ".github/workflows/protected-app-audit.yml").read_text(
             encoding="utf-8"
