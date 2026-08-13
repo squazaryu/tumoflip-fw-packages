@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
-from tools.catalog_contract import ContractError, manifest_release_id
+from tools.catalog_contract import ContractError, manifest_release_id, sha256
 from tools.native_release import finalize_native_release, load_native_plan
 from tools.publish_native import RELEASE_NOTES, publish_native
 
@@ -24,6 +24,8 @@ class FakeGitHub:
         self.assets: dict[int, bytes] = {}
         self.tag_target: str | None = None
         self.next_asset = 1000
+        self.tag_visibility_lag = 0
+        self._remaining_tag_lag = 0
         self.events: list[str] = []
         self.commands: list[list[str]] = []
 
@@ -81,6 +83,9 @@ class FakeGitHub:
                 values = [] if self.release is None else [copy.deepcopy(self.release)]
                 return self._response(command, [values])
             if "/git/ref/tags/" in endpoint:
+                if self._remaining_tag_lag:
+                    self._remaining_tag_lag -= 1
+                    return subprocess.CompletedProcess(command, 1, "", "HTTP 404: Not Found")
                 if self.tag_target is None:
                     return subprocess.CompletedProcess(command, 1, "", "HTTP 404: Not Found")
                 return self._response(
@@ -122,6 +127,7 @@ class FakeGitHub:
                 self.events.append("publish")
                 self.release["draft"] = False
                 self.tag_target = str(self.release["target_commitish"])
+                self._remaining_tag_lag = self.tag_visibility_lag
                 return self._response(command, copy.deepcopy(self.release))
             if endpoint.endswith("/releases/123"):
                 assert self.release is not None
@@ -143,13 +149,22 @@ class NativePublicationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
-        self.control = Path(__file__).resolve().parents[1]
+        self.repository = Path(__file__).resolve().parents[1]
+        self.control = self.root / "control"
+        shutil.copytree(self.repository / "contracts", self.control / "contracts")
+        policy_path = self.control / "contracts/native-build-policy.json"
+        policy = json.loads(policy_path.read_text())
+        policy["releasePlans"]["fw-packages-dev-009"] = {
+            "sourceCommit": self.source_commit,
+            "selectedOverlays": ["esp_flasher"],
+        }
+        policy_path.write_text(json.dumps(policy))
         self.plan = load_native_plan(
             self.control, "dev", 9, self.source_commit, self.publisher_commit
         )
         self.directory = self.root / "release"
         self.directory.mkdir()
-        fixture = self.control / "tests/fixtures/native"
+        fixture = self.repository / "tests/fixtures/native"
         shutil.copy2(
             fixture / "legacy-manifest.json",
             self.directory / "tumoflip-packages.json",
@@ -162,7 +177,14 @@ class NativePublicationTests(unittest.TestCase):
         ]["releaseId"]
         manifest["package_release"]["overlay_targets"] = self.plan["overlayTargets"]
         manifest["package_release"]["synced_extapps"] = [
-            {"target": target} for target in self.plan["overlayTargets"]
+            {
+                "source": ".extapps/esp_flasher.fap",
+                "target": target,
+                "bytes": 1,
+                "sha256": "0" * 64,
+                "md5": "0" * 32,
+            }
+            for target in self.plan["overlayTargets"]
         ]
         manifest["release_id"] = manifest_release_id(manifest)
         manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
@@ -170,7 +192,46 @@ class NativePublicationTests(unittest.TestCase):
             for entries in manifest["packages"].values():
                 for entry in entries:
                     archive.write(fixture / "resources" / entry["source"], entry["source"])
-        finalize_native_release(self.directory, self.plan)
+        self.base = self.root / "base"
+        shutil.copytree(self.directory, self.base)
+        base_manifest_path = self.base / "tumoflip-packages.json"
+        base_manifest = json.loads(base_manifest_path.read_text())
+        base_manifest["package_release"].update(
+            catalog_channel="dev",
+            catalog_revision=8,
+            catalog_release_tag="fw-packages-dev-008",
+        )
+        base_manifest["release_id"] = manifest_release_id(base_manifest)
+        base_manifest_path.write_text(
+            json.dumps(base_manifest, indent=2, sort_keys=True) + "\n"
+        )
+        base_checksum = self.base / "fw-packages-dev-008-SHA256SUMS"
+        base_checksum.write_text(
+            "".join(
+                f"{sha256(self.base / name)}  {name}\n"
+                for name in ("tumoflip-packages.json", "tumoflip-packages.zip")
+            )
+        )
+        self.plan["baseRelease"] = {
+            "tag": "fw-packages-dev-008",
+            "revision": 8,
+            "prerelease": True,
+            "releaseId": base_manifest["release_id"],
+            "tagCommit": "c" * 40,
+            "sourceCommit": "c" * 40,
+            "targetFirmwareTag": "t-dev-004-015",
+            "targetFirmwareCommit": "d" * 40,
+            "assets": {
+                base_checksum.name: sha256(base_checksum),
+                "tumoflip-packages.json": sha256(base_manifest_path),
+                "tumoflip-packages.zip": sha256(self.base / "tumoflip-packages.zip"),
+            },
+        }
+        legacy_path = self.control / "contracts/legacy-sources.json"
+        legacy = json.loads(legacy_path.read_text())
+        legacy["channels"]["dev"] = self.plan["baseRelease"]
+        legacy_path.write_text(json.dumps(legacy))
+        finalize_native_release(self.directory, self.plan, self.base)
         self.names = sorted(path.name for path in self.directory.iterdir())
         self.github = FakeGitHub("squazaryu/tumoflip-fw-packages", self.plan)
 
@@ -180,6 +241,7 @@ class NativePublicationTests(unittest.TestCase):
     def publish(self) -> None:
         publish_native(
             self.directory,
+            self.base,
             self.control,
             self.github.repository,
             "dev",
@@ -188,6 +250,7 @@ class NativePublicationTests(unittest.TestCase):
             self.publisher_commit,
             self.github.runner,
             self.github.downloader,
+            lambda _: None,
         )
 
     def test_create_response_id_avoids_eventual_consistency_lookup(self) -> None:
@@ -237,6 +300,23 @@ class NativePublicationTests(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, "publisher differs"):
             self.publish()
         self.assertIsNone(self.github.release)
+
+    def test_pinned_predecessor_tamper_is_terminal_before_github_calls(self) -> None:
+        with (self.base / "tumoflip-packages.zip").open("ab") as stream:
+            stream.write(b"tampered")
+        with self.assertRaisesRegex(ContractError, "legacy asset differs"):
+            self.publish()
+        self.assertIsNone(self.github.release)
+
+    def test_published_tag_visibility_is_retried_by_exact_target(self) -> None:
+        self.github.tag_visibility_lag = 2
+        self.publish()
+        tag_queries = [
+            command
+            for command in self.github.commands
+            if any("/git/ref/tags/" in item for item in command)
+        ]
+        self.assertEqual(len(tag_queries), 4)  # pre-create plus three post-publish
 
 
 if __name__ == "__main__":

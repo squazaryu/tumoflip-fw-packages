@@ -27,8 +27,17 @@ class NativeReleaseTests(unittest.TestCase):
         self.root = Path(self.temporary.name)
         self.repository = Path(__file__).resolve().parents[1]
         self.fixture = self.repository / "tests/fixtures/native"
+        self.control = self.root / "control"
+        shutil.copytree(self.repository / "contracts", self.control / "contracts")
+        policy_path = self.control / "contracts/native-build-policy.json"
+        policy = json.loads(policy_path.read_text())
+        policy["releasePlans"]["fw-packages-dev-009"] = {
+            "sourceCommit": self.source_commit,
+            "selectedOverlays": ["esp_flasher"],
+        }
+        policy_path.write_text(json.dumps(policy))
         self.plan = load_native_plan(
-            self.repository,
+            self.control,
             "dev",
             9,
             self.source_commit,
@@ -51,7 +60,14 @@ class NativeReleaseTests(unittest.TestCase):
         ]["releaseId"]
         manifest["package_release"]["overlay_targets"] = self.plan["overlayTargets"]
         manifest["package_release"]["synced_extapps"] = [
-            {"target": target} for target in self.plan["overlayTargets"]
+            {
+                "source": ".extapps/esp_flasher.fap",
+                "target": target,
+                "bytes": 1,
+                "sha256": "0" * 64,
+                "md5": "0" * 32,
+            }
+            for target in self.plan["overlayTargets"]
         ]
         manifest["release_id"] = manifest_release_id(manifest)
         manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
@@ -176,7 +192,7 @@ class NativeReleaseTests(unittest.TestCase):
                 self.repository, "dev", 10, self.source_commit, self.publisher_commit
             )
 
-        control = self.root / "control"
+        control = self.root / "parallelism-control"
         shutil.copytree(self.repository / "contracts", control / "contracts")
         path = control / "contracts/source-checkouts.json"
         value = json.loads(path.read_text())
@@ -185,7 +201,15 @@ class NativeReleaseTests(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, "exactly 2"):
             load_native_plan(control, "dev", 9, self.source_commit, self.publisher_commit)
 
-    def test_stable_plan_reserves_revision_two_against_v1_0_4(self) -> None:
+    def test_repository_has_no_authorized_native_release(self) -> None:
+        with self.assertRaisesRegex(ContractError, "no exact non-empty overlay plan"):
+            load_native_plan(
+                self.repository,
+                "dev",
+                9,
+                self.source_commit,
+                self.publisher_commit,
+            )
         with self.assertRaisesRegex(ContractError, "no exact non-empty overlay plan"):
             load_native_plan(
                 self.repository,
@@ -198,7 +222,7 @@ class NativeReleaseTests(unittest.TestCase):
     def test_unapproved_source_commit_is_terminal(self) -> None:
         with self.assertRaisesRegex(ContractError, "not authorized"):
             load_native_plan(
-                self.repository,
+                self.control,
                 "dev",
                 9,
                 "c" * 40,
@@ -273,6 +297,15 @@ def package_extapp_exports():
                 "changedTargets"
             ],
             ["apps/Module One/fixture.fap"],
+        )
+        provenance = json.loads((output / "catalog-provenance.json").read_text())
+        self.assertEqual(
+            provenance["buildEnvironment"],
+            {"runner": "ubuntu-24.04", "toolchainVersion": "39"},
+        )
+        self.assertEqual(
+            provenance["sourceBuiltOverlays"][0]["sha256"],
+            __import__("hashlib").sha256(b"changed fixture payload").hexdigest(),
         )
         self.assertEqual(
             sum(command[:3] == ("git", "rev-parse", "HEAD") for command in commands),
@@ -355,8 +388,83 @@ def package_extapp_exports():
                 return subprocess.CompletedProcess(command, 0, "", "")
             raise AssertionError(command)
 
-        with self.assertRaisesRegex(ContractError, "selected overlay is unchanged"):
+        with self.assertRaisesRegex(ContractError, "no runtime change"):
             build_native_release(source, base, self.root / "noop", plan, runner=runner)
+
+    def test_debuglink_crc_only_change_is_runtime_noop(self) -> None:
+        import struct
+
+        source = self.root / "source-debuglink"
+        source.mkdir()
+        source_contract = source / "tools/tumoflip/validate_release.py"
+        source_contract.parent.mkdir(parents=True)
+        source_contract.write_text(
+            '''
+PACKAGE_RELEASE_OVERLAY_FILES = {"apps/Module One/fixture.fap"}
+def package_extapp_exports():
+    return {"fixture.fap": "apps/Module One/fixture.fap"}
+'''
+        )
+        base, base_contract = self._base_output()
+
+        def elf(crc: bytes) -> bytes:
+            data = bytearray(200)
+            data[:16] = b"\x7fELF\x01\x01\x01" + b"\0" * 9
+            struct.pack_into("<I", data, 32, 52)
+            struct.pack_into("<HHH", data, 46, 40, 3, 2)
+            names = b"\0.gnu_debuglink\0.shstrtab\0"
+            data[160 : 160 + len(names)] = names
+            struct.pack_into("<I12xII", data, 92, 1, 188, 12)
+            struct.pack_into("<I12xII", data, 132, 16, 160, len(names))
+            data[188:200] = b"x.elf\0\0\0" + crc
+            return bytes(data)
+
+        previous = elf(b"\x01\x02\x03\x04")
+        candidate = elf(b"\x05\x06\x07\x08")
+        manifest_path = base / "tumoflip-packages.json"
+        manifest = json.loads(manifest_path.read_text())
+        entry = manifest["packages"]["module_one"][0]
+        entry.update(
+            bytes=len(previous),
+            sha256=__import__("hashlib").sha256(previous).hexdigest(),
+            md5=__import__("hashlib").md5(previous).hexdigest(),
+        )
+        manifest["release_id"] = manifest_release_id(manifest)
+        manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+        resources = self.fixture / "resources"
+        with zipfile.ZipFile(base / "tumoflip-packages.zip", "w") as archive:
+            archive.writestr(entry["source"], previous)
+            archive.write(resources / "apps/Tools/fixture.fap", "apps/Tools/fixture.fap")
+        checksum = base / "fw-packages-dev-008-SHA256SUMS"
+        checksum.write_text(
+            "".join(
+                f"{sha256(base / name)}  {name}\n"
+                for name in ("tumoflip-packages.json", "tumoflip-packages.zip")
+            )
+        )
+        base_contract["releaseId"] = manifest["release_id"]
+        base_contract["assets"] = {
+            checksum.name: sha256(checksum),
+            "tumoflip-packages.json": sha256(manifest_path),
+            "tumoflip-packages.zip": sha256(base / "tumoflip-packages.zip"),
+        }
+        artifact = source / "build/f7-firmware-C/.extapps/fixture.fap"
+        artifact.parent.mkdir(parents=True)
+        artifact.write_bytes(candidate)
+        plan = copy.deepcopy(self.plan)
+        plan["baseRelease"] = base_contract
+        plan["selectedOverlays"] = {"fixture": entry["source"]}
+        plan["overlayTargets"] = [entry["source"]]
+        plan["maxChangedTargets"] = 1
+
+        def runner(command, *, cwd):
+            command = tuple(command)
+            if command[:3] == ("git", "rev-parse", "HEAD"):
+                return subprocess.CompletedProcess(command, 0, self.source_commit + "\n", "")
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        with self.assertRaisesRegex(ContractError, "no runtime change"):
+            build_native_release(source, base, self.root / "debuglink", plan, runner=runner)
 
     def test_source_commit_mismatch_is_terminal(self) -> None:
         output = self._source_output()

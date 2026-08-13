@@ -38,15 +38,13 @@ application source, `fbt`, firmware builds, API checks, and firmware releases.
 Package workflows check out that repository by exact commit and never copy its
 source here.
 
-The native package path is currently **build-only**. It can produce and verify
-the reserved `dev-009` artifact, but the workflow has no
-`contents: write` permission and never calls the publisher. Enabling publication
-requires equivalence review plus physical installation and verification of the
-candidate artifact. Native builds start from the exact current catalog and are
-allowed to replace only the reviewed overlay paths, so a newer firmware source
-checkout cannot turn unrelated FAPs into false updates.
-Dev009 currently selects only `esp_flasher`; Stable002 is reserved but remains
-unbuildable until its own reviewed stable source plan is checked in.
+The native package path is currently **fail-closed**. The workflow has no
+`contents: write` permission and never calls the publisher. Dev009 and Stable002
+are reserved but neither has an authorized source/overlay plan. Enabling a build
+requires a reviewed source change, an exact source commit, and explicit overlay
+selection. Native builds start from the exact current catalog and may replace
+only those reviewed paths, so build-only metadata drift cannot become a false
+application update.
 
 See [Migration](docs/MIGRATION.md), [Release contract](docs/RELEASES.md), and
 [Security](SECURITY.md).

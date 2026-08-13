@@ -31,10 +31,10 @@ builder. A read-only build job produces an artifact and verification report. A
 separate environment-protected job with `contents: write` publishes only that
 verified artifact.
 
-During the migration gate the second half is intentionally disabled: the build
-job uploads a one-day CI artifact, while the environment job has read-only
-permissions and exits. `tools/publish_native.py` is covered by transaction tests
-but is not reachable from Actions.
+During the migration gate the second half is intentionally disabled: the
+environment job has read-only permissions and exits. The build job also fails
+closed until a reviewed release plan exists. `tools/publish_native.py` is
+covered by transaction tests but is not reachable from Actions.
 
 ## Native build ownership
 
@@ -44,8 +44,8 @@ repository owns the independent-catalog delta composition and will accept only
 paths that resolve unambiguously through that source-owned mapping. A checked-in
 per-release plan pins the only authorized source
 commit and a non-empty subset of the allowlisted overlays. There is no implicit
-"rebuild all" default, and stable publication remains blocked until it receives
-its own reviewed main-compatible source plan.
+"rebuild all" default. Both reserved releases remain blocked until they receive
+their own reviewed source plan containing an actual runtime change.
 Before composition, the workflow downloads the current immutable package
 catalog from this repository and verifies its release ID, checksum, ZIP, and
 contract-pinned asset hashes. The source builder overlays only the separately
@@ -62,13 +62,15 @@ create false mass updates.
 4. adds `catalog_channel`, `catalog_revision`, and the immutable release tag;
 5. recomputes the content-addressed manifest ID;
 6. emits a two-asset checksum file and `catalog-provenance.json`;
-7. normalizes ZIP order, timestamps, permissions, and compression so an exact
-   source produces reproducible archive bytes;
+7. pins the CI image, records the source toolchain version and exact built FAP
+   hashes, and normalizes ZIP container order, timestamps, and permissions;
 8. independently verifies manifest, archive members, hashes, sizes, paths, and
    the bounded delta against that predecessor.
 
 Selecting an overlay whose newly built digest equals the predecessor is a
-terminal no-op error; operators must not consume a revision without new bytes.
+terminal no-op error. A FAP differing only in its `.gnu_debuglink` CRC is also a
+runtime no-op and is rejected. FAP payload reproducibility is not assumed;
+exact source-built bytes are recorded and independently checked.
 
 Firmware DFU, update, SDK, updater, or radio assets are never downloaded,
 rewritten, checksummed into, or uploaded by this path.
@@ -76,8 +78,10 @@ rewritten, checksummed into, or uploaded by this path.
 The dormant publisher uses a resumable transaction: create a draft through the
 REST API (retaining its returned release ID), upload only missing assets,
 download and byte-verify all assets, publish by release ID, then download and
-verify again. Any unexpected, partial-public, or mismatching release is terminal
-and is never clobbered.
+verify again. At the privilege boundary it also requires the exact
+contract-pinned predecessor assets and repeats the bounded-delta verification.
+Any unexpected, partial-public, or mismatching release is terminal and is never
+clobbered.
 
 ## Protected audit releases
 

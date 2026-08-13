@@ -18,12 +18,5 @@
     "totp_cli_update_plugin": "apps_data/totp/plugins/totp_cli_update_plugin.fal",
     "totp_cli_version_plugin": "apps_data/totp/plugins/totp_cli_version_plugin.fal"
   },
-  "releasePlans": {
-    "fw-packages-dev-009": {
-      "sourceCommit": "a6bb38f027f5f17f2752d5dfca157478472b5c10",
-      "selectedOverlays": [
-        "esp_flasher"
-      ]
-    }
-  }
+  "releasePlans": {}
 }

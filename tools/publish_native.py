@@ -14,6 +14,7 @@ import json
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Any, Callable, Sequence
 from urllib.parse import quote
@@ -28,6 +29,7 @@ except ImportError:  # Direct script execution.
 
 Runner = Callable[[Sequence[str]], subprocess.CompletedProcess[str]]
 Downloader = Callable[[Sequence[str], Path], subprocess.CompletedProcess[str]]
+Sleeper = Callable[[float], None]
 RELEASE_NOTES = (
     "Independent Tumoflip FW Packages release. Firmware flash assets are unchanged. "
     "See catalog-provenance.json for exact source and publisher commits."
@@ -335,8 +337,28 @@ def _publish(
     return release
 
 
+def _wait_for_exact_tag(
+    runner: Runner,
+    repository: str,
+    tag: str,
+    expected_commit: str,
+    sleeper: Sleeper,
+    attempts: int = 5,
+) -> None:
+    for attempt in range(attempts):
+        target = _tag_target(runner, repository, tag)
+        if target == expected_commit:
+            return
+        if target is not None:
+            raise ContractError("published release tag target differs")
+        if attempt + 1 < attempts:
+            sleeper(1.0)
+    raise ContractError("published release tag did not become visible")
+
+
 def publish_native(
     directory: Path,
+    base_directory: Path,
     control_root: Path,
     repository: str,
     channel: str,
@@ -345,13 +367,16 @@ def publish_native(
     publisher_commit: str,
     runner: Runner = default_runner,
     downloader: Downloader = default_downloader,
+    sleeper: Sleeper = time.sleep,
 ) -> None:
     plan = load_native_plan(
         control_root, channel, revision, source_commit, publisher_commit
     )
     if repository != plan["publisherRepository"]:
         raise ContractError("publication repository differs from contract")
-    verify_native_release(directory, plan)
+    # Re-prove the bounded delta from the pinned predecessor after the artifact
+    # crosses into the privileged publication boundary.
+    verify_native_release(directory, plan, base_directory)
     release = _find_release(runner, repository, plan["tag"])
     if release is not None and release.get("draft") is False:
         _validate_metadata(release, plan, draft=False)
@@ -375,13 +400,15 @@ def publish_native(
     _verify_assets(downloader, directory, repository, plan, release, complete=True)
     release = _publish(runner, repository, plan, release_id)
     _verify_assets(downloader, directory, repository, plan, release, complete=True)
-    if _tag_target(runner, repository, plan["tag"]) != publisher_commit:
-        raise ContractError("published release tag target differs")
+    _wait_for_exact_tag(
+        runner, repository, plan["tag"], publisher_commit, sleeper
+    )
 
 
 def parser() -> argparse.ArgumentParser:
     value = argparse.ArgumentParser()
     value.add_argument("--directory", type=Path, required=True)
+    value.add_argument("--base-directory", type=Path, required=True)
     value.add_argument("--control-root", type=Path, default=Path("."))
     value.add_argument("--repository", required=True)
     value.add_argument("--channel", choices=("stable", "dev"), required=True)
@@ -396,6 +423,7 @@ def main() -> int:
     try:
         publish_native(
             args.directory.resolve(),
+            args.base_directory.resolve(),
             args.control_root.resolve(),
             args.repository,
             args.channel,

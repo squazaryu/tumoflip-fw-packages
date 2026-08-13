@@ -50,6 +50,13 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertRegex(requirements, r"heatshrink2==[0-9]+\.[0-9]+\.[0-9]+")
         self.assertEqual(requirements.count("--hash=sha256:"), 2)
         self.assertIn("control/tools/source_build_targets.py", text)
+        self.assertIn("control/tools/preflight_native.py", text)
+        self.assertLess(
+            text.index("control/tools/preflight_native.py"),
+            text.index("repository: squazaryu/tumoflip"),
+        )
+        self.assertIn("runs-on: ubuntu-24.04", text)
+        self.assertIn("firmware/toolchain/x86_64-linux/VERSION", text)
         self.assertIn('--control-root control', text)
         self.assertIn('--channel "$CHANNEL"', text)
         self.assertIn('--revision "$REVISION"', text)

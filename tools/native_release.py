@@ -16,6 +16,7 @@ import json
 import os
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -123,6 +124,10 @@ def load_native_plan(
     )
     if source_contract.get("buildParallelism") != 2:
         raise ContractError("build parallelism contract must remain exactly 2")
+    build_runner = source_contract.get("buildRunner")
+    toolchain_version = source_contract.get("toolchainVersion")
+    if build_runner != "ubuntu-24.04" or toolchain_version != "39":
+        raise ContractError("native build environment contract differs")
     allowed_overlays = policy.get("allowedOverlays")
     release_plans = policy.get("releasePlans")
     if (
@@ -224,6 +229,10 @@ def load_native_plan(
         "selectedOverlays": selected_overlays,
         "overlayTargets": sorted(selected_overlays.values()),
         "maxChangedTargets": len(selected_overlays),
+        "buildEnvironment": {
+            "runner": build_runner,
+            "toolchainVersion": toolchain_version,
+        },
         "targetFirmware": {
             "repository": source_repository,
             "tag": firmware_tag,
@@ -308,7 +317,16 @@ def _validate_source_manifest(manifest: dict[str, Any], plan: dict[str, Any]) ->
         not isinstance(synced, list)
         or len(synced) != len(plan["overlayTargets"])
         or any(not isinstance(entry, dict) for entry in synced)
-        or any(not isinstance(entry.get("target"), str) for entry in synced)
+        or any(
+            not isinstance(entry.get("source"), str)
+            or not isinstance(entry.get("target"), str)
+            or not isinstance(entry.get("bytes"), int)
+            or isinstance(entry.get("bytes"), bool)
+            or entry.get("bytes", 0) < 1
+            or re.fullmatch(r"[0-9a-f]{64}", str(entry.get("sha256"))) is None
+            or re.fullmatch(r"[0-9a-f]{32}", str(entry.get("md5"))) is None
+            for entry in synced
+        )
         or sorted(entry.get("target") for entry in synced) != plan["overlayTargets"]
     ):
         raise ContractError("source manifest synced overlay set differs")
@@ -373,6 +391,84 @@ def _entries_by_source(manifest: dict[str, Any]) -> dict[str, tuple[str, dict[st
     }
 
 
+def _gnu_debuglink_crc_range(data: bytes) -> tuple[int, int] | None:
+    """Locate the non-runtime CRC field in a 32-bit little-endian ELF file."""
+
+    if len(data) < 52 or data[:7] != b"\x7fELF\x01\x01\x01":
+        return None
+    try:
+        section_offset = struct.unpack_from("<I", data, 32)[0]
+        section_size, section_count, names_index = struct.unpack_from(
+            "<HHH", data, 46
+        )
+    except struct.error:
+        return None
+    if (
+        section_size != 40
+        or section_count < 2
+        or names_index == 0
+        or names_index >= section_count
+        or section_offset > len(data)
+        or section_count > (len(data) - section_offset) // section_size
+    ):
+        return None
+
+    def section(index: int) -> tuple[int, int, int] | None:
+        offset = section_offset + index * section_size
+        try:
+            name_offset, file_offset, file_size = struct.unpack_from(
+                "<I12xII", data, offset
+            )
+        except struct.error:
+            return None
+        if file_offset > len(data) or file_size > len(data) - file_offset:
+            return None
+        return name_offset, file_offset, file_size
+
+    names_section = section(names_index)
+    if names_section is None:
+        return None
+    _, names_offset, names_size = names_section
+    names = data[names_offset : names_offset + names_size]
+    matches: list[tuple[int, int]] = []
+    for index in range(1, section_count):
+        item = section(index)
+        if item is None:
+            return None
+        name_offset, file_offset, file_size = item
+        if name_offset >= len(names):
+            return None
+        name_end = names.find(b"\0", name_offset)
+        if name_end < 0:
+            return None
+        if names[name_offset:name_end] != b".gnu_debuglink":
+            continue
+        contents = data[file_offset : file_offset + file_size]
+        filename_end = contents.find(b"\0")
+        if filename_end < 0:
+            return None
+        crc_offset = (filename_end + 4) & ~3
+        if crc_offset + 4 != len(contents):
+            return None
+        matches.append((file_offset + crc_offset, file_offset + crc_offset + 4))
+    return matches[0] if len(matches) == 1 else None
+
+
+def _runtime_equivalent_fap(previous: bytes, candidate: bytes) -> bool:
+    """Return true when FAP bytes differ only by the debug-file CRC."""
+
+    if previous == candidate:
+        return True
+    if len(previous) != len(candidate):
+        return False
+    old_crc = _gnu_debuglink_crc_range(previous)
+    new_crc = _gnu_debuglink_crc_range(candidate)
+    if old_crc is None or new_crc is None or old_crc != new_crc:
+        return False
+    start, end = old_crc
+    return previous[:start] == candidate[:start] and previous[end:] == candidate[end:]
+
+
 def _source_exports(source_root: Path) -> dict[str, str]:
     try:
         from .source_build_targets import source_overlay_exports
@@ -404,10 +500,15 @@ def _compose_selected_release(
     if not isinstance(packages, dict):
         raise ContractError("immutable base package topology is invalid")
     base_entries = _entries_by_source(base)
+    missing = selected_paths - set(base_entries)
+    if missing:
+        raise ContractError(
+            f"selected overlay is absent from immutable base: {sorted(missing)[0]}"
+        )
+    with zipfile.ZipFile(base_directory / "tumoflip-packages.zip") as base_zip:
+        base_payloads = {source: base_zip.read(source) for source in selected_paths}
     synced: list[dict[str, Any]] = []
     for source in sorted(selected_paths):
-        if source not in base_entries:
-            raise ContractError(f"selected overlay is absent from immutable base: {source}")
         group, old_entry = base_entries[source]
         filename = exports[source]
         artifact = build_directory / ".extapps" / filename
@@ -416,6 +517,8 @@ def _compose_selected_release(
         data = artifact.read_bytes()
         if not data:
             raise ContractError(f"selected source build artifact is empty: {filename}")
+        if _runtime_equivalent_fap(base_payloads[source], data):
+            raise ContractError(f"selected overlay has no runtime change: {source}")
         replacement = {
             "source": source,
             "target": old_entry["target"],
@@ -423,11 +526,6 @@ def _compose_selected_release(
             "sha256": hashlib.sha256(data).hexdigest(),
             "md5": hashlib.md5(data).hexdigest(),
         }
-        if all(
-            replacement[key] == old_entry.get(key)
-            for key in ("bytes", "sha256", "md5")
-        ):
-            raise ContractError(f"selected overlay is unchanged: {source}")
         matches = [
             index
             for index, entry in enumerate(packages[group])
@@ -617,6 +715,8 @@ def finalize_native_release(
             "targets": plan["overlayTargets"],
             "maxChangedTargets": plan["maxChangedTargets"],
         },
+        "buildEnvironment": plan["buildEnvironment"],
+        "sourceBuiltOverlays": manifest["package_release"]["synced_extapps"],
         "changedTargets": changed_targets,
         "manifestReleaseId": manifest["release_id"],
         "assets": assets,
@@ -654,10 +754,16 @@ def verify_native_release(
             "targets": plan["overlayTargets"],
             "maxChangedTargets": plan["maxChangedTargets"],
         },
+        "buildEnvironment": plan["buildEnvironment"],
     }
     for key, value in exact.items():
         if provenance.get(key) != value:
             raise ContractError(f"native provenance {key} differs")
+    manifest = load_json(directory / "tumoflip-packages.json")
+    if provenance.get("sourceBuiltOverlays") != manifest["package_release"].get(
+        "synced_extapps"
+    ):
+        raise ContractError("native provenance source-built overlays differ")
     changed_targets = provenance.get("changedTargets")
     if (
         not isinstance(changed_targets, list)
@@ -671,7 +777,6 @@ def verify_native_release(
         actual_changed = verify_bounded_delta(base_directory, directory, plan)
         if changed_targets != actual_changed:
             raise ContractError("native provenance changedTargets evidence differs")
-    manifest = load_json(directory / "tumoflip-packages.json")
     if provenance.get("manifestReleaseId") != manifest.get("release_id"):
         raise ContractError("native provenance manifest release ID differs")
     checksum_name = f"{plan['tag']}-SHA256SUMS"
