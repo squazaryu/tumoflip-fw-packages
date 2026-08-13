@@ -1,26 +1,196 @@
 from __future__ import annotations
 
+import copy
 import json
-import shutil
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
-from tools.publish_seed import publish_seed
+from tools.catalog_contract import ContractError
+from tools.publish_seed import RELEASE_NOTES, publish_seed
 
 
-class PartialPublicationRerunTests(unittest.TestCase):
+class FakeGitHub:
+    def __init__(self, root: Path, repository: str, publisher_commit: str) -> None:
+        self.root = root
+        self.repository = repository
+        self.publisher_commit = publisher_commit
+        self.releases: dict[str, dict[str, object]] = {}
+        self.asset_bytes: dict[int, bytes] = {}
+        self.tags: dict[str, str] = {}
+        self.next_release_id = 100
+        self.next_asset_id = 1_000
+        self.events: list[tuple[str, str, tuple[str, ...]]] = []
+
+    @staticmethod
+    def channel(tag: str) -> str:
+        return "stable" if "-stable-" in tag else "dev"
+
+    @staticmethod
+    def title(channel: str, tag: str) -> str:
+        return f"FW Packages {channel} {tag.rsplit('-', 1)[-1]} (legacy mirror)"
+
+    def local_names(self, tag: str) -> list[str]:
+        channel = self.channel(tag)
+        return sorted(path.name for path in (self.root / "seed" / channel).iterdir())
+
+    def add_release(
+        self,
+        tag: str,
+        *,
+        draft: bool,
+        names: list[str] | None = None,
+        tamper: str | None = None,
+        unexpected: str | None = None,
+        target: str | None = None,
+        name: str | None = None,
+    ) -> dict[str, object]:
+        channel = self.channel(tag)
+        release: dict[str, object] = {
+            "id": self.next_release_id,
+            "tag_name": tag,
+            "target_commitish": target or self.publisher_commit,
+            "name": name or self.title(channel, tag),
+            "body": RELEASE_NOTES,
+            "draft": draft,
+            "prerelease": channel == "dev",
+            "assets": [],
+        }
+        self.next_release_id += 1
+        self.releases[tag] = release
+        for asset_name in names or []:
+            data = (self.root / "seed" / channel / asset_name).read_bytes()
+            if asset_name == tamper:
+                data = bytes([data[0] ^ 1]) + data[1:]
+            self._add_asset(release, asset_name, data)
+        if unexpected is not None:
+            self._add_asset(release, unexpected, b"unexpected")
+        if not draft:
+            self.tags[tag] = target or self.publisher_commit
+        return release
+
+    def _add_asset(self, release: dict[str, object], name: str, data: bytes) -> None:
+        asset_id = self.next_asset_id
+        self.next_asset_id += 1
+        self.asset_bytes[asset_id] = data
+        assets = release["assets"]
+        assert isinstance(assets, list)
+        assets.append(
+            {
+                "id": asset_id,
+                "name": name,
+                "size": len(data),
+                "digest": None,
+            }
+        )
+
+    @staticmethod
+    def _flag_value(command: list[str], flag: str) -> str:
+        return command[command.index(flag) + 1]
+
+    @staticmethod
+    def _response(command: list[str], value: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(command, 0, json.dumps(value), "")
+
+    def runner(self, command: list[str] | tuple[str, ...]) -> subprocess.CompletedProcess[str]:
+        command = list(command)
+        if command[:2] == ["gh", "api"]:
+            if len(command) >= 3 and command[2].endswith("/releases?per_page=100"):
+                releases = [copy.deepcopy(item) for item in self.releases.values()]
+                return self._response(command, [releases])
+            endpoint = command[2]
+            if "/git/ref/tags/" in endpoint:
+                tag = endpoint.rsplit("/", 1)[-1]
+                target = self.tags.get(tag)
+                if target is None:
+                    return subprocess.CompletedProcess(command, 1, "", "HTTP 404: Not Found")
+                return self._response(command, {"object": {"type": "commit", "sha": target}})
+            if "/releases/" in endpoint:
+                release_id = int(endpoint.rsplit("/", 1)[-1])
+                return self._response(command, copy.deepcopy(self._release_for_id(release_id)))
+        if command[:3] == ["gh", "release", "create"]:
+            tag = command[3]
+            if "--draft" not in command or tag in self.releases:
+                raise AssertionError("release must be created once and as a draft")
+            self.events.append(("create-draft", tag, ()))
+            release = self.add_release(
+                tag,
+                draft=True,
+                target=self._flag_value(command, "--target"),
+                name=self._flag_value(command, "--title"),
+            )
+            release["body"] = self._flag_value(command, "--notes")
+            release["prerelease"] = "--prerelease" in command
+            return subprocess.CompletedProcess(command, 0, "created", "")
+        if command[:3] == ["gh", "release", "upload"]:
+            tag = command[3]
+            release = self.releases[tag]
+            if release["draft"] is not True:
+                raise AssertionError("publisher attempted to upload to a public release")
+            repo_index = command.index("--repo")
+            paths = [Path(value) for value in command[4:repo_index]]
+            uploaded = tuple(path.name for path in paths)
+            self.events.append(("upload", tag, uploaded))
+            existing = {
+                item["name"]
+                for item in release["assets"]  # type: ignore[index]
+                if isinstance(item, dict)
+            }
+            for path in paths:
+                if path.name in existing:
+                    return subprocess.CompletedProcess(command, 1, "", "already_exists")
+                self._add_asset(release, path.name, path.read_bytes())
+            return subprocess.CompletedProcess(command, 0, "uploaded", "")
+        if command[:3] == ["gh", "release", "edit"]:
+            tag = command[3]
+            release = self.releases[tag]
+            if release["draft"] is not True:
+                raise AssertionError("only a verified draft may be published")
+            if "--draft=false" not in command or "--latest=false" not in command:
+                raise AssertionError("release edit flags are not fail-closed")
+            prerelease_flag = next(
+                item for item in command if item.startswith("--prerelease=")
+            )
+            self.events.append(("publish", tag, ()))
+            release["target_commitish"] = self._flag_value(command, "--target")
+            release["name"] = self._flag_value(command, "--title")
+            release["body"] = self._flag_value(command, "--notes")
+            release["draft"] = False
+            release["prerelease"] = prerelease_flag == "--prerelease=true"
+            self.tags[tag] = str(release["target_commitish"])
+            return subprocess.CompletedProcess(command, 0, "published", "")
+        raise AssertionError(f"unexpected command: {command}")
+
+    def _release_for_id(self, release_id: int) -> dict[str, object]:
+        for release in self.releases.values():
+            if release["id"] == release_id:
+                return release
+        raise AssertionError(f"unknown release {release_id}")
+
+    def downloader(
+        self, command: list[str] | tuple[str, ...], destination: Path
+    ) -> subprocess.CompletedProcess[str]:
+        command = list(command)
+        endpoint = command[-1]
+        asset_id = int(endpoint.rsplit("/", 1)[-1])
+        destination.write_bytes(self.asset_bytes[asset_id])
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+
+class AtomicPublicationTests(unittest.TestCase):
     repository = "squazaryu/tumoflip-fw-packages"
     publisher_commit = "a" * 40
+    stable_tag = "fw-packages-stable-001"
+    dev_tag = "fw-packages-dev-008"
 
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
         self.contract_root = self.root / "control"
         (self.contract_root / "contracts").mkdir(parents=True)
-        channels = {}
+        channels: dict[str, dict[str, object]] = {}
         for channel, revision in (("stable", 1), ("dev", 8)):
             tag = f"fw-packages-{channel}-{revision:03d}"
             channels[channel] = {"tag": tag, "prerelease": channel == "dev"}
@@ -43,86 +213,135 @@ class PartialPublicationRerunTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        self.existing = {"fw-packages-stable-001"}
-        self.created: list[str] = []
-        self.downloaded: list[str] = []
+        self.github = FakeGitHub(self.root, self.repository, self.publisher_commit)
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
-    def _metadata(self, tag: str) -> dict[str, object]:
-        channel = "stable" if "stable" in tag else "dev"
-        directory = self.root / "seed" / channel
-        return {
-            "tag_name": tag,
-            "draft": False,
-            "prerelease": channel == "dev",
-            "assets": [
-                {
-                    "name": path.name,
-                    "size": path.stat().st_size,
-                    "digest": None,
-                }
-                for path in sorted(directory.iterdir())
-            ],
-        }
+    def names(self, tag: str) -> list[str]:
+        return self.github.local_names(tag)
 
-    def _runner(self, command: tuple[str, ...] | list[str]) -> subprocess.CompletedProcess[str]:
-        command = list(command)
-        if command[:2] == ["gh", "api"]:
-            endpoint = command[2]
-            if "/releases/tags/" in endpoint:
-                tag = endpoint.rsplit("/", 1)[-1]
-                if tag not in self.existing:
-                    return subprocess.CompletedProcess(command, 1, "", "HTTP 404: Not Found")
-                return subprocess.CompletedProcess(command, 0, json.dumps(self._metadata(tag)), "")
-            if "/git/ref/tags/" in endpoint:
-                return subprocess.CompletedProcess(
-                    command,
-                    0,
-                    json.dumps(
-                        {"object": {"type": "commit", "sha": self.publisher_commit}}
-                    ),
-                    "",
-                )
-        if command[:3] == ["gh", "release", "create"]:
-            tag = command[3]
-            self.assertNotIn(tag, self.existing)
-            self.existing.add(tag)
-            self.created.append(tag)
-            return subprocess.CompletedProcess(command, 0, "created", "")
-        if command[:3] == ["gh", "release", "download"]:
-            tag = command[3]
-            channel = "stable" if "stable" in tag else "dev"
-            destination = Path(command[command.index("--dir") + 1])
-            for path in (self.root / "seed" / channel).iterdir():
-                shutil.copy2(path, destination / path.name)
-            self.downloaded.append(tag)
-            return subprocess.CompletedProcess(command, 0, "", "")
-        self.fail(f"unexpected command: {command}")
+    def publish(self) -> None:
+        with (
+            mock.patch("tools.publish_seed.verify_release_directory"),
+            mock.patch("tools.publish_seed.verify_migration_provenance"),
+        ):
+            publish_seed(
+                self.root / "seed",
+                self.contract_root,
+                self.repository,
+                self.publisher_commit,
+                self.github.runner,
+                self.github.downloader,
+            )
 
-    @mock.patch("tools.publish_seed.verify_release_directory")
-    @mock.patch("tools.publish_seed.verify_migration_provenance")
-    def test_rerun_verifies_existing_stable_then_creates_only_missing_dev(
-        self,
-        _verify_provenance: mock.Mock,
-        _verify_release: mock.Mock,
-    ) -> None:
-        publish_seed(
-            self.root / "seed",
-            self.contract_root,
-            self.repository,
-            self.publisher_commit,
-            self._runner,
-        )
+    def add_exact_published(self, tag: str) -> None:
+        self.github.add_release(tag, draft=False, names=self.names(tag))
 
-        self.assertEqual(self.created, ["fw-packages-dev-008"])
+    def test_missing_release_is_drafted_uploaded_verified_then_published(self) -> None:
+        self.add_exact_published(self.stable_tag)
+
+        self.publish()
+
+        dev_events = [event for event in self.github.events if event[1] == self.dev_tag]
         self.assertEqual(
-            self.downloaded,
-            ["fw-packages-stable-001", "fw-packages-dev-008"],
+            dev_events,
+            [
+                ("create-draft", self.dev_tag, ()),
+                ("upload", self.dev_tag, tuple(self.names(self.dev_tag))),
+                ("publish", self.dev_tag, ()),
+            ],
         )
-        self.assertEqual(_verify_release.call_count, 4)
-        _verify_provenance.assert_called_once()
+        self.assertFalse(self.github.releases[self.dev_tag]["draft"])
+
+    def test_partial_draft_resumes_only_missing_assets_then_publishes(self) -> None:
+        self.add_exact_published(self.stable_tag)
+        present = self.names(self.dev_tag)[:2]
+        self.github.add_release(self.dev_tag, draft=True, names=present)
+
+        self.publish()
+
+        missing = tuple(sorted(set(self.names(self.dev_tag)) - set(present)))
+        self.assertEqual(
+            [event for event in self.github.events if event[1] == self.dev_tag],
+            [
+                ("upload", self.dev_tag, missing),
+                ("publish", self.dev_tag, ()),
+            ],
+        )
+
+    def test_exact_published_releases_verify_and_skip_all_mutation(self) -> None:
+        self.add_exact_published(self.stable_tag)
+        self.add_exact_published(self.dev_tag)
+
+        self.publish()
+
+        self.assertEqual(self.github.events, [])
+
+    def test_published_partial_release_is_terminal(self) -> None:
+        self.github.add_release(
+            self.stable_tag, draft=False, names=self.names(self.stable_tag)[:-1]
+        )
+
+        with self.assertRaisesRegex(ContractError, "release is missing asset"):
+            self.publish()
+        self.assertEqual(self.github.events, [])
+
+    def test_published_tampered_release_is_terminal(self) -> None:
+        tampered = self.names(self.stable_tag)[0]
+        self.github.add_release(
+            self.stable_tag,
+            draft=False,
+            names=self.names(self.stable_tag),
+            tamper=tampered,
+        )
+
+        with self.assertRaisesRegex(ContractError, "release asset bytes differ"):
+            self.publish()
+        self.assertEqual(self.github.events, [])
+
+    def test_draft_tamper_is_terminal_without_upload_or_publish(self) -> None:
+        self.add_exact_published(self.stable_tag)
+        tampered = self.names(self.dev_tag)[0]
+        self.github.add_release(
+            self.dev_tag, draft=True, names=[tampered], tamper=tampered
+        )
+
+        with self.assertRaisesRegex(ContractError, "release asset bytes differ"):
+            self.publish()
+        self.assertEqual(self.github.events, [])
+
+    def test_draft_unexpected_asset_is_terminal(self) -> None:
+        self.add_exact_published(self.stable_tag)
+        self.github.add_release(self.dev_tag, draft=True, unexpected="surprise.bin")
+
+        with self.assertRaisesRegex(ContractError, "unexpected asset"):
+            self.publish()
+        self.assertEqual(self.github.events, [])
+
+    def test_published_wrong_tag_target_is_terminal(self) -> None:
+        self.github.add_release(
+            self.stable_tag,
+            draft=False,
+            names=self.names(self.stable_tag),
+        )
+        self.github.tags[self.stable_tag] = "b" * 40
+
+        with self.assertRaisesRegex(ContractError, "tag target differs"):
+            self.publish()
+        self.assertEqual(self.github.events, [])
+
+    def test_draft_metadata_drift_is_terminal(self) -> None:
+        self.add_exact_published(self.stable_tag)
+        self.github.add_release(
+            self.dev_tag,
+            draft=True,
+            name="not the canonical title",
+        )
+
+        with self.assertRaisesRegex(ContractError, "metadata differs"):
+            self.publish()
+        self.assertEqual(self.github.events, [])
 
 
 if __name__ == "__main__":

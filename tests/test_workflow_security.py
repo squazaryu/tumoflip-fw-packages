@@ -39,6 +39,33 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertNotIn("gh release create", text)
         self.assertIn("verify_catalog.py migration", text)
 
+    def test_seed_dispatch_is_pinned_to_exact_default_main_commit(self) -> None:
+        text = (self.root / ".github/workflows/seed-legacy.yml").read_text(encoding="utf-8")
+        guard = (
+            "if: github.ref == 'refs/heads/main' && "
+            "github.event.repository.default_branch == 'main'"
+        )
+        self.assertEqual(text.count(guard), 2)
+        self.assertEqual(text.count("ref: ${{ github.sha }}"), 2)
+        self.assertEqual(
+            text.count('test "$(git rev-parse HEAD)" = "$GITHUB_SHA"'),
+            2,
+        )
+        self.assertEqual(
+            text.count(
+                'test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"'
+            ),
+            2,
+        )
+        self.assertLess(
+            text.index("Prove exact default-branch control commit"),
+            text.index("Upload verified seed"),
+        )
+        self.assertLess(
+            text.index("Prove exact default-branch publisher commit"),
+            text.index("Publish immutable mirrors"),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
