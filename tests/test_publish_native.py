@@ -175,6 +175,9 @@ class NativePublicationTests(unittest.TestCase):
         manifest["package_release"]["target_release_id"] = self.plan[
             "targetFirmware"
         ]["releaseId"]
+        manifest["package_release"]["target_source_commit"] = self.plan[
+            "targetFirmware"
+        ]["commit"]
         manifest["package_release"]["overlay_targets"] = self.plan["overlayTargets"]
         manifest["package_release"]["synced_extapps"] = [
             {
@@ -253,6 +256,34 @@ class NativePublicationTests(unittest.TestCase):
             lambda _: None,
         )
 
+    def resign_local_candidate(self, path: tuple[str, str], value: object) -> None:
+        manifest_path = self.directory / "tumoflip-packages.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest[path[0]][path[1]] = value
+        manifest["release_id"] = manifest_release_id(manifest)
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n"
+        )
+        checksum_path = self.directory / "fw-packages-dev-009-SHA256SUMS"
+        checksum_path.write_text(
+            "".join(
+                f"{sha256(self.directory / name)}  {name}\n"
+                for name in ("tumoflip-packages.json", "tumoflip-packages.zip")
+            )
+        )
+        provenance_path = self.directory / "catalog-provenance.json"
+        provenance = json.loads(provenance_path.read_text())
+        provenance["manifestReleaseId"] = manifest["release_id"]
+        for name in ("tumoflip-packages.json", checksum_path.name):
+            file = self.directory / name
+            provenance["assets"][name] = {
+                "bytes": file.stat().st_size,
+                "sha256": sha256(file),
+            }
+        provenance_path.write_text(
+            json.dumps(provenance, indent=2, sort_keys=True) + "\n"
+        )
+
     def test_create_response_id_avoids_eventual_consistency_lookup(self) -> None:
         self.publish()
         self.assertEqual(self.github.events, ["create", "upload", "publish"])
@@ -317,6 +348,34 @@ class NativePublicationTests(unittest.TestCase):
             if any("/git/ref/tags/" in item for item in command)
         ]
         self.assertEqual(len(tag_queries), 4)  # pre-create plus three post-publish
+
+    def test_resigned_manifest_lineage_tamper_is_terminal_after_artifact_boundary(
+        self,
+    ) -> None:
+        original = {
+            path.name: path.read_bytes() for path in self.directory.iterdir()
+        }
+        cases = (
+            (("firmware", "version"), "t-dev-tampered"),
+            (("firmware", "api"), "99.0"),
+            (("firmware", "target"), 8),
+            (("firmware", "name"), "other-firmware"),
+            (("package_release", "source_commit"), "c" * 40),
+            (("package_release", "source_repository"), "other/repository"),
+            (("package_release", "source_firmware_version"), "t-dev-tampered"),
+            (("package_release", "target_release_id"), "0" * 64),
+            (("package_release", "target_release_tag"), "t-dev-tampered"),
+            (("package_release", "target_source_commit"), "c" * 40),
+            (("package_release", "target_firmware_commit"), "c" * 40),
+        )
+        for path, value in cases:
+            with self.subTest(path=".".join(path)):
+                for name, data in original.items():
+                    (self.directory / name).write_bytes(data)
+                self.resign_local_candidate(path, value)
+                with self.assertRaisesRegex(ContractError, "differs"):
+                    self.publish()
+                self.assertIsNone(self.github.release)
 
 
 if __name__ == "__main__":

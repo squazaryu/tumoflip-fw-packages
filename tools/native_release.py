@@ -302,6 +302,7 @@ def _validate_source_manifest(manifest: dict[str, Any], plan: dict[str, Any]) ->
         "source_commit": plan["sourceCommit"],
         "source_dirty": False,
         "target_release_tag": expected_firmware["tag"],
+        "target_source_commit": expected_firmware["commit"],
         "firmware_flash_unchanged": True,
     }
     for field, value in required.items():
@@ -335,6 +336,26 @@ def _validate_source_manifest(manifest: dict[str, Any], plan: dict[str, Any]) ->
     packages = manifest.get("packages")
     if not isinstance(packages, dict) or set(packages) != PACKAGE_GROUPS:
         raise ContractError("source manifest package groups differ from client contract")
+
+
+def _validate_final_manifest_identity(
+    manifest: dict[str, Any], plan: dict[str, Any]
+) -> None:
+    package_release = manifest.get("package_release")
+    if not isinstance(package_release, dict):
+        raise ContractError("native package release identity is missing")
+    expected = {
+        "id": plan["tag"],
+        "source_repository": plan["sourceRepository"],
+        "source_firmware_version": plan["targetFirmware"]["version"],
+        "target_firmware_commit": plan["targetFirmware"]["commit"],
+        "catalog_channel": plan["channel"],
+        "catalog_revision": plan["revision"],
+        "catalog_release_tag": plan["tag"],
+    }
+    for field, value in expected.items():
+        if package_release.get(field) != value:
+            raise ContractError(f"native package release {field} differs")
 
 
 def _checksums(directory: Path, tag: str) -> Path:
@@ -616,6 +637,8 @@ def verify_bounded_delta(
     verify_release_directory(base_directory, plan["baseRelease"])
     base = load_json(base_directory / "tumoflip-packages.json")
     candidate = load_json(directory / "tumoflip-packages.json")
+    _validate_source_manifest(candidate, plan)
+    _validate_final_manifest_identity(candidate, plan)
     base_entries = _entries_by_source(base)
     candidate_entries = _entries_by_source(candidate)
     if set(base_entries) != set(candidate_entries):
@@ -633,6 +656,8 @@ def verify_bounded_delta(
         raise ContractError("native package delta exceeds control-owned overlay policy")
     if candidate.get("cleanup") != base.get("cleanup"):
         raise ContractError("native cleanup policy differs from immutable base")
+    if candidate.get("firmware") != base.get("firmware"):
+        raise ContractError("native firmware compatibility differs from immutable base")
     if candidate.get("artifacts") != base.get("artifacts"):
         raise ContractError("native firmware artifact evidence differs from immutable base")
     base_package_release = base.get("package_release")
@@ -640,8 +665,14 @@ def verify_bounded_delta(
     if (
         not isinstance(base_package_release, dict)
         or not isinstance(candidate_package_release, dict)
-        or candidate_package_release.get("target_release_id")
-        != base_package_release.get("target_release_id")
+        or any(
+            candidate_package_release.get(field) != base_package_release.get(field)
+            for field in (
+                "target_release_id",
+                "target_release_tag",
+                "target_source_commit",
+            )
+        )
     ):
         raise ContractError("native target firmware release lineage differs")
     with zipfile.ZipFile(base_directory / "tumoflip-packages.zip") as old_zip:
@@ -668,6 +699,7 @@ def finalize_native_release(
     package_release = dict(manifest["package_release"])
     package_release.update(
         {
+            "id": plan["tag"],
             "catalog_channel": plan["channel"],
             "catalog_revision": plan["revision"],
             "catalog_release_tag": plan["tag"],
@@ -729,6 +761,9 @@ def verify_native_release(
     directory: Path, plan: dict[str, Any], base_directory: Path | None = None
 ) -> None:
     verify_release_directory(directory)
+    manifest = load_json(directory / "tumoflip-packages.json")
+    _validate_source_manifest(manifest, plan)
+    _validate_final_manifest_identity(manifest, plan)
     provenance = load_json(directory / PROVENANCE_NAME)
     exact = {
         "schema": 1,
@@ -759,7 +794,6 @@ def verify_native_release(
     for key, value in exact.items():
         if provenance.get(key) != value:
             raise ContractError(f"native provenance {key} differs")
-    manifest = load_json(directory / "tumoflip-packages.json")
     if provenance.get("sourceBuiltOverlays") != manifest["package_release"].get(
         "synced_extapps"
     ):

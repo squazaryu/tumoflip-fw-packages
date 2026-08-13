@@ -58,6 +58,9 @@ class NativeReleaseTests(unittest.TestCase):
         manifest["package_release"]["target_release_id"] = self.plan[
             "targetFirmware"
         ]["releaseId"]
+        manifest["package_release"]["target_source_commit"] = self.plan[
+            "targetFirmware"
+        ]["commit"]
         manifest["package_release"]["overlay_targets"] = self.plan["overlayTargets"]
         manifest["package_release"]["synced_extapps"] = [
             {
@@ -139,7 +142,10 @@ class NativeReleaseTests(unittest.TestCase):
             )
         self.assertEqual(payloads_after, payloads_before)
         for key, value in before["package_release"].items():
+            if key == "id":
+                continue
             self.assertEqual(after["package_release"][key], value)
+        self.assertEqual(after["package_release"]["id"], "fw-packages-dev-009")
         self.assertEqual(after["package_release"]["catalog_channel"], "dev")
         self.assertEqual(after["package_release"]["catalog_revision"], 9)
         self.assertEqual(after["package_release"]["catalog_release_tag"], "fw-packages-dev-009")
