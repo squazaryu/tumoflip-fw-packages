@@ -4,6 +4,8 @@
   "refPolicy": "full-commit-sha-only",
   "commitPattern": "^[0-9a-f]{40}$",
   "buildParallelism": 2,
+  "buildRunner": "ubuntu-24.04",
+  "toolchainVersion": "39",
   "publisherRepository": "squazaryu/tumoflip-fw-packages",
   "releaseTagPatterns": {
     "stable": "^fw-packages-stable-[0-9]{3}$",

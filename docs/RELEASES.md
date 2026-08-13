@@ -31,6 +31,58 @@ builder. A read-only build job produces an artifact and verification report. A
 separate environment-protected job with `contents: write` publishes only that
 verified artifact.
 
+During the migration gate the second half is intentionally disabled: the
+environment job has read-only permissions and exits. The build job also fails
+closed until a reviewed release plan exists. `tools/publish_native.py` is
+covered by transaction tests but is not reachable from Actions.
+
+## Native build ownership
+
+The exact firmware checkout owns application source, `fbt`, and the
+`PACKAGE_RELEASE_OVERLAY_FILES` / `package_extapp_exports` mapping. This
+repository owns the independent-catalog delta composition and will accept only
+paths that resolve unambiguously through that source-owned mapping. A checked-in
+per-release plan pins the only authorized source
+commit and a non-empty subset of the allowlisted overlays. There is no implicit
+"rebuild all" default. Both reserved releases remain blocked until they receive
+their own reviewed source plan containing an actual runtime change.
+Before composition, the workflow downloads the current immutable package
+catalog from this repository and verifies its release ID, checksum, ZIP, and
+contract-pinned asset hashes. The source builder overlays only the separately
+reviewed paths in `contracts/native-build-policy.json`; rebuilding the other
+applications from a newer firmware checkout is forbidden because it would
+create false mass updates.
+`tools/native_release.py` then:
+
+1. proves the full source SHA and a clean tracked checkout;
+2. requires the channel's pinned firmware tag, commit, release ID, version, API,
+   and target, independently from the predecessor catalog release ID;
+3. preserves package topology, cleanup entries, firmware artifact evidence,
+   and every non-overlay ZIP member payload byte from the immutable predecessor;
+4. adds `catalog_channel`, `catalog_revision`, and the immutable release tag;
+5. recomputes the content-addressed manifest ID;
+6. emits a two-asset checksum file and `catalog-provenance.json`;
+7. pins the CI image, records the source toolchain version and exact built FAP
+   hashes, and normalizes ZIP container order, timestamps, and permissions;
+8. independently verifies manifest, archive members, hashes, sizes, paths, and
+   the bounded delta against that predecessor.
+
+Selecting an overlay whose newly built digest equals the predecessor is a
+terminal no-op error. A FAP differing only in its `.gnu_debuglink` CRC is also a
+runtime no-op and is rejected. FAP payload reproducibility is not assumed;
+exact source-built bytes are recorded and independently checked.
+
+Firmware DFU, update, SDK, updater, or radio assets are never downloaded,
+rewritten, checksummed into, or uploaded by this path.
+
+The dormant publisher uses a resumable transaction: create a draft through the
+REST API (retaining its returned release ID), upload only missing assets,
+download and byte-verify all assets, publish by release ID, then download and
+verify again. At the privilege boundary it also requires the exact
+contract-pinned predecessor assets and repeats the bounded-delta verification.
+Any unexpected, partial-public, or mismatching release is terminal and is never
+clobbered.
+
 ## Protected audit releases
 
 Audit releases use their own tag namespace and cannot be selected as FW
