@@ -94,3 +94,16 @@ Packages. The client-visible provenance identity is exactly:
 
 Generator-only evidence must be deterministic and must never publish two
 records with the same client-visible identity.
+
+Each audit release contains exactly the ledger, its tag-scoped checksum file,
+and `audit-provenance.json`. Provenance binds the control commit, exact
+Community Pack archives, canonical issue, exact firmware implementation,
+numeric package/firmware release IDs, and all asset digests. Mirror tag commits
+are publisher commits and therefore are not required to equal the firmware
+source commit recorded inside the mirrored manifest; exact
+`migration-provenance.json` supplies that binding.
+
+Public audit releases are append-only. The publisher may resume its own draft
+by numeric release ID, but an existing public mutable release, unexpected
+asset, digest mismatch, tag drift, duplicate client identity, or malformed raw
+ledger is terminal.

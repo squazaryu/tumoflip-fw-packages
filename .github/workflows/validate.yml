@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Check out control repository
@@ -21,6 +21,12 @@ jobs:
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
+      - name: Install pinned resource decoder
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --no-deps \
+            --no-build-isolation --require-hashes \
+            -r tools/tumoflip/protected_audit_requirements.txt
       - name: Validate contracts and tests
         run: |
           python3 tools/verify_catalog.py contract --root .

@@ -1,0 +1,105 @@
+{
+  "schema": 1,
+  "kind": "protectedAuditLedgerBootstrap",
+  "legacy": {
+    "repository": "squazaryu/tumoflip",
+    "branch": "protected-app-audit-ledger",
+    "commit": "a95ee7dc6d8add5e5f4b25e7abbb426634fd0dca",
+    "tree": "0d8fea0355141001ca6cb234189b2eb4d5c7f1ac",
+    "historyTree": "f688ddab98827bf5025beeef4d5c7144a525784e",
+    "latest": {
+      "path": "latest.json",
+      "bytes": 227994,
+      "sha256": "737da278bbfdc51e11cfcfa3c4dcad560c428d70c6791c5b75b588b7431320f8"
+    },
+    "history": [
+      {
+        "path": "history/20260809193105-9aug2026-75002c05ac1d-a084a374d9e7-0e7f87a995e22f21445d57d232fad007e423ad159a7a8643cf1ee10c88d9e731.json",
+        "bytes": 41961,
+        "sha256": "308ef459617c645a4c00cfb436e2d66a0010aadb58e81dd24c3ce6d8a4ad7d15",
+        "clientStrict": true
+      },
+      {
+        "path": "history/20260809193105-9aug2026-75002c05ac1d-a084a374d9e7-375b9f0d72edeebf92cc2e2d26d1a2b994bf2e9aca305cb70aeec61630d896cd.json",
+        "bytes": 73329,
+        "sha256": "5d9c407e5de63c752e9cb2b1b7f97d8161f7413756d3a845240896eb69b934f9",
+        "clientStrict": true
+      },
+      {
+        "path": "history/20260809193105-9aug2026-75002c05ac1d-a084a374d9e7-3b5bf67e613ef5670a7b9023f6e65027e0800b87c4c632eb1a359fbff6d9bc5a.json",
+        "bytes": 102041,
+        "sha256": "94242ba7d4d190c5f105a80ef723d3fbfebc100a48aa784cbd36ee231f3e16dc",
+        "clientStrict": false
+      },
+      {
+        "path": "history/20260809193105-9aug2026-75002c05ac1d-a084a374d9e7-a1bd39cc131d81e6ede7d3d048062322f15ec8dde36bd0325a67da4bb1f5eef8.json",
+        "bytes": 121597,
+        "sha256": "da33152fd879f640c8304196cd148ec2249dcba48cbe95e285929135be446c3f",
+        "clientStrict": false
+      },
+      {
+        "path": "history/20260809193105-9aug2026-75002c05ac1d-a084a374d9e7-a7c557778bfc0b2c5e7fabe67702b5932083e38c816cb4ca20ce228495dddb5f.json",
+        "bytes": 82485,
+        "sha256": "f20dbaa510131618b8cafa0203ac8cd7a188edab57360d3cbd31b992784cc0ce",
+        "clientStrict": true
+      },
+      {
+        "path": "history/20260812095117-12aug2026-79e95fff98ba-1cd57a127023-01bf77abaeae74a820fb5f83ecb8f542d84c1597c7f63d5709b90399db456c5a.json",
+        "bytes": 82487,
+        "sha256": "aaf77602e9b5cc0bb21afa1d2d1547ea5e7991b03bd8ad1764ba342c143612cf",
+        "clientStrict": true
+      },
+      {
+        "path": "history/20260812095117-12aug2026-79e95fff98ba-1cd57a127023-23013339259acb55fb42c6f6c0ad8fb0ab527d1952efb07d4633819c2a8a2cfa.json",
+        "bytes": 105191,
+        "sha256": "519c619d4b7911fc789ab19506dd3e4161987b8a2ff281d40139d69733c3c209",
+        "clientStrict": true
+      },
+      {
+        "path": "history/20260812095117-12aug2026-79e95fff98ba-1cd57a127023-59a0aaae9b506801e915c3c0b13b0f6fdd763303fc44e121b3fb0ec669a7c146.json",
+        "bytes": 121599,
+        "sha256": "ae4a7f0497f86996bb010c686a41b566158452995dad8f7f2e3781961879209c",
+        "clientStrict": false
+      },
+      {
+        "path": "history/20260812095117-12aug2026-79e95fff98ba-1cd57a127023-afd1206772d555887d362a1fc8196d055e5b2260d94779d213cdaedaa3efa549.json",
+        "bytes": 102043,
+        "sha256": "54eeb5bc855b76f1b86a70b9a2e209ed927e1e7c1f6b0c99a50eaf613d6940e5",
+        "clientStrict": false
+      },
+      {
+        "path": "history/20260812095117-12aug2026-79e95fff98ba-1cd57a127023-b8efe6e6beda64d5d40723e07f8e57d5d34377f1cddfcfe3cbab33a2a8bfb02a.json",
+        "bytes": 41963,
+        "sha256": "1c256ed477025e7c70bd54aae0d0fc98ec3c5c2497d20e3d0d98eb5a55391889",
+        "clientStrict": true
+      },
+      {
+        "path": "history/20260812095117-12aug2026-79e95fff98ba-1cd57a127023-d78a65d6b8b3a32f7ba4e53c01448d789f9b3b8d823ba40a43733c375ba535c6.json",
+        "bytes": 73331,
+        "sha256": "8e0c6ed67525541efcd2c4dd2349caded37a3c8d2043fb296a5c7e9f84a1d2e7",
+        "clientStrict": true
+      }
+    ]
+  },
+  "destination": {
+    "repository": "squazaryu/tumoflip-fw-packages",
+    "branch": "protected-app-audit-ledger"
+  },
+  "clientContract": {
+    "schema": 2,
+    "provenanceIdentity": [
+      "targetMD5",
+      "channel",
+      "releaseTag",
+      "manifestSHA256"
+    ],
+    "latestStrict": true,
+    "legacyGeneratorSnapshots": [
+      "history/20260809193105-9aug2026-75002c05ac1d-a084a374d9e7-3b5bf67e613ef5670a7b9023f6e65027e0800b87c4c632eb1a359fbff6d9bc5a.json",
+      "history/20260809193105-9aug2026-75002c05ac1d-a084a374d9e7-a1bd39cc131d81e6ede7d3d048062322f15ec8dde36bd0325a67da4bb1f5eef8.json",
+      "history/20260812095117-12aug2026-79e95fff98ba-1cd57a127023-59a0aaae9b506801e915c3c0b13b0f6fdd763303fc44e121b3fb0ec669a7c146.json",
+      "history/20260812095117-12aug2026-79e95fff98ba-1cd57a127023-afd1206772d555887d362a1fc8196d055e5b2260d94779d213cdaedaa3efa549.json"
+    ],
+    "policy": "Preserve historical snapshots byte-for-byte; publish only a strictly normalized cumulative latest ledger to clients."
+  }
+}

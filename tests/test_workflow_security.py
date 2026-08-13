@@ -21,12 +21,62 @@ class WorkflowSecurityTests(unittest.TestCase):
                 reference = match.group(1)
                 self.assertRegex(reference, r"^[^@]+@[0-9a-f]{40}$", path.name)
 
-    def test_bootstrap_has_no_scheduled_or_pull_request_write_workflow(self) -> None:
+    def test_pull_request_workflows_never_receive_write_permissions(self) -> None:
         for path in self.workflows:
             text = path.read_text(encoding="utf-8")
-            self.assertNotRegex(text, r"(?m)^\s*schedule\s*:")
             if "pull_request:" in text:
                 self.assertNotIn("contents: write", text)
+
+    def test_only_protected_audit_is_scheduled(self) -> None:
+        scheduled = [
+            path.name
+            for path in self.workflows
+            if re.search(r"(?m)^\s*schedule\s*:", path.read_text(encoding="utf-8"))
+        ]
+        self.assertEqual(scheduled, ["protected-app-audit.yml"])
+
+    def test_protected_audit_splits_privileges_and_orders_publication(self) -> None:
+        text = (self.root / ".github/workflows/protected-app-audit.yml").read_text(
+            encoding="utf-8"
+        )
+        for job in ("resolve-source:", "resolve-issue:", "scan:", "publish:", "finalize-issue:"):
+            self.assertIn(job, text)
+        self.assertIn("environment: production", text)
+        self.assertIn("vars.IMMUTABLE_RELEASES_ENABLED == 'true'", text)
+        self.assertLess(text.index("Publish or resume exact immutable release"), text.index("Publish transitional raw branch"))
+        self.assertLess(text.index("Publish transitional raw branch"), text.index("Reconcile canonical issue only after publication proof"))
+
+    def test_protected_audit_uses_exact_external_checkouts(self) -> None:
+        text = (self.root / ".github/workflows/protected-app-audit.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("ref: a6bb38f027f5f17f2752d5dfca157478472b5c10", text)
+        self.assertIn("repository: xMasterX/all-the-plugins", text)
+        self.assertGreaterEqual(text.count("persist-credentials: false"), 6)
+        self.assertIn("Download and verify exact release inputs by numeric ID", text)
+        self.assertIn("ls-remote --heads origin", text)
+        self.assertNotIn("if git -C \"$LEDGER\" fetch", text)
+        branch_publisher = (self.root / "tools/publish_audit_branch.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("force-with-lease", branch_publisher)
+
+    def test_dispatch_inputs_are_not_interpolated_in_shell(self) -> None:
+        text = (self.root / ".github/workflows/protected-app-audit.yml").read_text(
+            encoding="utf-8"
+        )
+        in_run = False
+        run_indent = 0
+        for line in text.splitlines():
+            match = re.match(r"(\s*)run:\s*\|", line)
+            if match:
+                in_run = True
+                run_indent = len(match.group(1))
+                continue
+            if in_run and line.strip() and len(line) - len(line.lstrip()) <= run_indent:
+                in_run = False
+            if in_run:
+                self.assertNotIn("${{ inputs.", line)
 
     def test_native_publisher_remains_fail_closed(self) -> None:
         text = (self.root / ".github/workflows/publish.yml").read_text(encoding="utf-8")

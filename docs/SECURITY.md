@@ -10,11 +10,14 @@ Configure the public repository before enabling publication:
    workflow, update/deletion and force-push forbidden.
 4. Create a `production` environment with an owner reviewer. Only the publish
    job receives `contents: write`.
-5. Enable secret scanning, push protection, Dependabot, and private
+5. Enable GitHub immutable releases and set the repository variable
+   `IMMUTABLE_RELEASES_ENABLED=true` only after the API reports that setting as
+   active. Until then, audit publication intentionally remains blocked.
+6. Enable secret scanning, push protection, Dependabot, and private
    vulnerability reporting.
-6. Allow only GitHub-owned/verified actions and pin every action to a full
+7. Allow only GitHub-owned/verified actions and pin every action to a full
    commit SHA.
-7. Do not use a PAT for public read access. If cross-repository dispatch later
+8. Do not use a PAT for public read access. If cross-repository dispatch later
    becomes necessary, use a narrowly scoped GitHub App token, never a classic
    PAT.
 
