@@ -7,6 +7,7 @@ import hashlib
 import json
 import re
 import stat
+import unicodedata
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -73,6 +74,25 @@ def _safe_relative_archive_path(value: str, label: str) -> PurePosixPath:
     return path
 
 
+def _canonical_absolute_target_path(value: str, label: str) -> str:
+    path = PurePosixPath(value)
+    has_control = any(
+        unicodedata.category(character) in {"Cc", "Cf", "Cs"} for character in value
+    )
+    if (
+        "\\" in value
+        or has_control
+        or not path.is_absolute()
+        or value != str(path)
+        or len(path.parts) < 3
+        or path.parts[0] != "/"
+        or path.parts[1] != "ext"
+        or any(part in {"", ".", ".."} for part in path.parts[2:])
+    ):
+        raise ContractError(f"unsafe {label}: {value!r}")
+    return str(path)
+
+
 def validate_manifest(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
     if manifest.get("schema") != 2:
         raise ContractError("manifest schema must be 2")
@@ -136,10 +156,9 @@ def validate_manifest(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
             source = _require_string(entry.get("source"), f"{label}.source")
             _safe_relative_archive_path(source, f"{label}.source")
             target_path = _require_string(entry.get("target"), f"{label}.target")
-            if not target_path.startswith("/ext/") or any(
-                part in {"", ".", ".."} for part in PurePosixPath(target_path).parts[1:]
-            ):
-                raise ContractError(f"unsafe {label}.target: {target_path}")
+            canonical_target = _canonical_absolute_target_path(
+                target_path, f"{label}.target"
+            )
             digest = entry.get("sha256")
             md5 = entry.get("md5")
             size = entry.get("bytes")
@@ -151,24 +170,36 @@ def validate_manifest(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
                 raise ContractError(f"{label}.bytes is invalid")
             if source in by_source:
                 raise ContractError(f"duplicate package source: {source}")
-            if target_path in targets:
-                raise ContractError(f"duplicate package target: {target_path}")
+            if canonical_target in targets:
+                raise ContractError(f"duplicate package target: {canonical_target}")
             by_source[source] = entry
-            targets.add(target_path)
+            targets.add(canonical_target)
     return by_source
 
 
 def verify_archive(manifest: dict[str, Any], archive_path: Path) -> None:
     expected = validate_manifest(manifest)
     seen: set[str] = set()
-    total = 0
+    declared_total = 0
+    actual_total = 0
     try:
         with zipfile.ZipFile(archive_path) as archive:
             infos = archive.infolist()
             if len(infos) > MAX_ARCHIVE_MEMBERS:
                 raise ContractError("package archive has too many members")
             for info in infos:
+                if (
+                    not isinstance(info.file_size, int)
+                    or isinstance(info.file_size, bool)
+                    or info.file_size < 0
+                ):
+                    raise ContractError("ZIP member has invalid declared size")
+                declared_total += info.file_size
+                if declared_total > MAX_ARCHIVE_BYTES:
+                    raise ContractError("package archive exceeds declared size limit")
                 if info.is_dir():
+                    if info.file_size != 0:
+                        raise ContractError("ZIP directory has non-zero declared size")
                     continue
                 source = str(_safe_relative_archive_path(info.filename, "ZIP member"))
                 mode = (info.external_attr >> 16) & 0xFFFF
@@ -179,12 +210,14 @@ def verify_archive(manifest: dict[str, Any], archive_path: Path) -> None:
                 entry = expected.get(source)
                 if entry is None:
                     raise ContractError(f"unexpected ZIP member: {source}")
+                if info.file_size != entry["bytes"]:
+                    raise ContractError(f"ZIP member declared size differs: {source}")
                 data = archive.read(info)
-                total += len(data)
-                if total > MAX_ARCHIVE_BYTES:
+                if len(data) != info.file_size:
+                    raise ContractError(f"ZIP member actual size differs: {source}")
+                actual_total += len(data)
+                if actual_total > MAX_ARCHIVE_BYTES:
                     raise ContractError("package archive exceeds size limit")
-                if len(data) != entry["bytes"]:
-                    raise ContractError(f"ZIP member size differs: {source}")
                 if hashlib.sha256(data).hexdigest() != entry["sha256"]:
                     raise ContractError(f"ZIP member SHA-256 differs: {source}")
                 if entry.get("md5") and hashlib.md5(data).hexdigest() != entry["md5"]:
@@ -222,32 +255,62 @@ def parse_checksums(path: Path) -> dict[str, str]:
 def verify_release_directory(directory: Path, expected: dict[str, Any] | None = None) -> None:
     manifest_path = directory / CANONICAL_PACKAGE_ASSETS[0]
     archive_path = directory / CANONICAL_PACKAGE_ASSETS[1]
-    manifest = load_json(manifest_path)
+    for path in (manifest_path, archive_path):
+        if not path.is_file():
+            raise ContractError(f"missing canonical asset: {path}")
+
+    if expected is not None:
+        release_tag = _require_string(expected.get("tag"), "legacy tag")
+        if PACKAGE_TAG.fullmatch(release_tag) is None:
+            raise ContractError("legacy tag is invalid")
+        checksum_path = directory / f"{release_tag}-SHA256SUMS"
+        required_assets = {
+            *CANONICAL_PACKAGE_ASSETS,
+            checksum_path.name,
+        }
+        pinned_assets = expected.get("assets")
+        if not isinstance(pinned_assets, dict) or set(pinned_assets) != required_assets:
+            raise ContractError("legacy pinned asset set differs from canonical assets")
+        if not checksum_path.is_file():
+            raise ContractError(f"missing canonical asset: {checksum_path}")
+        for name in sorted(required_assets):
+            digest = pinned_assets.get(name)
+            if not isinstance(digest, str) or HEX_64.fullmatch(digest) is None:
+                raise ContractError(f"legacy pinned digest is invalid: {name}")
+            if sha256(directory / name) != digest:
+                raise ContractError(f"legacy asset differs from pinned contract: {name}")
+        manifest = load_json(manifest_path)
+    else:
+        manifest = load_json(manifest_path)
+        package_release = manifest.get("package_release")
+        if not isinstance(package_release, dict):
+            raise ContractError("package_release is required for an independent catalog")
+        release_tag = _require_string(
+            package_release.get("catalog_release_tag"),
+            "package_release.catalog_release_tag",
+        )
+        checksum_path = directory / f"{release_tag}-SHA256SUMS"
+        if not checksum_path.is_file():
+            raise ContractError(f"missing canonical asset: {checksum_path}")
+
     package_release = manifest.get("package_release")
     if not isinstance(package_release, dict):
         raise ContractError("package_release is required for an independent catalog")
-    release_tag = _require_string(
+    manifest_tag = _require_string(
         package_release.get("catalog_release_tag"),
         "package_release.catalog_release_tag",
     )
-    checksum_path = directory / f"{release_tag}-SHA256SUMS"
-    for path in (manifest_path, archive_path, checksum_path):
-        if not path.is_file():
-            raise ContractError(f"missing canonical asset: {path}")
+    if manifest_tag != release_tag:
+        raise ContractError("manifest release tag differs from pinned contract")
     validate_manifest(manifest)
+    if expected is not None and manifest.get("release_id") != expected.get("releaseId"):
+        raise ContractError("legacy release ID differs from pinned contract")
     checksums = parse_checksums(checksum_path)
     for name, digest in checksums.items():
         actual = sha256(directory / name)
         if actual != digest:
             raise ContractError(f"checksum mismatch for {name}")
     verify_archive(manifest, archive_path)
-    if expected is not None:
-        if manifest.get("release_id") != expected.get("releaseId"):
-            raise ContractError("legacy release ID differs from pinned contract")
-        for name, digest in expected.get("assets", {}).items():
-            path = directory / name
-            if not path.is_file() or sha256(path) != digest:
-                raise ContractError(f"legacy asset differs from pinned contract: {name}")
 
 
 def _require_exact_keys(value: dict[str, Any], keys: set[str], label: str) -> None:
