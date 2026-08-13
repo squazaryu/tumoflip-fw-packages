@@ -78,6 +78,20 @@ endpoint. TumoCompanion prefers the immutable release asset, then the new raw
 endpoint, then the old raw endpoint only when the newer endpoints are
 unavailable. Invalid primary audit data is terminal and must not fall back.
 
+The migration seed is content-addressed in `audit/bootstrap/index.json`. Keep
+all historical files byte-for-byte, including generator snapshots that are not
+valid as a current client response. Only `latest.json` is required to satisfy
+the strict schema-2 validator and the unique client identity
+`(targetMD5, channel, releaseTag, manifestSHA256)`.
+
+Publication is deliberately ordered: immutable release first, transitional
+raw branch second, issue reconciliation last. A rerun may finish a raw-branch
+or issue step after an already verified immutable release; it must never alter
+that release. The old workflow must remain available until a released
+TumoCompanion build has exercised the new immutable release and new raw URL.
+After that acceptance, disable writes in the legacy workflow but preserve its
+raw branch, issues, releases, and tags as historical evidence.
+
 ## Rollback
 
 - Never delete or retag a published revision.

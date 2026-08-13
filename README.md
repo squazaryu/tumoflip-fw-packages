@@ -29,6 +29,9 @@ packages. Firmware source and firmware images remain in
 The exact legacy `stable-001` and `dev-008` assets are seeded as byte-for-byte
 mirrors so clients can switch repositories without losing the current catalog.
 The legacy firmware repository remains an immutable fallback during migration.
+Its raw audit branch is imported byte-for-byte from commit
+`a95ee7dc6d8add5e5f4b25e7abbb426634fd0dca`; the checked-in bootstrap contract
+pins the tree, every history object, and the strict schema-2 client ledger.
 
 ## Repository boundary
 
@@ -45,6 +48,11 @@ requires a reviewed source change, an exact source commit, and explicit overlay
 selection. Native builds start from the exact current catalog and may replace
 only those reviewed paths, so build-only metadata drift cannot become a false
 application update.
+
+The protected-app workflow likewise executes only this repository's audited
+scanner. Firmware and Community Pack checkouts are read-only evidence, package
+and firmware targets are numeric-release-ID contracts, and publication is
+blocked unless GitHub reports immutable releases enabled.
 
 See [Migration](docs/MIGRATION.md), [Release contract](docs/RELEASES.md), and
 [Security](SECURITY.md).

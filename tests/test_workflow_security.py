@@ -21,12 +21,114 @@ class WorkflowSecurityTests(unittest.TestCase):
                 reference = match.group(1)
                 self.assertRegex(reference, r"^[^@]+@[0-9a-f]{40}$", path.name)
 
-    def test_bootstrap_has_no_scheduled_or_pull_request_write_workflow(self) -> None:
+    def test_pull_request_workflows_never_receive_write_permissions(self) -> None:
         for path in self.workflows:
             text = path.read_text(encoding="utf-8")
-            self.assertNotRegex(text, r"(?m)^\s*schedule\s*:")
             if "pull_request:" in text:
                 self.assertNotIn("contents: write", text)
+
+    def test_only_protected_audit_is_scheduled(self) -> None:
+        scheduled = [
+            path.name
+            for path in self.workflows
+            if re.search(r"(?m)^\s*schedule\s*:", path.read_text(encoding="utf-8"))
+        ]
+        self.assertEqual(scheduled, ["protected-app-audit.yml"])
+
+    def test_protected_audit_splits_privileges_and_orders_publication(self) -> None:
+        text = (self.root / ".github/workflows/protected-app-audit.yml").read_text(
+            encoding="utf-8"
+        )
+        for job in ("resolve-source:", "resolve-issue:", "scan:", "publish:", "finalize-issue:"):
+            self.assertIn(job, text)
+        self.assertIn("environment: production", text)
+        self.assertIn("vars.IMMUTABLE_RELEASES_ENABLED == 'true'", text)
+        self.assertIn(
+            "actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349",
+            text,
+        )
+        self.assertIn("permission-administration: read", text)
+        self.assertIn("permission-contents: write", text)
+        self.assertGreaterEqual(
+            text.count("GH_TOKEN: ${{ steps.publisher-token.outputs.token }}"), 2
+        )
+        self.assertIn("--bootstrap-index audit/bootstrap/index.json", text)
+        self.assertIn("--bootstrap-ledger audit/bootstrap/latest.json", text)
+        self.assertIn(".publisherCommit ../publication/publication.json", text)
+        self.assertLess(text.index("Publish or resume exact immutable release"), text.index("Publish transitional raw branch"))
+        self.assertLess(text.index("Publish transitional raw branch"), text.index("Reconcile canonical issue only after publication proof"))
+
+    def test_resource_decoder_build_backend_is_pinned_and_installed_first(self) -> None:
+        build_requirements = (
+            self.root / "tools/tumoflip/protected_audit_build_requirements.txt"
+        ).read_text(encoding="utf-8")
+        self.assertRegex(
+            build_requirements,
+            r"setuptools==[0-9]+\.[0-9]+\.[0-9]+ --hash=sha256:[0-9a-f]{64}",
+        )
+        self.assertEqual(build_requirements.count("--hash=sha256:"), 1)
+
+        for workflow_name in ("validate.yml", "protected-app-audit.yml"):
+            text = (self.root / ".github/workflows" / workflow_name).read_text(
+                encoding="utf-8"
+            )
+            backend = "protected_audit_build_requirements.txt"
+            decoder = "protected_audit_requirements.txt"
+            self.assertIn("--only-binary=:all:", text)
+            self.assertLess(text.index(backend), text.index(decoder))
+
+    def test_protected_audit_preserves_pending_and_flat_artifact_layout(self) -> None:
+        text = (self.root / ".github/workflows/protected-app-audit.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('[[ "$STATUS" == verified || "$STATUS" == pending ]]', text)
+        self.assertNotIn('[[ "$STATUS" == verified || "$STATUS" == needsReview ]]', text)
+        self.assertIn('BUNDLE="$RUNNER_TEMP/publication-bundle"', text)
+        self.assertIn("path: ${{ runner.temp }}/publication-bundle", text)
+        self.assertNotRegex(text, r"(?m)^\s+\$\{\{ runner\.temp \}\}/release-assets$")
+
+    def test_protected_audit_issue_lookup_is_paginated_and_unique(self) -> None:
+        text = (self.root / ".github/workflows/protected-app-audit.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('issues?state=all&per_page=100', text)
+        self.assertIn('--paginate --slurp > "$RUNNER_TEMP/issue-pages.json"', text)
+        self.assertIn("test \"$(jq 'length' \"$RUNNER_TEMP/issue-matches.json\")\" -le 1", text)
+        self.assertNotIn("gh issue list", text)
+        self.assertNotIn("head -n1", text)
+
+    def test_protected_audit_uses_exact_external_checkouts(self) -> None:
+        text = (self.root / ".github/workflows/protected-app-audit.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("ref: a6bb38f027f5f17f2752d5dfca157478472b5c10", text)
+        self.assertIn("repository: xMasterX/all-the-plugins", text)
+        self.assertGreaterEqual(text.count("persist-credentials: false"), 6)
+        self.assertIn("Download and verify exact release inputs by numeric ID", text)
+        self.assertIn("python3 tools/audit_chain.py", text)
+        self.assertNotIn("refs/heads/protected-app-audit-ledger", text)
+        self.assertNotIn('EXISTING="$LEDGER/latest.json"', text)
+        branch_publisher = (self.root / "tools/publish_audit_branch.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("force-with-lease", branch_publisher)
+
+    def test_dispatch_inputs_are_not_interpolated_in_shell(self) -> None:
+        text = (self.root / ".github/workflows/protected-app-audit.yml").read_text(
+            encoding="utf-8"
+        )
+        in_run = False
+        run_indent = 0
+        for line in text.splitlines():
+            match = re.match(r"(\s*)run:\s*\|", line)
+            if match:
+                in_run = True
+                run_indent = len(match.group(1))
+                continue
+            if in_run and line.strip() and len(line) - len(line.lstrip()) <= run_indent:
+                in_run = False
+            if in_run:
+                self.assertNotIn("${{ inputs.", line)
 
     def test_native_publisher_remains_fail_closed(self) -> None:
         text = (self.root / ".github/workflows/publish.yml").read_text(encoding="utf-8")

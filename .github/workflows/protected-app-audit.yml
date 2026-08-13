@@ -1,54 +1,567 @@
-name: Protected app audit contract
+name: Protected App Audit
 
 on:
+  schedule:
+    - cron: "17 6 * * *"
   workflow_dispatch:
     inputs:
-      community_tag:
-        required: true
+      source_tag:
+        description: Optional exact Community Pack tag; empty selects latest
+        required: false
         type: string
-      community_commit:
-        required: true
+      previous_source_tag:
+        description: Required previous tag when source_tag is explicit
+        required: false
         type: string
-      firmware_commit:
-        required: true
+      issue_number:
+        description: Optional canonical issue in this repository
+        required: false
         type: string
 
 permissions:
   contents: read
 
+concurrency:
+  group: protected-app-audit-publication
+  cancel-in-progress: false
+
 jobs:
-  exact-inputs:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+  resolve-source:
+    if: github.ref == 'refs/heads/main' && github.event.repository.default_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      source_commit: ${{ steps.identity.outputs.source_commit }}
+      source_tag: ${{ steps.identity.outputs.source_tag }}
     steps:
-      - name: Validate exact commits
-        env:
-          COMMUNITY_COMMIT: ${{ inputs.community_commit }}
-          FIRMWARE_COMMIT: ${{ inputs.firmware_commit }}
+      - name: Check out exact control commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Prove exact default-branch control commit
         run: |
-          case "$COMMUNITY_COMMIT" in (*[!0-9a-f]*|'') exit 1;; esac
-          case "$FIRMWARE_COMMIT" in (*[!0-9a-f]*|'') exit 1;; esac
-          test "${#COMMUNITY_COMMIT}" -eq 40
-          test "${#FIRMWARE_COMMIT}" -eq 40
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Resolve exact Community Pack source
+        env:
+          REQUESTED_TAG: ${{ inputs.source_tag }}
+          REQUESTED_PREVIOUS_TAG: ${{ inputs.previous_source_tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ARGS=(--output resolved-source.json)
+          if [[ -n "$REQUESTED_TAG" || -n "$REQUESTED_PREVIOUS_TAG" ]]; then
+            [[ -n "$REQUESTED_TAG" && -n "$REQUESTED_PREVIOUS_TAG" ]]
+            ARGS+=(--current-tag "$REQUESTED_TAG" --previous-tag "$REQUESTED_PREVIOUS_TAG")
+          fi
+          python3 tools/resolve_audit_source.py "${ARGS[@]}"
+      - name: Export resolved identity
+        id: identity
+        run: |
+          set -euo pipefail
+          SOURCE_COMMIT="$(jq -r .current.tagCommit resolved-source.json)"
+          SOURCE_TAG="$(jq -r .current.releaseTag resolved-source.json)"
+          [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$SOURCE_TAG" =~ ^[0-9]{1,2}[a-z]{3}[0-9]{4}(p[0-9]+)?$ ]]
+          {
+            echo "source_commit=$SOURCE_COMMIT"
+            echo "source_tag=$SOURCE_TAG"
+          } >> "$GITHUB_OUTPUT"
+      - name: Upload resolved source
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: protected-audit-resolved-source
+          path: resolved-source.json
+          if-no-files-found: error
+          retention-days: 1
+
+  resolve-issue:
+    if: github.ref == 'refs/heads/main' && github.event.repository.default_branch == 'main'
+    needs: resolve-source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    outputs:
+      issue_number: ${{ steps.issue.outputs.number }}
+      issue_url: ${{ steps.issue.outputs.url }}
+    steps:
+      - name: Check out exact control commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Download resolved source
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: protected-audit-resolved-source
+          path: resolved
+      - name: Resolve exactly one canonical issue
+        id: issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          set -euo pipefail
+          SOURCE_TAG="$(jq -r .current.releaseTag resolved/resolved-source.json)"
+          SOURCE_COMMIT="$(jq -r .current.tagCommit resolved/resolved-source.json)"
+          BASE_SHA="$(jq -r .current.assets.base.sha256 resolved/resolved-source.json)"
+          EXTRA_SHA="$(jq -r .current.assets.extra.sha256 resolved/resolved-source.json)"
+          [[ "$SOURCE_TAG" =~ ^[0-9]{1,2}[a-z]{3}[0-9]{4}(p[0-9]+)?$ ]]
+          [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$BASE_SHA" =~ ^[0-9a-f]{64}$ && "$EXTRA_SHA" =~ ^[0-9a-f]{64}$ ]]
+          [[ -z "$REQUESTED_NUMBER" || "$REQUESTED_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          MARKER="<!-- protected-app-audit:$SOURCE_TAG:$BASE_SHA:$EXTRA_SHA -->"
+          TITLE="Audit protected apps for Community Pack $SOURCE_TAG"
+          ISSUE_NUMBER="$REQUESTED_NUMBER"
+          if [[ -z "$ISSUE_NUMBER" ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/issues?state=all&per_page=100" \
+              --paginate --slurp > "$RUNNER_TEMP/issue-pages.json"
+            jq '[.[][] | select(.pull_request == null)]' \
+              "$RUNNER_TEMP/issue-pages.json" > "$RUNNER_TEMP/issues.json"
+            jq --arg title "$TITLE" --arg marker "$MARKER" \
+              --arg source "$SOURCE_COMMIT" --arg base "$BASE_SHA" --arg extra "$EXTRA_SHA" \
+              -f tools/tumoflip/protected_audit_issue_lookup.jq \
+              "$RUNNER_TEMP/issues.json" > "$RUNNER_TEMP/issue-matches.json"
+            test "$(jq 'length' "$RUNNER_TEMP/issue-matches.json")" -le 1
+            ISSUE_NUMBER="$(jq -r '.[0] // empty' "$RUNNER_TEMP/issue-matches.json")"
+          fi
+          if [[ -z "$ISSUE_NUMBER" ]]; then
+            {
+              echo "$MARKER"
+              echo '## Exact source identity'
+              echo
+              printf -- '- source commit: `%s`\n' "$SOURCE_COMMIT"
+              printf -- '- base archive SHA-256: `%s`\n' "$BASE_SHA"
+              printf -- '- extra archive SHA-256: `%s`\n' "$EXTRA_SHA"
+              echo
+              echo 'The ledger remains fail-closed until every protected artifact is resolved.'
+            } > "$RUNNER_TEMP/issue.md"
+            ISSUE_URL="$(gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "$TITLE" --body-file "$RUNNER_TEMP/issue.md")"
+            ISSUE_NUMBER="${ISSUE_URL##*/}"
+          fi
+          gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+            --json number,title,body,state,url > "$RUNNER_TEMP/issue.json"
+          jq -e --arg title "$TITLE" --arg marker "$MARKER" \
+            '.title == $title and (.body | contains($marker))' \
+            "$RUNNER_TEMP/issue.json" >/dev/null
+          {
+            echo "number=$ISSUE_NUMBER"
+            echo "url=$(jq -r .url "$RUNNER_TEMP/issue.json")"
+          } >> "$GITHUB_OUTPUT"
+      - name: Bind source to canonical issue
+        env:
+          ISSUE_NUMBER: ${{ steps.issue.outputs.number }}
+          ISSUE_URL: ${{ steps.issue.outputs.url }}
+        run: |
+          set -euo pipefail
+          python3 tools/finalize_audit_source.py \
+            --resolved resolved/resolved-source.json \
+            --issue-repository "$GITHUB_REPOSITORY" \
+            --issue-number "$ISSUE_NUMBER" \
+            --issue-url "$ISSUE_URL" \
+            --output source-fixture.json
+      - name: Upload issue-bound source
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: protected-audit-source-fixture
+          path: source-fixture.json
+          if-no-files-found: error
+          retention-days: 1
+
+  scan:
+    if: github.ref == 'refs/heads/main' && github.event.repository.default_branch == 'main'
+    needs: [resolve-source, resolve-issue]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    outputs:
+      status: ${{ steps.result.outputs.status }}
+      audit_tag: ${{ steps.result.outputs.audit_tag }}
+    steps:
+      - name: Check out exact control commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          persist-credentials: false
       - name: Check out exact firmware implementation
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: squazaryu/tumoflip
-          ref: ${{ inputs.firmware_commit }}
+          ref: a6bb38f027f5f17f2752d5dfca157478472b5c10
           path: firmware
+          fetch-depth: 0
           persist-credentials: false
       - name: Check out exact Community Pack source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: xMasterX/all-the-plugins
-          ref: ${{ inputs.community_commit }}
+          ref: ${{ needs.resolve-source.outputs.source_commit }}
           path: community
+          fetch-depth: 0
           persist-credentials: false
-      - name: Prove exact checkouts
-        env:
-          COMMUNITY_COMMIT: ${{ inputs.community_commit }}
-          FIRMWARE_COMMIT: ${{ inputs.firmware_commit }}
+      - name: Download issue-bound source
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: protected-audit-source-fixture
+          path: inputs
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Install pinned resource decoder
+        working-directory: control
         run: |
-          test "$(git -C firmware rev-parse HEAD)" = "$FIRMWARE_COMMIT"
-          test "$(git -C community rev-parse HEAD)" = "$COMMUNITY_COMMIT"
-          echo "Audit publication remains disabled until registry, decisions, and exact release inputs are migrated."
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --no-deps \
+            --only-binary=:all: --require-hashes \
+            -r tools/tumoflip/protected_audit_build_requirements.txt
+          python3 -m pip install --disable-pip-version-check --no-deps \
+            --no-build-isolation --require-hashes \
+            -r tools/tumoflip/protected_audit_requirements.txt
+      - name: Prove exact read-only checkouts
+        env:
+          EXPECTED_COMMUNITY: ${{ needs.resolve-source.outputs.source_commit }}
+        run: |
+          set -euo pipefail
+          test "$(git -C control rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C firmware rev-parse HEAD)" = \
+            "$(jq -r .implementation.commit control/contracts/protected-audit-targets.json)"
+          test "$(git -C community rev-parse HEAD)" = "$EXPECTED_COMMUNITY"
+          test "$(git -C control ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+      - name: Download and verify exact release inputs by numeric ID
+        working-directory: control
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 tools/audit_inputs.py \
+            --targets contracts/protected-audit-targets.json \
+            --source-fixture ../inputs/source-fixture.json \
+            --output "$RUNNER_TEMP/audit-inputs" \
+            --control-repository "$GITHUB_REPOSITORY" \
+            --control-commit "$GITHUB_SHA"
+      - name: Scan protected intersections
+        id: audit
+        working-directory: control
+        run: |
+          set -euo pipefail
+          FIXTURE=../inputs/source-fixture.json
+          SOURCE_TAG="$(jq -r .current.releaseTag "$FIXTURE")"
+          SOURCE_COMMIT="$(jq -r .current.tagCommit "$FIXTURE")"
+          PREVIOUS_COMMIT="$(jq -r .previous.tagCommit "$FIXTURE")"
+          BASE_SHA="$(jq -r .current.assets.base.sha256 "$FIXTURE")"
+          EXTRA_SHA="$(jq -r .current.assets.extra.sha256 "$FIXTURE")"
+          PUBLISHED_AT="$(jq -r .current.publishedAt "$FIXTURE")"
+          API="$(jq -r .current.api "$FIXTURE")"
+          SEQUENCE="$(jq -r .sequence "$FIXTURE")"
+          ISSUE_NUMBER="$(jq -r .canonicalIssue.number "$FIXTURE")"
+          ISSUE_URL="$(jq -r .canonicalIssue.url "$FIXTURE")"
+          ARGS=(scan --repo ../community --implementation-repo ../firmware \
+            --registry tools/tumoflip/protected_apps_registry.json \
+            --base-archive "$RUNNER_TEMP/audit-inputs/community/all-the-apps-base.zip" \
+            --extra-archive "$RUNNER_TEMP/audit-inputs/community/all-the-apps-extra.zip" \
+            --base-sha256 "$BASE_SHA" --extra-sha256 "$EXTRA_SHA" \
+            --source-tag "$SOURCE_TAG" --source-commit "$SOURCE_COMMIT" \
+            --previous-source-commit "$PREVIOUS_COMMIT" \
+            --release-url "https://github.com/xMasterX/all-the-plugins/releases/tag/$SOURCE_TAG" \
+            --published-at "$PUBLISHED_AT" --api "$API" --sequence "$SEQUENCE" \
+            --issue-number "$ISSUE_NUMBER" --issue-url "$ISSUE_URL" \
+            --output-audit "$RUNNER_TEMP/audit.json" \
+            --output-summary "$RUNNER_TEMP/summary.md")
+          DECISIONS="tools/tumoflip/protected_audit_decisions/$SOURCE_TAG.json"
+          if [[ -f "$DECISIONS" ]]; then ARGS+=(--decisions "$DECISIONS"); fi
+          while IFS= read -r ITEM; do ARGS+=(--target-manifest "$ITEM"); done \
+            < <(find "$RUNNER_TEMP/audit-inputs/targets" -name '*=manifest.json' -type f | sort)
+          while IFS= read -r ITEM; do ARGS+=(--target-archive "$ITEM"); done \
+            < <(find "$RUNNER_TEMP/audit-inputs/targets" -name '*=targets.zip' -type f | sort)
+          while IFS= read -r ITEM; do ARGS+=(--firmware-updater-descriptor "$ITEM"); done \
+            < <(find "$RUNNER_TEMP/audit-inputs/firmware" -name firmware-updater.json -type f | sort)
+          python3 tools/tumoflip/protected_app_audit.py "${ARGS[@]}" \
+            | tee "$RUNNER_TEMP/result.json"
+      - name: Build strict cumulative ledger and immutable release assets
+        working-directory: control
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          CHAIN="$RUNNER_TEMP/audit-chain"
+          python3 tools/audit_chain.py \
+            --repository "$GITHUB_REPOSITORY" \
+            --publisher-commit "$GITHUB_SHA" \
+            --bootstrap-index audit/bootstrap/index.json \
+            --bootstrap-ledger audit/bootstrap/latest.json \
+            --audit "$RUNNER_TEMP/audit.json" \
+            --output "$CHAIN"
+          MODE="$(jq -r .mode "$CHAIN/resolution.json")"
+          AUDIT_TAG="$(jq -r .auditReleaseTag "$CHAIN/resolution.json")"
+          if [[ "$MODE" == publish ]]; then
+            python3 tools/audit_release.py prepare \
+              --ledger "$CHAIN/ledger.json" \
+              --audit "$RUNNER_TEMP/audit.json" \
+              --evidence "$RUNNER_TEMP/audit-inputs/exact-evidence.json" \
+              --predecessor "$CHAIN/predecessor.json" \
+              --output "$RUNNER_TEMP/release-assets" \
+              --tag "$AUDIT_TAG" \
+              --publisher-repository "$GITHUB_REPOSITORY" \
+              --publisher-commit "$GITHUB_SHA"
+          elif [[ "$MODE" == reuse ]]; then
+            cp -R "$CHAIN/release-assets" "$RUNNER_TEMP/release-assets"
+          else
+            echo "Unknown audit chain resolution mode: $MODE" >&2
+            exit 1
+          fi
+      - name: Run fail-closed audit tests
+        working-directory: control
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p 'test_protected_app_audit.py' -v
+          python3 -m unittest discover -s tests -p 'test_audit_*.py' -v
+      - name: Export verified result
+        id: result
+        working-directory: control
+        run: |
+          set -euo pipefail
+          STATUS="$(jq -r .overallStatus "$RUNNER_TEMP/result.json")"
+          RESOLUTION="$RUNNER_TEMP/audit-chain/resolution.json"
+          AUDIT_TAG="$(jq -r .auditReleaseTag "$RESOLUTION")"
+          MODE="$(jq -r .mode "$RESOLUTION")"
+          PUBLISHER_COMMIT="$(jq -r .publisherCommit "$RESOLUTION")"
+          [[ "$STATUS" == verified || "$STATUS" == pending ]]
+          [[ "$AUDIT_TAG" =~ ^audit-ledger-[0-9]{8}-[0-9]{3}$ ]]
+          [[ "$MODE" == publish || "$MODE" == reuse ]]
+          [[ "$PUBLISHER_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          jq -n --arg status "$STATUS" --arg tag "$AUDIT_TAG" --arg mode "$MODE" \
+            --arg publisher "$PUBLISHER_COMMIT" \
+            --arg issue "$(jq -r .canonicalIssue.url ../inputs/source-fixture.json)" \
+            '{status:$status,auditTag:$tag,issueURL:$issue,mode:$mode,publisherCommit:$publisher}' \
+            > "$RUNNER_TEMP/publication.json"
+          {
+            echo "status=$STATUS"
+            echo "audit_tag=$AUDIT_TAG"
+          } >> "$GITHUB_OUTPUT"
+      - name: Stage flat publication bundle
+        working-directory: control
+        run: |
+          set -euo pipefail
+          BUNDLE="$RUNNER_TEMP/publication-bundle"
+          test ! -e "$BUNDLE"
+          mkdir "$BUNDLE"
+          cp -R "$RUNNER_TEMP/release-assets" "$BUNDLE/release-assets"
+          cp "$RUNNER_TEMP/audit.json" "$BUNDLE/audit.json"
+          cp "$RUNNER_TEMP/summary.md" "$BUNDLE/summary.md"
+          cp "$RUNNER_TEMP/publication.json" "$BUNDLE/publication.json"
+          cp ../inputs/source-fixture.json "$BUNDLE/source-fixture.json"
+      - name: Upload verified publication bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: protected-audit-publication
+          path: ${{ runner.temp }}/publication-bundle
+          if-no-files-found: error
+          include-hidden-files: false
+          retention-days: 1
+
+  publish:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event.repository.default_branch == 'main' &&
+      vars.IMMUTABLE_RELEASES_ENABLED == 'true'
+    needs: [resolve-source, resolve-issue, scan]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production
+    permissions:
+      contents: read
+    outputs:
+      release_id: ${{ steps.publish.outputs.release_id }}
+      raw_commit: ${{ steps.raw.outputs.raw_commit }}
+    steps:
+      - name: Download verified publication bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: protected-audit-publication
+          path: publication
+      - name: Create repository-scoped audit publisher token
+        id: publisher-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ secrets.PROTECTED_AUDIT_APP_ID }}
+          private-key: ${{ secrets.PROTECTED_AUDIT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-administration: read
+          permission-contents: write
+      - name: Check out exact publisher control commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          persist-credentials: false
+      - name: Prove exact default-branch publisher commit
+        working-directory: control
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+      - name: Reverify after privilege boundary
+        working-directory: control
+        run: |
+          set -euo pipefail
+          AUDIT_TAG="$(jq -r .auditTag ../publication/publication.json)"
+          PUBLISHER_COMMIT="$(jq -r .publisherCommit ../publication/publication.json)"
+          [[ "$PUBLISHER_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          python3 tools/audit_release.py verify \
+            --root ../publication/release-assets \
+            --tag "$AUDIT_TAG" \
+            --publisher-repository "$GITHUB_REPOSITORY" \
+            --publisher-commit "$PUBLISHER_COMMIT" \
+            > "$RUNNER_TEMP/release-bound.json"
+      - name: Publish or resume exact immutable release
+        id: publish
+        working-directory: control
+        env:
+          GH_TOKEN: ${{ steps.publisher-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          AUDIT_TAG="$(jq -r .auditTag ../publication/publication.json)"
+          PUBLISHER_COMMIT="$(jq -r .publisherCommit ../publication/publication.json)"
+          python3 tools/publish_audit.py publish \
+            --assets ../publication/release-assets \
+            --repository "$GITHUB_REPOSITORY" \
+            --tag "$AUDIT_TAG" \
+            --publisher-commit "$PUBLISHER_COMMIT" \
+            --bootstrap-index audit/bootstrap/index.json \
+            --bootstrap-ledger audit/bootstrap/latest.json \
+            > "$RUNNER_TEMP/release.json"
+          echo "release_id=$(jq -r .releaseId "$RUNNER_TEMP/release.json")" \
+            >> "$GITHUB_OUTPUT"
+      - name: Publish transitional raw branch only after immutable release
+        id: raw
+        working-directory: control
+        env:
+          GH_TOKEN: ${{ steps.publisher-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          AUDIT_TAG="$(jq -r .auditTag ../publication/publication.json)"
+          PUBLISHER_COMMIT="$(jq -r .publisherCommit ../publication/publication.json)"
+          gh auth setup-git
+          python3 tools/publish_audit_branch.py \
+            --repository "$GITHUB_REPOSITORY" \
+            --publisher-commit "$PUBLISHER_COMMIT" \
+            --tag "$AUDIT_TAG" \
+            --release-assets ../publication/release-assets \
+            --audit ../publication/audit.json \
+            --bootstrap-index audit/bootstrap/index.json \
+            > "$RUNNER_TEMP/raw.json"
+          echo "raw_commit=$(jq -r .commit "$RUNNER_TEMP/raw.json")" \
+            >> "$GITHUB_OUTPUT"
+
+  finalize-issue:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event.repository.default_branch == 'main' &&
+      always() && needs.publish.result == 'success'
+    needs: [resolve-source, resolve-issue, scan, publish]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Download publication bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: protected-audit-publication
+          path: publication
+      - name: Check out exact verifier
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          persist-credentials: false
+      - name: Independently verify release and raw branch
+        working-directory: control
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RAW_COMMIT: ${{ needs.publish.outputs.raw_commit }}
+        run: |
+          set -euo pipefail
+          [[ "$RAW_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          AUDIT_TAG="$(jq -r .auditTag ../publication/publication.json)"
+          PUBLISHER_COMMIT="$(jq -r .publisherCommit ../publication/publication.json)"
+          python3 tools/publish_audit.py verify \
+            --assets ../publication/release-assets \
+            --repository "$GITHUB_REPOSITORY" \
+            --tag "$AUDIT_TAG" \
+            --publisher-commit "$PUBLISHER_COMMIT"
+          python3 tools/audit_release.py verify \
+            --root ../publication/release-assets \
+            --tag "$AUDIT_TAG" \
+            --publisher-repository "$GITHUB_REPOSITORY" \
+            --publisher-commit "$PUBLISHER_COMMIT" \
+            > "$RUNNER_TEMP/release-bound.json"
+          VERIFY="$RUNNER_TEMP/raw-verify"
+          git init -q "$VERIFY"
+          git -C "$VERIFY" remote add origin \
+            "https://github.com/$GITHUB_REPOSITORY.git"
+          git -C "$VERIFY" fetch --no-tags origin "$RAW_COMMIT"
+          test "$(git -C "$VERIFY" rev-parse FETCH_HEAD)" = "$RAW_COMMIT"
+          git -C "$VERIFY" show "$RAW_COMMIT:latest.json" \
+            > "$RUNNER_TEMP/remote-latest.json"
+          cmp "$RUNNER_TEMP/remote-latest.json" \
+            ../publication/release-assets/protected-app-audit-ledger.json
+      - name: Reconcile canonical issue only after publication proof
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RAW_COMMIT: ${{ needs.publish.outputs.raw_commit }}
+        run: |
+          set -euo pipefail
+          ISSUE_URL="$(jq -r .audit.auditIssue "$RUNNER_TEMP/release-bound.json")"
+          ISSUE_NUMBER="${ISSUE_URL##*/}"
+          STATUS="$(jq -r .audit.overallStatus "$RUNNER_TEMP/release-bound.json")"
+          AUDIT_TAG="$(jq -r .auditTag publication/publication.json)"
+          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          [[ "$STATUS" == verified || "$STATUS" == pending ]]
+          CURRENT="$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+            --json state,url --jq '.state + " " + .url')"
+          [[ "$CURRENT" == "OPEN $ISSUE_URL" || "$CURRENT" == "CLOSED $ISSUE_URL" ]]
+          {
+            cat publication/summary.md
+            echo
+            echo '<!-- tumoflip-protected-app-audit -->'
+            printf -- '- immutable audit release: `%s`\n' "$AUDIT_TAG"
+            printf -- '- transitional raw commit: `%s`\n' "$RAW_COMMIT"
+          } > "$RUNNER_TEMP/comment.md"
+          gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments?per_page=100" \
+            --paginate --slurp > "$RUNNER_TEMP/comment-pages.json"
+          jq '[.[][] | select((.body // "") | contains("<!-- tumoflip-protected-app-audit -->")) | .id]' \
+            "$RUNNER_TEMP/comment-pages.json" > "$RUNNER_TEMP/comment-ids.json"
+          test "$(jq 'length' "$RUNNER_TEMP/comment-ids.json")" -le 1
+          COMMENT_ID="$(jq -r '.[0] // empty' "$RUNNER_TEMP/comment-ids.json")"
+          jq -n --rawfile body "$RUNNER_TEMP/comment.md" '{body:$body}' \
+            > "$RUNNER_TEMP/comment.json"
+          if [[ -n "$COMMENT_ID" ]]; then
+            gh api --method PATCH \
+              "repos/$GITHUB_REPOSITORY/issues/comments/$COMMENT_ID" \
+              --input "$RUNNER_TEMP/comment.json" >/dev/null
+          else
+            gh api --method POST \
+              "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+              --input "$RUNNER_TEMP/comment.json" >/dev/null
+          fi
+          if [[ "$STATUS" == verified && "$CURRENT" == "OPEN $ISSUE_URL" ]]; then
+            gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --reason completed
+          elif [[ "$STATUS" != verified && "$CURRENT" == "CLOSED $ISSUE_URL" ]]; then
+            gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
+          fi

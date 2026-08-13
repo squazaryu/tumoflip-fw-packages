@@ -1,0 +1,170 @@
+{
+  "schema": 1,
+  "kind": "protectedAuditTargets",
+  "implementation": {
+    "repository": "squazaryu/tumoflip",
+    "commit": "a6bb38f027f5f17f2752d5dfca157478472b5c10"
+  },
+  "packages": [
+    {
+      "repository": "squazaryu/tumoflip",
+      "releaseTag": "fw-packages-dev-007",
+      "githubReleaseId": 369482639,
+      "tagCommit": "89905fa8da20f1ad165b6b2615578d5b66326e75",
+      "prerelease": true,
+      "manifestSourceCommit": "89905fa8da20f1ad165b6b2615578d5b66326e75",
+      "manifestReleaseId": "3dd166c8afbd98208ef30428ff0124aaba5e5a10226153e99ef15e7b18b8954e",
+      "assets": {
+        "manifest": {
+          "id": 511986182,
+          "name": "tumoflip-packages.json",
+          "bytes": 47693,
+          "sha256": "f2ab7b5b164780c313a268043a3115bac6e7b41d9b746fee47def242ad3cd6c1"
+        },
+        "archive": {
+          "id": 511986181,
+          "name": "tumoflip-packages.zip",
+          "bytes": 5217306,
+          "sha256": "8d0d08d4728d9ace2b3fae62c7e5b903d8e1296cc176fb924025cb0148c0aed0"
+        },
+        "checksums": {
+          "id": 511986183,
+          "name": "fw-packages-dev-007-SHA256SUMS",
+          "bytes": 177,
+          "sha256": "7301c4b69559953e459b78dddd6e52b0285dc1ce5bb6d17b8c9b6917b29fe5c7"
+        }
+      }
+    },
+    {
+      "repository": "squazaryu/tumoflip-fw-packages",
+      "releaseTag": "fw-packages-stable-001",
+      "githubReleaseId": 369786610,
+      "tagCommit": "7b8c605101e283e84b4fdbcee5b621205396d4f4",
+      "prerelease": false,
+      "manifestSourceCommit": "49b47de9044c1b135b31c0612740f4533c8d6eef",
+      "manifestReleaseId": "c433e50a25f7d33213fd75b908cae27b14b4c102526b41103877c7783f5d0b35",
+      "assets": {
+        "manifest": {
+          "id": 512790490,
+          "name": "tumoflip-packages.json",
+          "bytes": 37112,
+          "sha256": "62fc425cfb89417fbfc3b0c5ecc83bd3daeaf3dc8ed2b80a6a850137edc214a2"
+        },
+        "archive": {
+          "id": 512790494,
+          "name": "tumoflip-packages.zip",
+          "bytes": 5171146,
+          "sha256": "efb1d259115fcd938eb16b7548231052d75a739870a9fb66af075116aca9b552"
+        },
+        "checksums": {
+          "id": 512790471,
+          "name": "fw-packages-stable-001-SHA256SUMS",
+          "bytes": 177,
+          "sha256": "ca94d427cea194e662a58a0587bef5fb9b8a03d7e9537e3cfbf47c3ac5b8bab3"
+        },
+        "migrationProvenance": {
+          "id": 512790486,
+          "name": "migration-provenance.json",
+          "bytes": 1204,
+          "sha256": "0771fc7dd42b542709d0fc202793c6dc1fe7994e801b1430b6a3c919ebbd27ad"
+        }
+      }
+    },
+    {
+      "repository": "squazaryu/tumoflip",
+      "releaseTag": "fw-packages-dev-005",
+      "githubReleaseId": 369302102,
+      "tagCommit": "8458827d6f0fd385661ce9da52cd73ce5ec21286",
+      "prerelease": true,
+      "manifestSourceCommit": "8458827d6f0fd385661ce9da52cd73ce5ec21286",
+      "manifestReleaseId": "a0918ef86334966e9e05ee27213f021170f5d07c8cc4af5a76cf86c11521b633",
+      "assets": {
+        "manifest": {
+          "id": 511677085,
+          "name": "tumoflip-packages.json",
+          "bytes": 47095,
+          "sha256": "f469e91db78f77449f1d6ff2853a8b70479a6cb635f5f6205818cef421b759be"
+        },
+        "archive": {
+          "id": 511677084,
+          "name": "tumoflip-packages.zip",
+          "bytes": 5217317,
+          "sha256": "4ed1b743291a06c5fb45ce95a5843fcadf3de96a75811fb50a9ddad808bfc19c"
+        },
+        "checksums": {
+          "id": 511677079,
+          "name": "fw-packages-dev-005-SHA256SUMS",
+          "bytes": 177,
+          "sha256": "ec6b0d524fba5e0f19b60bd747eb1fb621b44fd5081f52c495dad98caba96be0"
+        }
+      }
+    },
+    {
+      "repository": "squazaryu/tumoflip-fw-packages",
+      "releaseTag": "fw-packages-dev-008",
+      "githubReleaseId": 369803658,
+      "tagCommit": "7b8c605101e283e84b4fdbcee5b621205396d4f4",
+      "prerelease": true,
+      "manifestSourceCommit": "cf5f27221bf42d3dd98a5634c62feaabf305e34b",
+      "manifestReleaseId": "18b1d93f4a8a2e1fecee08753cf5e0701302a7dad9470a8d5024581cf691723c",
+      "assets": {
+        "manifest": {
+          "id": 512790641,
+          "name": "tumoflip-packages.json",
+          "bytes": 47693,
+          "sha256": "1d2d9cf822e08cd9f2c76a75d9a5fc8a468779ce0076f69cf02c15c2cb40090c"
+        },
+        "archive": {
+          "id": 512790651,
+          "name": "tumoflip-packages.zip",
+          "bytes": 5217304,
+          "sha256": "7e66feae8a2431172b2e30894905c37a25893a14b2ba073ac72fe3d556a2592f"
+        },
+        "checksums": {
+          "id": 512790622,
+          "name": "fw-packages-dev-008-SHA256SUMS",
+          "bytes": 177,
+          "sha256": "fdcb2d0a8c4a353a6e923963868bade7e49dd5a2b9f6e96ca6dc4aba3901eff4"
+        },
+        "migrationProvenance": {
+          "id": 512790627,
+          "name": "migration-provenance.json",
+          "bytes": 1192,
+          "sha256": "825f4cea18a21cf4098f7b987cb05c6f6c09114ade1873e31d10ba0241511dca"
+        }
+      }
+    }
+  ],
+  "firmware": [
+    {
+      "repository": "squazaryu/tumoflip",
+      "releaseTag": "v1.0.4",
+      "githubReleaseId": 363124178,
+      "tagCommit": "b5f8f76ea564fe0e4d447b1f3d85dbac168bad25",
+      "prerelease": false,
+      "resourceManifestSHA256": "dc71dde47d3f68c38ec771ba8b6b3fb1409cab708a95b332df79f5fd1637a7f9",
+      "resourcesSHA256": "267c7a2c86d98f383a3898b25ad38337088e0af581b8be2d0561220affd4996a",
+      "asset": {
+        "id": 496779073,
+        "name": "flipper-z-f7-update-t-flppr-fw-004.tgz",
+        "bytes": 4490762,
+        "sha256": "fe2580df2aaad3991a225fc5f2637bb5f6d775990880307490158c36729f240a"
+      }
+    },
+    {
+      "repository": "squazaryu/tumoflip",
+      "releaseTag": "t-dev-004-015",
+      "githubReleaseId": 369120259,
+      "tagCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
+      "prerelease": true,
+      "resourceManifestSHA256": "d79e8508d9c2bd1494cda991e0f3d06300844276510b6df28c5c439a80ec0a48",
+      "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386",
+      "asset": {
+        "id": 511354262,
+        "name": "flipper-z-f7-update-t-dev-004-015.tgz",
+        "bytes": 4529887,
+        "sha256": "55e23f1976e73e7bff27b345695d484fac8b21cddd522b3c4e96c6b0758028ab"
+      }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "kind": "protectedAuditSourceFixture",
+  "current": {
+    "repository": "xMasterX/all-the-plugins",
+    "releaseTag": "12aug2026",
+    "githubReleaseId": 369137652,
+    "tagCommit": "585b144ac5b4d9a48a0e5a74570a6584353fdbba",
+    "publishedAt": "2026-08-12T09:51:17Z",
+    "api": "88.2",
+    "assets": {
+      "base": {
+        "id": 511388638,
+        "name": "all-the-apps-base.zip",
+        "bytes": 1686917,
+        "sha256": "79e95fff98ba3afd95f5a31f81882412ed3505237e8fdae4f6e053328847e430"
+      },
+      "extra": {
+        "id": 511388649,
+        "name": "all-the-apps-extra.zip",
+        "bytes": 11375871,
+        "sha256": "1cd57a12702343dbb5fcda6a4b37cbc10e80449fed9b67e04a19b5de5a87a1e0"
+      }
+    }
+  },
+  "previous": {
+    "repository": "xMasterX/all-the-plugins",
+    "releaseTag": "9aug2026",
+    "githubReleaseId": 367566171,
+    "tagCommit": "0b71d9f34fec8ae3ba763b8de27ef15d1d604c5b"
+  },
+  "sequence": 20260812095117,
+  "canonicalIssue": {
+    "repository": "squazaryu/tumoflip",
+    "number": 308,
+    "url": "https://github.com/squazaryu/tumoflip/issues/308"
+  }
+}
