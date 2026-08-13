@@ -6,6 +6,7 @@
       "firmwareTag": "v1.0.4",
       "firmwareVersion": "t-flppr-fw-004",
       "firmwareCommit": "b5f8f76ea564fe0e4d447b1f3d85dbac168bad25",
+      "firmwareReleaseId": "ad51d602ccdd35820aa2db37f26218bd610bac18350e66809f7de411cf9e8935",
       "api": "88.0",
       "target": 7
     },
@@ -13,6 +14,7 @@
       "firmwareTag": "t-dev-004-015",
       "firmwareVersion": "t-dev-004-015",
       "firmwareCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
+      "firmwareReleaseId": "5799604a854b34c1bb67c67e63733e9c396af1167dfe829c2b144791c07a2ebf",
       "api": "88.0",
       "target": 7
     }

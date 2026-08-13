@@ -44,6 +44,19 @@ Publish the first newly built catalogs as `fw-packages-dev-009` and
 `fw-packages-stable-002`. The workflow checks out `squazaryu/tumoflip` by a full
 40-character commit SHA, verifies `git rev-parse HEAD`, builds with `-j2`, and
 records both source-repository and publisher-repository provenance.
+Each candidate is a bounded delta over the exact mirrored channel head; it may
+replace only the control-owned overlay paths. This prevents a package-only
+release from presenting unrelated firmware-built applications as updates.
+The exact subset and firmware-source commit are checked in per release. The
+first Dev009 dry-run plan selects only `esp_flasher`; Stable002 intentionally
+has no plan and therefore fails closed until a stable-compatible source commit
+is separately approved.
+
+Current subphase: the native builder and dormant publisher transaction are
+implemented, but workflow publication is fail-closed. A dry run may build the
+one-day verified artifact. Do not grant write permission or connect
+`tools/publish_native.py` until the candidate passes legacy-composition
+equivalence review and physical-device package installation/verification.
 
 Only after both channel heads install and verify on physical hardware may the
 legacy package workflow be disabled. Do not remove old releases or client

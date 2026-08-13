@@ -1,4 +1,4 @@
-name: Native package release contract
+name: Native package release (disabled)
 
 on:
   workflow_dispatch:
@@ -14,12 +14,6 @@ on:
         description: Exact squazaryu/tumoflip package-source commit
         required: true
         type: string
-      target_firmware_tag:
-        required: true
-        type: string
-      target_firmware_commit:
-        required: true
-        type: string
       dry_run:
         required: true
         default: true
@@ -33,30 +27,59 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  contract:
+  build:
+    if: github.ref == 'refs/heads/main' && github.event.repository.default_branch == 'main'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 90
+    env:
+      FBT_NO_SYNC: 0
+      FORCE_NO_DIRTY: "yes"
+      FBT_GIT_SUBMODULE_SHALLOW: 1
     steps:
       - name: Validate immutable inputs
         env:
           SOURCE_COMMIT: ${{ inputs.source_commit }}
-          TARGET_COMMIT: ${{ inputs.target_firmware_commit }}
           CHANNEL: ${{ inputs.channel }}
           REVISION: ${{ inputs.revision }}
         run: |
+          set -euo pipefail
           case "$SOURCE_COMMIT" in (*[!0-9a-f]*|'') exit 1;; esac
-          case "$TARGET_COMMIT" in (*[!0-9a-f]*|'') exit 1;; esac
           test "${#SOURCE_COMMIT}" -eq 40
-          test "${#TARGET_COMMIT}" -eq 40
           test "$REVISION" -ge 1
           printf 'requested tag: fw-packages-%s-%03d\n' "$CHANNEL" "$REVISION"
       - name: Check out control repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           path: control
+          ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Prove exact default-branch control commit
+        working-directory: control
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
       - name: Validate control contracts
         run: python3 control/tools/verify_catalog.py contract --root control
+      - name: Download immutable predecessor catalog
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHANNEL: ${{ inputs.channel }}
+        run: |
+          set -euo pipefail
+          BASE_TAG="$(
+            jq -r --arg channel "$CHANNEL" \
+              '.channels[$channel].tag' control/contracts/legacy-sources.json
+          )"
+          test "$BASE_TAG" != null
+          mkdir base-release
+          gh release download "$BASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --dir base-release \
+            --pattern 'tumoflip-packages.json' \
+            --pattern 'tumoflip-packages.zip' \
+            --pattern "${BASE_TAG}-SHA256SUMS"
       - name: Check out exact firmware source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -68,21 +91,95 @@ jobs:
       - name: Prove exact source checkout
         env:
           EXPECTED: ${{ inputs.source_commit }}
-        run: test "$(git -C firmware rev-parse HEAD)" = "$EXPECTED"
+        run: |
+          set -euo pipefail
+          test "$(git -C firmware rev-parse HEAD)" = "$EXPECTED"
+          test -z "$(git -C firmware status --porcelain --untracked-files=no)"
+          test -z "$(git -C firmware submodule status --recursive | grep -E '^[+-U]' || true)"
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Install source build dependency
+        run: >-
+          python3 -m pip install --disable-pip-version-check
+          --require-hashes -r control/requirements-build.txt
+      - name: Build package resources with bounded parallelism
+        env:
+          CHANNEL: ${{ inputs.channel }}
+          REVISION: ${{ inputs.revision }}
+        run: |
+          set -euo pipefail
+          SOURCE_BUILD_TARGETS="$(
+            python3 control/tools/source_build_targets.py \
+              --source-root firmware \
+              --control-root control \
+              --channel "$CHANNEL" \
+              --revision "$REVISION" \
+              --format shell
+          )"
+          test -n "$SOURCE_BUILD_TARGETS"
+          (
+            cd firmware
+            # Intentional word splitting: the helper emits only validated
+            # lowercase fbt target tokens separated by one space.
+            # shellcheck disable=SC2086
+            ./fbt -j2 COMPACT=1 DEBUG=0 FBT_NO_SYNC="${FBT_NO_SYNC}" \
+              $SOURCE_BUILD_TARGETS
+          )
+      - name: Run source-owned package composition tests
+        working-directory: firmware
+        run: |
+          set -euo pipefail
+          python3 -m unittest \
+            tools/tumoflip/test_package_release.py \
+            tools/tumoflip/test_validate_release.py \
+            tools/tumoflip/test_make_packages_zip.py
+      - name: Build and verify independent package release
+        env:
+          CHANNEL: ${{ inputs.channel }}
+          REVISION: ${{ inputs.revision }}
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+        run: |
+          set -euo pipefail
+          python3 control/tools/native_release.py \
+            --control-root control \
+            --source-root firmware \
+            --base-directory base-release \
+            --output native-release \
+            --channel "$CHANNEL" \
+            --revision "$REVISION" \
+            --source-commit "$SOURCE_COMMIT" \
+            --publisher-commit "$GITHUB_SHA"
+          python3 control/tools/verify_native.py \
+            --control-root control \
+            --directory native-release \
+            --base-directory base-release \
+            --channel "$CHANNEL" \
+            --revision "$REVISION" \
+            --source-commit "$SOURCE_COMMIT" \
+            --publisher-commit "$GITHUB_SHA"
+      - name: Upload verified native release
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: verified-native-${{ inputs.channel }}-${{ inputs.revision }}
+          path: native-release
+          if-no-files-found: error
+          retention-days: 1
       - name: Report migration gate
         run: |
-          echo "Exact source checkout and control contract are valid."
-          echo "The native builder/publisher is intentionally disabled until the migrated builder passes equivalence tests."
+          echo "Exact source checkout, bounded build, package composition, and independent verification succeeded."
+          echo "Publication remains intentionally disabled pending equivalence and physical-device acceptance."
 
-  publish-gate:
+  publication-disabled:
     if: ${{ !inputs.dry_run }}
-    needs: contract
+    needs: build
     runs-on: ubuntu-latest
     environment: production
     permissions:
-      contents: write
+      contents: read
     steps:
-      - name: Fail closed until native publisher is enabled
+      - name: Fail closed before acquiring release write permission
         run: |
-          echo "Native publishing is not enabled in the bootstrap repository." >&2
+          echo "Native publishing is not enabled. The verified artifact was not released." >&2
           exit 1

@@ -32,6 +32,34 @@ class WorkflowSecurityTests(unittest.TestCase):
         text = (self.root / ".github/workflows/publish.yml").read_text(encoding="utf-8")
         self.assertIn("Native publishing is not enabled", text)
         self.assertIn("environment: production", text)
+        self.assertNotIn("contents: write", text)
+        self.assertNotIn("tools/publish_native.py", text)
+
+    def test_native_builder_is_exact_bounded_and_artifact_only(self) -> None:
+        text = (self.root / ".github/workflows/publish.yml").read_text(encoding="utf-8")
+        self.assertIn("ref: ${{ github.sha }}", text)
+        self.assertIn("ref: ${{ inputs.source_commit }}", text)
+        self.assertIn('test "$(git -C firmware rev-parse HEAD)" = "$EXPECTED"', text)
+        self.assertIn("git -C firmware submodule status --recursive", text)
+        self.assertIn("./fbt -j2", text)
+        self.assertIn("--require-hashes -r control/requirements-build.txt", text)
+        requirements = (self.root / "requirements-build.txt").read_text(
+            encoding="utf-8"
+        )
+        self.assertRegex(requirements, r"Pillow==[0-9]+\.[0-9]+\.[0-9]+")
+        self.assertRegex(requirements, r"heatshrink2==[0-9]+\.[0-9]+\.[0-9]+")
+        self.assertEqual(requirements.count("--hash=sha256:"), 2)
+        self.assertIn("control/tools/source_build_targets.py", text)
+        self.assertIn('--control-root control', text)
+        self.assertIn('--channel "$CHANNEL"', text)
+        self.assertIn('--revision "$REVISION"', text)
+        self.assertIn("Download immutable predecessor catalog", text)
+        self.assertIn("--base-directory base-release", text)
+        self.assertIn("control/tools/native_release.py", text)
+        self.assertIn("control/tools/verify_native.py", text)
+        self.assertIn("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", text)
+        self.assertNotIn("gh release upload", text)
+        self.assertNotIn("target_firmware_commit", text)
 
     def test_seed_workflow_uses_resumable_verified_publisher(self) -> None:
         text = (self.root / ".github/workflows/seed-legacy.yml").read_text(encoding="utf-8")

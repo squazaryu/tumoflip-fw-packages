@@ -1,0 +1,43 @@
+{
+  "artifacts": {},
+  "cleanup": [],
+  "firmware": {
+    "api": "88.0",
+    "name": "tumoflip",
+    "target": 7,
+    "version": "t-dev-004-015"
+  },
+  "package_release": {
+    "firmware_flash_unchanged": true,
+    "id": "fixture",
+    "source_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source_dirty": false,
+    "synced_extapps": [],
+    "target_release_tag": "t-dev-004-015",
+    "type": "package-only"
+  },
+  "packages": {
+    "arf": [],
+    "base": [
+      {
+        "bytes": 13,
+        "md5": "e55567523e9c7445ab25dc9c802163e6",
+        "sha256": "21e4d09b747b8f29c887bb3d9c0e141b9ee0a7fda1db75d7699cf5108c5b3f49",
+        "source": "apps/Tools/fixture.fap",
+        "target": "/ext/apps/Tools/fixture.fap"
+      }
+    ],
+    "module_one": [
+      {
+        "bytes": 15,
+        "md5": "90f64aa52d0de2c329255a15c7866412",
+        "sha256": "0abe66dd766901e2b925bf59e5f427aea385c103205828ba468e600bf1656e80",
+        "source": "apps/Module One/fixture.fap",
+        "target": "/ext/apps/Module One/fixture.fap"
+      }
+    ],
+    "protocol_packs": []
+  },
+  "release_id": "dfc5b79ae27f1c87e83198a9d58403bd94f7183ebe31604c41812d009470b14f",
+  "schema": 2
+}
