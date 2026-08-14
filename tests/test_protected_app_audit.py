@@ -890,6 +890,65 @@ class ProtectedAppAuditTests(unittest.TestCase):
             with self.assertRaisesRegex(audit.AuditError, "compression ratio exceeds limit"):
                 audit.load_archive(archive, audit.file_hash(archive, "sha256"))
 
+    def test_target_archive_file_size_limit_fails_before_zip_parsing(self) -> None:
+        archive = self.root / "stable:fw-packages-stable-001=oversized.zip"
+        archive.write_bytes(b"not a ZIP")
+        manifests = audit.load_target_manifests([self.stable_manifest])
+        with mock.patch.object(audit, "MAX_TARGET_ARCHIVE_BYTES", 4):
+            with self.assertRaisesRegex(audit.AuditError, "archive size exceeds limit"):
+                audit.load_target_archives([archive], manifests)
+
+    def test_target_archive_member_count_and_symlink_fail_closed(self) -> None:
+        manifests = audit.load_target_manifests([self.stable_manifest])
+        directories = self.root / "stable:fw-packages-stable-001=directories.zip"
+        with zipfile.ZipFile(directories, "w") as output:
+            output.writestr("one/", b"")
+            output.writestr("two/", b"")
+        with mock.patch.object(audit, "MAX_TARGET_MEMBERS", 1):
+            with self.assertRaisesRegex(audit.AuditError, "member count exceeds limit"):
+                audit.load_target_archives([directories], manifests)
+
+        symlink = self.root / "stable:fw-packages-stable-001=symlink.zip"
+        info = zipfile.ZipInfo("linked.fap")
+        info.create_system = 3
+        info.external_attr = 0o120777 << 16
+        with zipfile.ZipFile(symlink, "w") as output:
+            output.writestr(info, b"target.fap")
+        with self.assertRaisesRegex(audit.AuditError, "symlink target ZIP member"):
+            audit.load_target_archives([symlink], manifests)
+
+    def test_target_archive_member_and_total_limits_fail_closed(self) -> None:
+        archive = self.root / "stable:fw-packages-stable-001=members.zip"
+        with zipfile.ZipFile(archive, "w") as output:
+            output.writestr("one.fap", b"12")
+            output.writestr("two.fap", b"34")
+        manifests = audit.load_target_manifests([self.stable_manifest])
+        with mock.patch.object(audit, "MAX_TARGET_MEMBER_BYTES", 1):
+            with self.assertRaisesRegex(audit.AuditError, "member size exceeds limit"):
+                audit.load_target_archives([archive], manifests)
+        with mock.patch.object(audit, "MAX_TARGET_TOTAL_BYTES", 3):
+            with self.assertRaisesRegex(audit.AuditError, "expanded size exceeds limit"):
+                audit.load_target_archives([archive], manifests)
+
+    def test_target_archive_compression_ratio_limit_fails_closed(self) -> None:
+        archive = self.root / "stable:fw-packages-stable-001=high-ratio.zip"
+        with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as output:
+            output.writestr("zeros.fap", b"\0" * 4096)
+        manifests = audit.load_target_manifests([self.stable_manifest])
+        with mock.patch.object(audit, "MAX_TARGET_COMPRESSION_RATIO", 2):
+            with self.assertRaisesRegex(audit.AuditError, "compression ratio exceeds limit"):
+                audit.load_target_archives([archive], manifests)
+
+    def test_target_archive_streams_each_member_with_a_bound(self) -> None:
+        manifests = audit.load_target_manifests([self.stable_manifest])
+        with mock.patch.object(
+            zipfile.ZipFile,
+            "read",
+            side_effect=AssertionError("unbounded ZipFile.read must not be used"),
+        ):
+            archives = audit.load_target_archives([self.stable_archive], manifests)
+        self.assertIn(("stable", "fw-packages-stable-001"), archives)
+
     def test_missing_protected_family_member_fails_closed(self) -> None:
         family = next(app["artifactFamily"] for app in self.apps if app["id"] == "totp")
         self._write_archives(omit=family["archivePrefix"] + "totp_cli_00.fal")
