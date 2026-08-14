@@ -49,6 +49,11 @@ MAX_COMMUNITY_MEMBERS = 10_000
 MAX_COMMUNITY_MEMBER_BYTES = 16 * 1024 * 1024
 MAX_COMMUNITY_TOTAL_BYTES = 64 * 1024 * 1024
 MAX_COMMUNITY_COMPRESSION_RATIO = 200
+MAX_TARGET_ARCHIVE_BYTES = 64 * 1024 * 1024
+MAX_TARGET_MEMBERS = 2_000
+MAX_TARGET_MEMBER_BYTES = 16 * 1024 * 1024
+MAX_TARGET_TOTAL_BYTES = 64 * 1024 * 1024
+MAX_TARGET_COMPRESSION_RATIO = 200
 MAX_RESOURCE_MEMBERS = 10_000
 MAX_RESOURCE_MEMBER_BYTES = 16 * 1024 * 1024
 MAX_RESOURCE_TOTAL_BYTES = 64 * 1024 * 1024
@@ -766,24 +771,53 @@ def load_target_archives(
         if key not in manifest_keys or key in result:
             raise AuditError(f"target archive identity is unknown or duplicated: {path.name}")
         try:
+            archive_bytes = path.stat().st_size
+        except OSError as error:
+            raise AuditError(f"cannot stat target archive {path}: {error}") from error
+        if archive_bytes < 1 or archive_bytes > MAX_TARGET_ARCHIVE_BYTES:
+            raise AuditError(f"target ZIP archive size exceeds limit: {path.name}")
+        try:
             with zipfile.ZipFile(path) as archive:
                 targets: dict[str, dict[str, Any]] = {}
+                seen_members = 0
+                expanded_bytes = 0
                 for info in archive.infolist():
+                    seen_members += 1
+                    if seen_members > MAX_TARGET_MEMBERS:
+                        raise AuditError("target ZIP member count exceeds limit")
                     if info.is_dir():
                         continue
                     name = info.filename
                     if name.startswith("/") or ".." in Path(name).parts or "\\" in name:
                         raise AuditError(f"unsafe target archive member: {name}")
+                    if ((info.external_attr >> 16) & 0o170000) == 0o120000:
+                        raise AuditError(f"symlink target ZIP member is forbidden: {name}")
                     target = "/ext/" + name
                     if target in targets:
                         raise AuditError(f"duplicate target archive member: {name}")
-                    data = archive.read(info)
+                    if info.file_size < 0 or info.file_size > MAX_TARGET_MEMBER_BYTES:
+                        raise AuditError(f"target ZIP member size exceeds limit: {name}")
+                    expanded_bytes += info.file_size
+                    if expanded_bytes > MAX_TARGET_TOTAL_BYTES:
+                        raise AuditError("target ZIP expanded size exceeds limit")
+                    if info.compress_size < 0 or (
+                        info.file_size > 0
+                        and info.file_size
+                        > max(info.compress_size, 1) * MAX_TARGET_COMPRESSION_RATIO
+                    ):
+                        raise AuditError(f"target ZIP compression ratio exceeds limit: {name}")
+                    with archive.open(info) as stream:
+                        data = stream.read(MAX_TARGET_MEMBER_BYTES + 1)
+                    if len(data) > MAX_TARGET_MEMBER_BYTES:
+                        raise AuditError(f"target ZIP member size exceeds limit: {name}")
+                    if len(data) != info.file_size:
+                        raise AuditError(f"target ZIP member size differs: {name}")
                     targets[target] = {
                         "md5": bytes_hash(data, "md5"),
                         "sha256": bytes_hash(data, "sha256"),
                         "bytes": len(data),
                     }
-        except (OSError, zipfile.BadZipFile) as error:
+        except (OSError, RuntimeError, zipfile.BadZipFile, zipfile.LargeZipFile) as error:
             raise AuditError(f"invalid target archive {path}: {error}") from error
         result[key] = {
             "sha256": file_hash(path, "sha256"),

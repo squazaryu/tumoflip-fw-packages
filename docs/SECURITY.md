@@ -27,7 +27,8 @@ Configure the public repository before enabling publication:
    becomes necessary, use a narrowly scoped GitHub App token, never a classic
    PAT.
 
-Untrusted archives are never executed. Verification rejects traversal,
-absolute ZIP members, duplicate targets, unexpected members, symlinks, digest
-mismatches, excessive member count, expansion ratio, per-member size, and total
-expanded size before a publish token is available.
+Untrusted archives are never executed. Both Community Pack ZIPs and FW Packages
+target ZIPs are streamed through explicit archive, member-count, per-member,
+total-expanded-size, and compression-ratio limits. Verification also rejects
+traversal, absolute members, duplicate targets, unexpected members, symlinks,
+and digest mismatches before a publish token is available.

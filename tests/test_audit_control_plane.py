@@ -53,7 +53,7 @@ class AuditControlPlaneTests(unittest.TestCase):
         with self.assertRaisesRegex(BootstrapError, "classification differs"):
             validate_index(index)
 
-    def test_target_contract_pins_mirror_and_legacy_release_ids(self) -> None:
+    def test_target_contract_pins_only_independent_mirror_release_ids(self) -> None:
         contract = validate_targets(
             json.loads((self.root / "contracts/protected-audit-targets.json").read_text())
         )
@@ -67,10 +67,16 @@ class AuditControlPlaneTests(unittest.TestCase):
             packages["fw-packages-stable-001"]["manifestSourceCommit"],
         )
         self.assertEqual(
-            packages["fw-packages-dev-005"]["repository"], "squazaryu/tumoflip"
+            {item["repository"] for item in packages.values()},
+            {"squazaryu/tumoflip-fw-packages"},
         )
-        self.assertIn("fw-packages-dev-007", packages)
-        self.assertIn("fw-packages-dev-008", packages)
+        self.assertEqual(
+            {item["githubReleaseId"] for item in packages.values()},
+            {369786610, 369803658, 370143096, 370143158},
+        )
+        for item in packages.values():
+            self.assertIn("migrationProvenance", item["assets"])
+            self.assertNotEqual(item["tagCommit"], item["manifestSourceCommit"])
 
     def test_target_contract_rejects_duplicate_release_identity(self) -> None:
         contract = json.loads((self.root / "contracts/protected-audit-targets.json").read_text())
