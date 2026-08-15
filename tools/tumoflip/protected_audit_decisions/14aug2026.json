@@ -1,0 +1,19 @@
+{
+  "schema": 2,
+  "decisions": [
+    {
+      "appId": "arf_frequency_analyzer",
+      "throughAuthorCommit": "ce2650948899b50b8a8ec114784e025a117b0885",
+      "sourceCommit": "ce2650948899b50b8a8ec114784e025a117b0885",
+      "disposition": "intentionallyReplaced",
+      "changelog": "Reviewed the standalone Frequency Analyzer 1.2 source. Tumoflip keeps the ARF-integrated analyzer and intentionally does not install the duplicate freq_analyzer_ext target."
+    },
+    {
+      "appId": "wifi_mapper",
+      "throughAuthorCommit": "ce2650948899b50b8a8ec114784e025a117b0885",
+      "sourceCommit": "ce2650948899b50b8a8ec114784e025a117b0885",
+      "disposition": "intentionallyReplaced",
+      "changelog": "Reviewed the legacy UART-only WIFI Mapping source. Tumoflip keeps TumoSurvey with the compatible wifi_mapper app identity and intentionally does not install the duplicate wifi_map target."
+    }
+  ]
+}

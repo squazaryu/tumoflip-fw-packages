@@ -32,6 +32,18 @@ class ProtectedAppAuditTests(unittest.TestCase):
         self.assertTrue(REGISTRY_PATH.is_relative_to(checkout))
         self.assertTrue(REGISTRY_PATH.is_file())
 
+    def test_14aug_replacement_decisions_cover_new_legacy_apps(self) -> None:
+        decisions = audit.load_decisions(
+            REPO_ROOT / "tools/tumoflip/protected_audit_decisions/14aug2026.json"
+        )
+        self.assertEqual(set(decisions), {"arf_frequency_analyzer", "wifi_mapper"})
+        for decision in decisions.values():
+            self.assertEqual(decision["disposition"], "intentionallyReplaced")
+            self.assertEqual(
+                decision["sourceCommit"],
+                "ce2650948899b50b8a8ec114784e025a117b0885",
+            )
+
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
@@ -359,7 +371,7 @@ class ProtectedAppAuditTests(unittest.TestCase):
         result, _ = audit.audit_release(self._args())
 
         self.assertEqual(result["overallStatus"], "pending")
-        self.assertEqual(len(result["entries"]), 9)
+        self.assertEqual(len(result["entries"]), 11)
         self.assertEqual(len(result["unresolved"]), 15)
         self.assertTrue(
             any(
@@ -372,7 +384,7 @@ class ProtectedAppAuditTests(unittest.TestCase):
         )
         raw = next(app for app in result["apps"] if app["appId"] == "subghz_raw_edit")
         self.assertEqual(raw["status"], "needsReview")
-        self.assertEqual(sum(len(app["artifacts"]) for app in result["apps"]), 24)
+        self.assertEqual(sum(len(app["artifacts"]) for app in result["apps"]), 26)
         accepted = next(
             entry for entry in result["entries"]
             if entry["remotePath"].endswith("esp32_wifi_marauder.fap")
@@ -424,7 +436,7 @@ class ProtectedAppAuditTests(unittest.TestCase):
         result, _ = audit.audit_release(self._args(decisions=decisions))
 
         self.assertEqual(result["overallStatus"], "pending")
-        self.assertEqual(len(result["entries"]), 10)
+        self.assertEqual(len(result["entries"]), 12)
         self.assertEqual(len(result["unresolved"]), 14)
 
     def test_checked_in_raw_edit_decisions_accept_the_exact_live_sources(self) -> None:
@@ -680,7 +692,7 @@ class ProtectedAppAuditTests(unittest.TestCase):
         result, _ = audit.audit_release(self._args(decisions=decisions))
 
         self.assertEqual(result["overallStatus"], "verified")
-        self.assertEqual(len(result["entries"]), 24)
+        self.assertEqual(len(result["entries"]), 26)
         self.assertEqual(result["unresolved"], [])
 
     def test_changed_app_decision_requires_hardware_acceptance(self) -> None:
@@ -1077,18 +1089,18 @@ class ProtectedAppAuditTests(unittest.TestCase):
     def test_same_pack_is_reaudited_when_target_release_changes(self) -> None:
         self._set_raw_author_head("e" * 40)
         first, _ = audit.audit_release(self._args())
-        self.assertEqual(len(first["entries"]), 9)
+        self.assertEqual(len(first["entries"]), 11)
         self.assertEqual(len(first["unresolved"]), 15)
         ledger = audit.merge_ledger(None, first)
 
         self._add_totp_target_family()
         second, _ = audit.audit_release(self._args())
-        self.assertEqual(len(second["entries"]), 23)
+        self.assertEqual(len(second["entries"]), 25)
         self.assertEqual(len(second["unresolved"]), 1)
         ledger = audit.merge_ledger(ledger, second)
 
         self.assertEqual(len(ledger["audits"]), 1)
-        self.assertEqual(len(ledger["audits"][0]["entries"]), 23)
+        self.assertEqual(len(ledger["audits"][0]["entries"]), 25)
         self.assertEqual(len(ledger["audits"][0]["unresolved"]), 1)
 
     def test_semantic_identity_ignores_time_but_changes_with_target_evidence(self) -> None:
