@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "sourceRepository": "xMasterX/all-the-plugins",
-  "generatedAt": "2026-08-15T07:00:00+00:00",
+  "generatedAt": "2026-08-15T08:41:08+00:00",
   "audits": [
     {
       "sequence": 20260809193105,
@@ -4554,6 +4554,15 @@
           ]
         },
         {
+          "remotePath": "/ext/apps/GPIO/wifi_map.fap",
+          "targetPath": "/ext/apps/Module One/ESP32 Wi-Fi/wifi_map.fap",
+          "sourceMD5": "d93ed705cff508570f3015d93b9ff7ea",
+          "disposition": "intentionallyReplaced",
+          "note": "Reviewed the legacy UART-only WIFI Mapping source. Tumoflip keeps TumoSurvey with the compatible wifi_mapper app identity and intentionally does not install the duplicate wifi_map target.",
+          "targetMD5s": [],
+          "targetProvenance": []
+        },
+        {
           "remotePath": "/ext/apps/Infrared/flipper_xremote.fap",
           "targetPath": "/ext/apps/Module One/IR Blaster/tumoflip_xremote.fap",
           "sourceMD5": "6817690c7212d041834faf0433e5ad74",
@@ -4629,6 +4638,15 @@
               "targetSourceCommit": "49b47de9044c1b135b31c0612740f4533c8d6eef"
             }
           ]
+        },
+        {
+          "remotePath": "/ext/apps/Sub-GHz/freq_analyzer_ext.fap",
+          "targetPath": "/ext/apps/Module One/Sub-GHz/freq_analyzer_ext.fap",
+          "sourceMD5": "a7eb649d6545304a0bd5f231c877deca",
+          "disposition": "intentionallyReplaced",
+          "note": "Reviewed the standalone Frequency Analyzer 1.2 source. Tumoflip keeps the ARF-integrated analyzer and intentionally does not install the duplicate freq_analyzer_ext target.",
+          "targetMD5s": [],
+          "targetProvenance": []
         },
         {
           "remotePath": "/ext/apps/Sub-GHz/proto_pirate.fap",
@@ -6537,6 +6555,78 @@
           ]
         },
         {
+          "appId": "arf_frequency_analyzer",
+          "aliases": [
+            "freq_analyzer_ext"
+          ],
+          "packSourcePath": "non_catalog_apps/freq_analyzer_ext",
+          "localSourcePath": "applications_user/arf_subghz_full",
+          "packSourceChanged": false,
+          "author": {
+            "repository": "https://github.com/xMasterX/all-the-plugins.git",
+            "ref": "release-source",
+            "previousCommit": "ce2650948899b50b8a8ec114784e025a117b0885",
+            "currentCommit": "ce2650948899b50b8a8ec114784e025a117b0885",
+            "changed": false,
+            "license": "not-declared"
+          },
+          "status": "verified",
+          "disposition": "intentionallyReplaced",
+          "note": "Reviewed the standalone Frequency Analyzer 1.2 source. Tumoflip keeps the ARF-integrated analyzer and intentionally does not install the duplicate freq_analyzer_ext target.",
+          "artifacts": [
+            {
+              "pack": "extra",
+              "remotePath": "/ext/apps/Sub-GHz/freq_analyzer_ext.fap",
+              "targetPath": "/ext/apps/Module One/Sub-GHz/freq_analyzer_ext.fap",
+              "sourceMD5": "a7eb649d6545304a0bd5f231c877deca",
+              "ledgerStatus": "accepted"
+            }
+          ],
+          "decision": {
+            "appId": "arf_frequency_analyzer",
+            "throughAuthorCommit": "ce2650948899b50b8a8ec114784e025a117b0885",
+            "sourceCommit": "ce2650948899b50b8a8ec114784e025a117b0885",
+            "disposition": "intentionallyReplaced",
+            "changelog": "Reviewed the standalone Frequency Analyzer 1.2 source. Tumoflip keeps the ARF-integrated analyzer and intentionally does not install the duplicate freq_analyzer_ext target."
+          }
+        },
+        {
+          "appId": "wifi_mapper",
+          "aliases": [
+            "wifi_map"
+          ],
+          "packSourcePath": "non_catalog_apps/wifi-map",
+          "localSourcePath": "applications_user/wifi_mapper",
+          "packSourceChanged": false,
+          "author": {
+            "repository": "https://github.com/xMasterX/all-the-plugins.git",
+            "ref": "release-source",
+            "previousCommit": "ce2650948899b50b8a8ec114784e025a117b0885",
+            "currentCommit": "ce2650948899b50b8a8ec114784e025a117b0885",
+            "changed": false,
+            "license": "MIT"
+          },
+          "status": "verified",
+          "disposition": "intentionallyReplaced",
+          "note": "Reviewed the legacy UART-only WIFI Mapping source. Tumoflip keeps TumoSurvey with the compatible wifi_mapper app identity and intentionally does not install the duplicate wifi_map target.",
+          "artifacts": [
+            {
+              "pack": "extra",
+              "remotePath": "/ext/apps/GPIO/wifi_map.fap",
+              "targetPath": "/ext/apps/Module One/ESP32 Wi-Fi/wifi_map.fap",
+              "sourceMD5": "d93ed705cff508570f3015d93b9ff7ea",
+              "ledgerStatus": "accepted"
+            }
+          ],
+          "decision": {
+            "appId": "wifi_mapper",
+            "throughAuthorCommit": "ce2650948899b50b8a8ec114784e025a117b0885",
+            "sourceCommit": "ce2650948899b50b8a8ec114784e025a117b0885",
+            "disposition": "intentionallyReplaced",
+            "changelog": "Reviewed the legacy UART-only WIFI Mapping source. Tumoflip keeps TumoSurvey with the compatible wifi_mapper app identity and intentionally does not install the duplicate wifi_map target."
+          }
+        },
+        {
           "appId": "flipper_xremote",
           "aliases": [
             "xremote",
@@ -6597,7 +6687,7 @@
         }
       ],
       "unresolved": [],
-      "generatedAt": "2026-08-15T07:00:00+00:00"
+      "generatedAt": "2026-08-15T08:41:08+00:00"
     }
   ]
 }
