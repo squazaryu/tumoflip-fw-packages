@@ -22,6 +22,7 @@
     "flipper_companion",
     "flipper_relay",
     "flipper_xremote",
+    "freq_analyzer_ext",
     "garage_door_remote",
     "keeloq_keystore_decryptor",
     "module_one_cockpit",
@@ -60,6 +61,7 @@
     "tumovm_peripherals",
     "tumovm_poc",
     "usb_sd_mode",
+    "wifi_map",
     "wifi_mapper",
     "wifi_marauder_companion",
     "xremote"
@@ -254,6 +256,50 @@
       ],
       "defaultDisposition": "intentionallyReplaced",
       "note": "Claude Buddy replaces Agentic Remote by design; the upstream target remains absent."
+    },
+    {
+      "id": "arf_frequency_analyzer",
+      "aliases": ["freq_analyzer_ext"],
+      "packSourcePath": "non_catalog_apps/freq_analyzer_ext",
+      "localSourcePath": "applications_user/arf_subghz_full",
+      "author": {
+        "repository": "https://github.com/xMasterX/all-the-plugins.git",
+        "ref": "release-source",
+        "lastReviewedCommit": "ce2650948899b50b8a8ec114784e025a117b0885",
+        "license": "not-declared"
+      },
+      "artifacts": [
+        {
+          "pack": "extra",
+          "remotePath": "/ext/apps/Sub-GHz/freq_analyzer_ext.fap",
+          "archivePath": "extra_pack_build/artifacts-extra/Sub-GHz/freq_analyzer_ext.fap",
+          "targetPath": "/ext/apps/Module One/Sub-GHz/freq_analyzer_ext.fap"
+        }
+      ],
+      "defaultDisposition": "intentionallyReplaced",
+      "note": "ARF Frequency Analyzer replaces the standalone upstream analyzer; the duplicate target remains absent."
+    },
+    {
+      "id": "wifi_mapper",
+      "aliases": ["wifi_map"],
+      "packSourcePath": "non_catalog_apps/wifi-map",
+      "localSourcePath": "applications_user/wifi_mapper",
+      "author": {
+        "repository": "https://github.com/xMasterX/all-the-plugins.git",
+        "ref": "release-source",
+        "lastReviewedCommit": "ce2650948899b50b8a8ec114784e025a117b0885",
+        "license": "MIT"
+      },
+      "artifacts": [
+        {
+          "pack": "extra",
+          "remotePath": "/ext/apps/GPIO/wifi_map.fap",
+          "archivePath": "extra_pack_build/artifacts-extra/GPIO/wifi_map.fap",
+          "targetPath": "/ext/apps/Module One/ESP32 Wi-Fi/wifi_map.fap"
+        }
+      ],
+      "defaultDisposition": "intentionallyReplaced",
+      "note": "TumoSurvey replaces the legacy UART-only WIFI Mapping app; the duplicate target remains absent."
     },
     {
       "id": "flipper_xremote",
