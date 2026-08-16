@@ -165,21 +165,21 @@ def load_native_plan(
             f"requested {tag} is not the next contracted release {expected_tag}"
         )
     release_policy = release_plans.get(tag)
-    selected_names = (
-        release_policy.get("selectedOverlays")
-        if isinstance(release_policy, dict)
-        else None
-    )
-    if (
-        not isinstance(selected_names, list)
-        or not selected_names
-        or any(
-            not isinstance(name, str) or name not in allowed_overlays
-            for name in selected_names
-        )
-        or len(set(selected_names)) != len(selected_names)
-    ):
+    if not isinstance(release_policy, dict):
         raise ContractError(f"native release {tag} has no exact non-empty overlay plan")
+    mode = release_policy.get("mode", "overlay")
+    selected_names = release_policy.get("selectedOverlays")
+    if mode not in {"overlay", "firmwareSnapshot"}:
+        raise ContractError(f"native release {tag} mode is invalid")
+    if not isinstance(selected_names, list) or any(
+        not isinstance(name, str) or name not in allowed_overlays
+        for name in selected_names
+    ) or len(set(selected_names)) != len(selected_names):
+        raise ContractError(f"native release {tag} overlay plan is invalid")
+    if mode == "overlay" and not selected_names:
+        raise ContractError(f"native release {tag} has no exact non-empty overlay plan")
+    if mode == "firmwareSnapshot" and (channel != "stable" or selected_names):
+        raise ContractError("firmware snapshot must be a stable release without overlays")
     authorized_source_commit = _exact_commit(
         release_policy.get("sourceCommit"), f"native release {tag} source commit"
     )
@@ -215,8 +215,20 @@ def load_native_plan(
         raise ContractError("target firmware API contract is invalid")
     if not isinstance(target, int) or isinstance(target, bool) or target < 1:
         raise ContractError("target firmware hardware target is invalid")
+    snapshot_manifest_sha = baseline.get("packageManifestSHA256")
+    snapshot_zip_sha = baseline.get("packageZipSHA256")
+    if mode == "firmwareSnapshot":
+        if source_commit != firmware_commit:
+            raise ContractError("firmware snapshot source differs from target firmware")
+        for value, label in (
+            (snapshot_manifest_sha, "snapshot manifest SHA-256"),
+            (snapshot_zip_sha, "snapshot ZIP SHA-256"),
+        ):
+            if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
+                raise ContractError(f"{label} contract is invalid")
 
     return {
+        "mode": mode,
         "channel": channel,
         "revision": revision,
         "tag": tag,
@@ -241,6 +253,8 @@ def load_native_plan(
             "version": firmware_version,
             "api": api,
             "target": target,
+            "packageManifestSHA256": snapshot_manifest_sha,
+            "packageZipSHA256": snapshot_zip_sha,
         },
     }
 
@@ -757,10 +771,229 @@ def finalize_native_release(
     verify_native_release(directory, plan, base_directory)
 
 
+def _snapshot_changed_sources(
+    base: dict[str, Any], snapshot: dict[str, Any]
+) -> list[str]:
+    """Return the exact package sources added, removed, or changed by stable firmware."""
+
+    old = _entries_by_source(base)
+    new = _entries_by_source(snapshot)
+    return sorted(
+        source
+        for source in set(old) | set(new)
+        if old.get(source) != new.get(source)
+    )
+
+
+def _validate_snapshot_source(
+    target_directory: Path, plan: dict[str, Any]
+) -> dict[str, Any]:
+    manifest_path = target_directory / "tumoflip-packages.json"
+    archive_path = target_directory / "tumoflip-packages.zip"
+    if not manifest_path.is_file() or not archive_path.is_file():
+        raise ContractError("firmware snapshot package assets are missing")
+    if sha256(manifest_path) != plan["targetFirmware"]["packageManifestSHA256"]:
+        raise ContractError("firmware snapshot manifest SHA-256 differs")
+    if sha256(archive_path) != plan["targetFirmware"]["packageZipSHA256"]:
+        raise ContractError("firmware snapshot ZIP SHA-256 differs")
+    manifest = load_json(manifest_path)
+    verify_archive(manifest, archive_path)
+    if manifest.get("release_id") != plan["targetFirmware"]["releaseId"]:
+        raise ContractError("firmware snapshot release ID differs")
+    if manifest.get("package_release") is not None:
+        raise ContractError("firmware snapshot unexpectedly contains package-release metadata")
+    firmware = manifest.get("firmware")
+    expected = plan["targetFirmware"]
+    if not isinstance(firmware, dict) or any(
+        firmware.get(field) != expected[value]
+        for field, value in (("version", "version"), ("api", "api"), ("target", "target"))
+    ):
+        raise ContractError("firmware snapshot compatibility identity differs")
+    return manifest
+
+
+def _snapshot_package_release(
+    snapshot: dict[str, Any], base: dict[str, Any], base_directory: Path, plan: dict[str, Any]
+) -> dict[str, Any]:
+    manifest = copy.deepcopy(snapshot)
+    manifest.pop("release_id", None)
+    manifest["package_release"] = {
+        "type": "package-only",
+        "id": plan["tag"],
+        "source_commit": plan["sourceCommit"],
+        "source_dirty": False,
+        "source_firmware_version": plan["targetFirmware"]["version"],
+        "target_release_tag": plan["targetFirmware"]["tag"],
+        "target_release_id": plan["targetFirmware"]["releaseId"],
+        "target_source_commit": plan["targetFirmware"]["commit"],
+        "firmware_flash_unchanged": True,
+        "overlay_targets": [],
+        "synced_extapps": [],
+        "catalog_channel": plan["channel"],
+        "catalog_revision": plan["revision"],
+        "catalog_release_tag": plan["tag"],
+        "source_repository": plan["sourceRepository"],
+        "target_firmware_commit": plan["targetFirmware"]["commit"],
+        "base_catalog": {
+            "release_tag": plan["baseRelease"]["tag"],
+            "release_id": base["release_id"],
+            "manifest_sha256": sha256(base_directory / "tumoflip-packages.json"),
+            "package_zip_sha256": sha256(base_directory / "tumoflip-packages.zip"),
+            "source_commit": plan["baseRelease"]["sourceCommit"],
+        },
+        "compatible_releases": [],
+    }
+    manifest["release_id"] = manifest_release_id(manifest)
+    return manifest
+
+
+def build_firmware_snapshot_release(
+    target_directory: Path,
+    base_directory: Path,
+    output: Path,
+    plan: dict[str, Any],
+) -> None:
+    """Atomically promote one exact stable firmware package snapshot."""
+
+    if plan.get("mode") != "firmwareSnapshot":
+        raise ContractError("release plan is not a firmware snapshot")
+    verify_release_directory(base_directory, plan["baseRelease"])
+    snapshot = _validate_snapshot_source(target_directory, plan)
+    base = load_json(base_directory / "tumoflip-packages.json")
+    if output.exists():
+        raise ContractError(f"output already exists: {output}")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=f".{output.name}.", dir=str(output.parent)))
+    try:
+        manifest = _snapshot_package_release(snapshot, base, base_directory, plan)
+        _write_json(staging / "tumoflip-packages.json", manifest)
+        shutil.copyfile(
+            target_directory / "tumoflip-packages.zip",
+            staging / "tumoflip-packages.zip",
+        )
+        verify_archive(manifest, staging / "tumoflip-packages.zip")
+        checksum_path = _checksums(staging, plan["tag"])
+        changed_sources = _snapshot_changed_sources(base, snapshot)
+        assets = {
+            name: _asset_evidence(staging / name)
+            for name in (*CANONICAL_ASSETS, checksum_path.name)
+        }
+        provenance = {
+            "schema": 1,
+            "kind": "firmwareSnapshotPackageRelease",
+            "channel": plan["channel"],
+            "revision": plan["revision"],
+            "tag": plan["tag"],
+            "publisher": {
+                "repository": plan["publisherRepository"],
+                "commit": plan["publisherCommit"],
+            },
+            "firmwareSource": {
+                "repository": plan["sourceRepository"],
+                "commit": plan["sourceCommit"],
+            },
+            "targetFirmware": plan["targetFirmware"],
+            "baseCatalog": {
+                "tag": plan["baseRelease"]["tag"],
+                "releaseId": plan["baseRelease"]["releaseId"],
+                "assets": plan["baseRelease"]["assets"],
+            },
+            "targetSnapshot": {
+                "manifestSHA256": plan["targetFirmware"]["packageManifestSHA256"],
+                "packageZipSHA256": plan["targetFirmware"]["packageZipSHA256"],
+                "manifestReleaseId": plan["targetFirmware"]["releaseId"],
+            },
+            "changedSources": changed_sources,
+            "manifestReleaseId": manifest["release_id"],
+            "assets": assets,
+        }
+        _write_json(staging / PROVENANCE_NAME, provenance)
+        verify_native_release(staging, plan, base_directory, target_directory)
+        os.replace(staging, output)
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
+
+
+def _verify_firmware_snapshot_release(
+    directory: Path,
+    plan: dict[str, Any],
+    base_directory: Path,
+    target_directory: Path,
+) -> None:
+    verify_release_directory(base_directory, plan["baseRelease"])
+    snapshot = _validate_snapshot_source(target_directory, plan)
+    base = load_json(base_directory / "tumoflip-packages.json")
+    manifest = load_json(directory / "tumoflip-packages.json")
+    expected_manifest = _snapshot_package_release(snapshot, base, base_directory, plan)
+    if manifest != expected_manifest:
+        raise ContractError("firmware snapshot catalog manifest differs")
+    if sha256(directory / "tumoflip-packages.zip") != sha256(
+        target_directory / "tumoflip-packages.zip"
+    ):
+        raise ContractError("firmware snapshot package ZIP differs")
+    provenance = load_json(directory / PROVENANCE_NAME)
+    checksum_name = f"{plan['tag']}-SHA256SUMS"
+    expected_names = {*CANONICAL_ASSETS, checksum_name}
+    exact = {
+        "schema": 1,
+        "kind": "firmwareSnapshotPackageRelease",
+        "channel": plan["channel"],
+        "revision": plan["revision"],
+        "tag": plan["tag"],
+        "publisher": {
+            "repository": plan["publisherRepository"],
+            "commit": plan["publisherCommit"],
+        },
+        "firmwareSource": {
+            "repository": plan["sourceRepository"],
+            "commit": plan["sourceCommit"],
+        },
+        "targetFirmware": plan["targetFirmware"],
+        "baseCatalog": {
+            "tag": plan["baseRelease"]["tag"],
+            "releaseId": plan["baseRelease"]["releaseId"],
+            "assets": plan["baseRelease"]["assets"],
+        },
+        "targetSnapshot": {
+            "manifestSHA256": plan["targetFirmware"]["packageManifestSHA256"],
+            "packageZipSHA256": plan["targetFirmware"]["packageZipSHA256"],
+            "manifestReleaseId": plan["targetFirmware"]["releaseId"],
+        },
+        "changedSources": _snapshot_changed_sources(base, snapshot),
+        "manifestReleaseId": manifest["release_id"],
+    }
+    for key, value in exact.items():
+        if provenance.get(key) != value:
+            raise ContractError(f"firmware snapshot provenance {key} differs")
+    assets = provenance.get("assets")
+    if not isinstance(assets, dict) or set(assets) != expected_names:
+        raise ContractError("firmware snapshot provenance asset set differs")
+    for name in sorted(expected_names):
+        evidence = assets.get(name)
+        path = directory / name
+        if (
+            not isinstance(evidence, dict)
+            or evidence.get("bytes") != path.stat().st_size
+            or evidence.get("sha256") != sha256(path)
+        ):
+            raise ContractError(f"firmware snapshot provenance asset differs: {name}")
+
+
 def verify_native_release(
-    directory: Path, plan: dict[str, Any], base_directory: Path | None = None
+    directory: Path,
+    plan: dict[str, Any],
+    base_directory: Path | None = None,
+    target_directory: Path | None = None,
 ) -> None:
     verify_release_directory(directory)
+    if plan.get("mode") == "firmwareSnapshot":
+        if base_directory is None or target_directory is None:
+            raise ContractError("firmware snapshot verification requires base and target assets")
+        _verify_firmware_snapshot_release(
+            directory, plan, base_directory, target_directory
+        )
+        return
     manifest = load_json(directory / "tumoflip-packages.json")
     _validate_source_manifest(manifest, plan)
     _validate_final_manifest_identity(manifest, plan)
@@ -839,6 +1072,8 @@ def build_native_release(
 ) -> None:
     """Compose selected source-owned exports, then atomically expose verified assets."""
 
+    if plan.get("mode") != "overlay":
+        raise ContractError("source build requires an overlay release plan")
     prove_source_checkout(source_root, plan["sourceCommit"], runner)
     verify_release_directory(base_directory, plan["baseRelease"])
     if output.exists():
@@ -866,7 +1101,8 @@ def build_native_release(
 def parser() -> argparse.ArgumentParser:
     value = argparse.ArgumentParser()
     value.add_argument("--control-root", type=Path, default=Path("."))
-    value.add_argument("--source-root", type=Path, required=True)
+    value.add_argument("--source-root", type=Path)
+    value.add_argument("--target-directory", type=Path)
     value.add_argument("--base-directory", type=Path, required=True)
     value.add_argument("--output", type=Path, required=True)
     value.add_argument("--channel", choices=("stable", "dev"), required=True)
@@ -887,13 +1123,25 @@ def main() -> int:
             args.source_commit,
             args.publisher_commit,
         )
-        build_native_release(
-            args.source_root.resolve(),
-            args.base_directory.resolve(),
-            args.output.resolve(),
-            plan,
-            args.build_dir,
-        )
+        if plan["mode"] == "firmwareSnapshot":
+            if args.target_directory is None:
+                raise ContractError("firmware snapshot requires --target-directory")
+            build_firmware_snapshot_release(
+                args.target_directory.resolve(),
+                args.base_directory.resolve(),
+                args.output.resolve(),
+                plan,
+            )
+        else:
+            if args.source_root is None:
+                raise ContractError("overlay release requires --source-root")
+            build_native_release(
+                args.source_root.resolve(),
+                args.base_directory.resolve(),
+                args.output.resolve(),
+                plan,
+                args.build_dir,
+            )
     except (ContractError, OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1

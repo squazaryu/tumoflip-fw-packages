@@ -39,12 +39,14 @@ def verify_contract(root: Path) -> None:
     baselines = load_json(root / "contracts/catalog-baselines.json")
     checkouts = load_json(root / "contracts/source-checkouts.json")
     clients = load_json(root / "contracts/client-sources.json")
+    policy = load_json(root / "contracts/native-build-policy.json")
     for name, document in (
         ("legacy", legacy),
         ("lineage", lineage),
         ("baselines", baselines),
         ("checkouts", checkouts),
         ("clients", clients),
+        ("native policy", policy),
     ):
         if document.get("schema") != 1:
             raise ContractError(f"{name} contract schema must be 1")
@@ -106,10 +108,22 @@ def verify_contract(root: Path) -> None:
         ):
             if commit_pattern.fullmatch(commit) is None:
                 raise ContractError(f"{channel} {label} commit is not an exact SHA")
-        if legacy_channel["targetFirmwareTag"] != baseline["firmwareTag"]:
-            raise ContractError(f"{channel} target firmware tag differs")
-        if legacy_channel["targetFirmwareCommit"] != baseline["firmwareCommit"]:
-            raise ContractError(f"{channel} target firmware commit differs")
+        baseline_advanced = (
+            legacy_channel["targetFirmwareTag"] != baseline["firmwareTag"]
+            or legacy_channel["targetFirmwareCommit"] != baseline["firmwareCommit"]
+        )
+        if baseline_advanced:
+            plan = policy.get("releasePlans", {}).get(lineage_channel["nextNativeTag"])
+            if (
+                channel != "stable"
+                or not isinstance(plan, dict)
+                or plan.get("mode") != "firmwareSnapshot"
+                or plan.get("sourceCommit") != baseline["firmwareCommit"]
+                or plan.get("selectedOverlays") != []
+                or not isinstance(baseline.get("packageManifestSHA256"), str)
+                or not isinstance(baseline.get("packageZipSHA256"), str)
+            ):
+                raise ContractError(f"{channel} target firmware differs without snapshot plan")
 
 
 def verify_seed(root: Path, contract_root: Path) -> None:

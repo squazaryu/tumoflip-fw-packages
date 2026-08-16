@@ -20,6 +20,7 @@ def main() -> int:
     parser.add_argument("--control-root", type=Path, default=Path("."))
     parser.add_argument("--directory", type=Path, required=True)
     parser.add_argument("--base-directory", type=Path)
+    parser.add_argument("--target-directory", type=Path)
     parser.add_argument("--channel", choices=("stable", "dev"), required=True)
     parser.add_argument("--revision", type=int, required=True)
     parser.add_argument("--source-commit", required=True)
@@ -37,6 +38,7 @@ def main() -> int:
             args.directory.resolve(),
             plan,
             args.base_directory.resolve() if args.base_directory else None,
+            args.target_directory.resolve() if args.target_directory else None,
         )
     except (ContractError, OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
