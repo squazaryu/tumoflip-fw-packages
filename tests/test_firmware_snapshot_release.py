@@ -142,10 +142,12 @@ class FirmwareSnapshotReleaseTests(unittest.TestCase):
 
         policy_path = self.control / "contracts/native-build-policy.json"
         policy = json.loads(policy_path.read_text())
-        policy["releasePlans"]["fw-packages-stable-002"] = {
-            "mode": "firmwareSnapshot",
-            "sourceCommit": self.source_commit,
-            "selectedOverlays": [],
+        policy["releasePlans"] = {
+            "fw-packages-stable-002": {
+                "mode": "firmwareSnapshot",
+                "sourceCommit": self.source_commit,
+                "selectedOverlays": [],
+            }
         }
         policy_path.write_text(json.dumps(policy))
 
