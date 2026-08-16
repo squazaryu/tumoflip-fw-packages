@@ -41,9 +41,10 @@ application source, `fbt`, firmware builds, API checks, and firmware releases.
 Package workflows check out that repository by exact commit and never copy its
 source here.
 
-Stable002 is the first native stable release. It promotes the exact package
-snapshot published with firmware `v1.0.5`; its ZIP payload is byte-identical to
-that firmware release and its catalog identity is independent. Dev009 remains
+Stable002 is the first native stable release. Stable003 is the current stable
+catalog and promotes the exact package snapshot published with firmware
+`v1.0.6`; its ZIP payload is byte-identical to that firmware release and its
+catalog identity is independent. Dev009 remains
 fail-closed without an authorized source/overlay plan. Overlay builds start from
 the exact current catalog and may replace only reviewed paths, so build-only
 metadata drift cannot become a false application update. Stable firmware
