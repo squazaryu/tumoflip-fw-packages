@@ -18,11 +18,5 @@
     "totp_cli_update_plugin": "apps_data/totp/plugins/totp_cli_update_plugin.fal",
     "totp_cli_version_plugin": "apps_data/totp/plugins/totp_cli_version_plugin.fal"
   },
-  "releasePlans": {
-    "fw-packages-stable-003": {
-      "mode": "firmwareSnapshot",
-      "sourceCommit": "8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758",
-      "selectedOverlays": []
-    }
-  }
+  "releasePlans": {}
 }

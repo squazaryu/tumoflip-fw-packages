@@ -21,8 +21,9 @@ firmware-source repository and commit.
 - Compatibility is explicit: target `f7`, API range, firmware release ID, and
   retained compatible build hashes.
 - A tag, revision, or release ID collision with different bytes is fatal.
-- `stable-002` is the first native stable release; `dev-009` remains the first
-  reserved native development revision.
+- `stable-002` is the first native stable release; `stable-003` is the current
+  stable catalog for firmware v1.0.6. `dev-009` remains the first reserved
+  native development revision.
 
 ## Build boundary
 
