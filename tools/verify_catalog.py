@@ -35,6 +35,7 @@ def verify_contract(root: Path) -> None:
 
     load_history_contract(root)
     legacy = load_json(root / "contracts/legacy-sources.json")
+    current = load_json(root / "contracts/current-releases.json")
     lineage = load_json(root / "contracts/catalog-lineage.json")
     baselines = load_json(root / "contracts/catalog-baselines.json")
     checkouts = load_json(root / "contracts/source-checkouts.json")
@@ -42,6 +43,7 @@ def verify_contract(root: Path) -> None:
     policy = load_json(root / "contracts/native-build-policy.json")
     for name, document in (
         ("legacy", legacy),
+        ("current", current),
         ("lineage", lineage),
         ("baselines", baselines),
         ("checkouts", checkouts),
@@ -52,6 +54,8 @@ def verify_contract(root: Path) -> None:
             raise ContractError(f"{name} contract schema must be 1")
     if legacy.get("repository") != baselines.get("firmwareRepository"):
         raise ContractError("legacy and baseline firmware repositories differ")
+    if current.get("repository") != lineage.get("publisherRepository"):
+        raise ContractError("current releases repository differs from publisher")
     if checkouts.get("firmwareRepository") != baselines.get("firmwareRepository"):
         raise ContractError("checkout and baseline firmware repositories differ")
     if lineage.get("publisherRepository") != checkouts.get("publisherRepository"):
@@ -82,6 +86,7 @@ def verify_contract(root: Path) -> None:
     commit_pattern = re.compile(checkouts.get("commitPattern", ""))
     for channel in ("stable", "dev"):
         legacy_channel = legacy["channels"][channel]
+        current_channel = current["channels"][channel]
         lineage_channel = lineage["channels"][channel]
         baseline = baselines["channels"][channel]
         tag_match = PACKAGE_TAG.fullmatch(legacy_channel["tag"])
@@ -91,11 +96,18 @@ def verify_contract(root: Path) -> None:
             raise ContractError(f"legacy {channel} revision differs")
         if legacy_channel.get("prerelease") is not (channel == "dev"):
             raise ContractError(f"legacy {channel} prerelease state differs")
-        if lineage_channel["currentTag"] != legacy_channel["tag"]:
-            raise ContractError(f"lineage {channel} head differs from seed")
-        if lineage_channel["currentRevision"] != legacy_channel["revision"]:
-            raise ContractError(f"lineage {channel} revision differs from seed")
-        if lineage_channel["nextNativeRevision"] != legacy_channel["revision"] + 1:
+        current_match = PACKAGE_TAG.fullmatch(current_channel["tag"])
+        if current_match is None or current_match.group(1) != channel:
+            raise ContractError(f"invalid current {channel} tag")
+        if int(current_match.group(2)) != current_channel["revision"]:
+            raise ContractError(f"current {channel} revision differs")
+        if current_channel.get("prerelease") is not (channel == "dev"):
+            raise ContractError(f"current {channel} prerelease state differs")
+        if lineage_channel["currentTag"] != current_channel["tag"]:
+            raise ContractError(f"lineage {channel} head differs from current release")
+        if lineage_channel["currentRevision"] != current_channel["revision"]:
+            raise ContractError(f"lineage {channel} revision differs from current release")
+        if lineage_channel["nextNativeRevision"] != current_channel["revision"] + 1:
             raise ContractError(f"lineage {channel} next revision is not monotonic")
         next_match = PACKAGE_TAG.fullmatch(lineage_channel["nextNativeTag"])
         if next_match is None or int(next_match.group(2)) != lineage_channel["nextNativeRevision"]:
@@ -104,13 +116,16 @@ def verify_contract(root: Path) -> None:
             ("legacy source", legacy_channel["sourceCommit"]),
             ("legacy tag", legacy_channel["tagCommit"]),
             ("legacy target", legacy_channel["targetFirmwareCommit"]),
+            ("current source", current_channel["sourceCommit"]),
+            ("current tag", current_channel["tagCommit"]),
+            ("current target", current_channel["targetFirmwareCommit"]),
             ("baseline", baseline["firmwareCommit"]),
         ):
             if commit_pattern.fullmatch(commit) is None:
                 raise ContractError(f"{channel} {label} commit is not an exact SHA")
         baseline_advanced = (
-            legacy_channel["targetFirmwareTag"] != baseline["firmwareTag"]
-            or legacy_channel["targetFirmwareCommit"] != baseline["firmwareCommit"]
+            current_channel["targetFirmwareTag"] != baseline["firmwareTag"]
+            or current_channel["targetFirmwareCommit"] != baseline["firmwareCommit"]
         )
         if baseline_advanced:
             plan = policy.get("releasePlans", {}).get(lineage_channel["nextNativeTag"])

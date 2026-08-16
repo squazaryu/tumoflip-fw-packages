@@ -207,7 +207,7 @@ class NativeReleaseTests(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, "exactly 2"):
             load_native_plan(control, "dev", 9, self.source_commit, self.publisher_commit)
 
-    def test_repository_authorizes_only_the_pinned_stable_snapshot(self) -> None:
+    def test_repository_has_no_unpublished_release_plan(self) -> None:
         with self.assertRaisesRegex(ContractError, "no exact non-empty overlay plan"):
             load_native_plan(
                 self.repository,
@@ -216,13 +216,14 @@ class NativeReleaseTests(unittest.TestCase):
                 self.source_commit,
                 self.publisher_commit,
             )
-        stable_commit = "1f9457fb9a513c08685c5d76178318491e8eb6c2"
-        plan = load_native_plan(
-            self.repository, "stable", 2, stable_commit, self.publisher_commit
-        )
-        self.assertEqual(plan["mode"], "firmwareSnapshot")
-        self.assertEqual(plan["overlayTargets"], [])
-        self.assertEqual(plan["targetFirmware"]["tag"], "v1.0.5")
+        with self.assertRaisesRegex(ContractError, "not the next contracted release"):
+            load_native_plan(
+                self.repository,
+                "stable",
+                2,
+                "1f9457fb9a513c08685c5d76178318491e8eb6c2",
+                self.publisher_commit,
+            )
 
     def test_unapproved_source_commit_is_terminal(self) -> None:
         with self.assertRaisesRegex(ContractError, "not authorized"):

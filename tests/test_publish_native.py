@@ -230,10 +230,10 @@ class NativePublicationTests(unittest.TestCase):
                 "tumoflip-packages.zip": sha256(self.base / "tumoflip-packages.zip"),
             },
         }
-        legacy_path = self.control / "contracts/legacy-sources.json"
-        legacy = json.loads(legacy_path.read_text())
-        legacy["channels"]["dev"] = self.plan["baseRelease"]
-        legacy_path.write_text(json.dumps(legacy))
+        current_path = self.control / "contracts/current-releases.json"
+        current = json.loads(current_path.read_text())
+        current["channels"]["dev"] = self.plan["baseRelease"]
+        current_path.write_text(json.dumps(current))
         finalize_native_release(self.directory, self.plan, self.base)
         self.names = sorted(path.name for path in self.directory.iterdir())
         self.github = FakeGitHub("squazaryu/tumoflip-fw-packages", self.plan)

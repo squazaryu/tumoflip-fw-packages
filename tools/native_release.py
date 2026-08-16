@@ -114,7 +114,7 @@ def load_native_plan(
     source_contract = load_json(control_root / "contracts/source-checkouts.json")
     lineage = load_json(control_root / "contracts/catalog-lineage.json")
     baselines = load_json(control_root / "contracts/catalog-baselines.json")
-    legacy = load_json(control_root / "contracts/legacy-sources.json")
+    current = load_json(control_root / "contracts/current-releases.json")
     policy = load_json(control_root / "contracts/native-build-policy.json")
     source_repository = _repository(
         source_contract.get("firmwareRepository"), "firmware repository"
@@ -154,7 +154,7 @@ def load_native_plan(
     try:
         channel_lineage = lineage["channels"][channel]
         baseline = baselines["channels"][channel]
-        base_release = legacy["channels"][channel]
+        base_release = current["channels"][channel]
     except (KeyError, TypeError) as error:
         raise ContractError(f"missing {channel} release contract") from error
     expected_revision = channel_lineage.get("nextNativeRevision")
