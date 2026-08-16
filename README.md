@@ -41,13 +41,14 @@ application source, `fbt`, firmware builds, API checks, and firmware releases.
 Package workflows check out that repository by exact commit and never copy its
 source here.
 
-The native package path is currently **fail-closed**. The workflow has no
-`contents: write` permission and never calls the publisher. Dev009 and Stable002
-are reserved but neither has an authorized source/overlay plan. Enabling a build
-requires a reviewed source change, an exact source commit, and explicit overlay
-selection. Native builds start from the exact current catalog and may replace
-only those reviewed paths, so build-only metadata drift cannot become a false
-application update.
+Stable002 is the first native stable release. It promotes the exact package
+snapshot published with firmware `v1.0.5`; its ZIP payload is byte-identical to
+that firmware release and its catalog identity is independent. Dev009 remains
+fail-closed without an authorized source/overlay plan. Overlay builds start from
+the exact current catalog and may replace only reviewed paths, so build-only
+metadata drift cannot become a false application update. Stable firmware
+promotions use the separate exact-snapshot mode and pin the firmware tag,
+commit, release ID, manifest hash, and ZIP hash.
 
 The protected-app workflow likewise executes only this repository's audited
 scanner. Firmware and Community Pack checkouts are read-only evidence, package

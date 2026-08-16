@@ -21,7 +21,8 @@ firmware-source repository and commit.
 - Compatibility is explicit: target `f7`, API range, firmware release ID, and
   retained compatible build hashes.
 - A tag, revision, or release ID collision with different bytes is fatal.
-- `dev-009` and `stable-002` are reserved as the first native releases here.
+- `stable-002` is the first native stable release; `dev-009` remains the first
+  reserved native development revision.
 
 ## Build boundary
 
@@ -42,10 +43,10 @@ The exact firmware checkout owns application source, `fbt`, and the
 `PACKAGE_RELEASE_OVERLAY_FILES` / `package_extapp_exports` mapping. This
 repository owns the independent-catalog delta composition and will accept only
 paths that resolve unambiguously through that source-owned mapping. A checked-in
-per-release plan pins the only authorized source
-commit and a non-empty subset of the allowlisted overlays. There is no implicit
-"rebuild all" default. Both reserved releases remain blocked until they receive
-their own reviewed source plan containing an actual runtime change.
+per-release plan pins the only authorized source commit and either a non-empty
+subset of allowlisted overlays or an exact stable-firmware snapshot. There is no
+implicit "rebuild all" default. Overlay releases remain blocked until they
+contain an actual runtime change.
 Before composition, the workflow downloads the current immutable package
 catalog from this repository and verifies its release ID, checksum, ZIP, and
 contract-pinned asset hashes. The source builder overlays only the separately
@@ -74,6 +75,12 @@ exact source-built bytes are recorded and independently checked.
 
 Firmware DFU, update, SDK, updater, or radio assets are never downloaded,
 rewritten, checksummed into, or uploaded by this path.
+
+For a stable firmware promotion, the publisher consumes only the package
+manifest and package ZIP already published by the exact firmware release. It
+verifies their pinned digests, firmware identity, release ID, and every archive
+member, then adds independent catalog metadata without changing any ZIP payload
+byte. The firmware updater/DFU itself is never copied into FW Packages.
 
 The dormant publisher uses a resumable transaction: create a draft through the
 REST API (retaining its returned release ID), upload only missing assets,

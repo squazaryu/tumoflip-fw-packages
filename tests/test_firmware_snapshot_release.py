@@ -107,12 +107,17 @@ class FirmwareSnapshotReleaseTests(unittest.TestCase):
         )
         baseline_path.write_text(json.dumps(baselines))
 
-        legacy_path = self.control / "contracts/legacy-sources.json"
-        legacy = json.loads(legacy_path.read_text())
         base_manifest = json.loads((self.base / "tumoflip-packages.json").read_text())
         checksum = self.base / "fw-packages-stable-001-SHA256SUMS"
-        legacy["channels"]["stable"].update(
+        current_path = self.control / "contracts/current-releases.json"
+        current = json.loads(current_path.read_text())
+        current["channels"]["stable"].update(
             {
+                "tag": "fw-packages-stable-001",
+                "revision": 1,
+                "sourceCommit": "a" * 40,
+                "targetFirmwareTag": "v1.0.4",
+                "targetFirmwareCommit": "a" * 40,
                 "releaseId": base_manifest["release_id"],
                 "assets": {
                     checksum.name: sha256(checksum),
@@ -121,7 +126,28 @@ class FirmwareSnapshotReleaseTests(unittest.TestCase):
                 },
             }
         )
-        legacy_path.write_text(json.dumps(legacy))
+        current_path.write_text(json.dumps(current))
+
+        lineage_path = self.control / "contracts/catalog-lineage.json"
+        lineage = json.loads(lineage_path.read_text())
+        lineage["channels"]["stable"].update(
+            {
+                "currentTag": "fw-packages-stable-001",
+                "currentRevision": 1,
+                "nextNativeRevision": 2,
+                "nextNativeTag": "fw-packages-stable-002",
+            }
+        )
+        lineage_path.write_text(json.dumps(lineage))
+
+        policy_path = self.control / "contracts/native-build-policy.json"
+        policy = json.loads(policy_path.read_text())
+        policy["releasePlans"]["fw-packages-stable-002"] = {
+            "mode": "firmwareSnapshot",
+            "sourceCommit": self.source_commit,
+            "selectedOverlays": [],
+        }
+        policy_path.write_text(json.dumps(policy))
 
     def test_snapshot_is_exact_atomic_and_independently_reverified(self) -> None:
         output = self.root / "stable002"
