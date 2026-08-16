@@ -368,6 +368,7 @@ def publish_native(
     runner: Runner = default_runner,
     downloader: Downloader = default_downloader,
     sleeper: Sleeper = time.sleep,
+    target_directory: Path | None = None,
 ) -> None:
     plan = load_native_plan(
         control_root, channel, revision, source_commit, publisher_commit
@@ -376,7 +377,7 @@ def publish_native(
         raise ContractError("publication repository differs from contract")
     # Re-prove the bounded delta from the pinned predecessor after the artifact
     # crosses into the privileged publication boundary.
-    verify_native_release(directory, plan, base_directory)
+    verify_native_release(directory, plan, base_directory, target_directory)
     release = _find_release(runner, repository, plan["tag"])
     if release is not None and release.get("draft") is False:
         _validate_metadata(release, plan, draft=False)
@@ -409,6 +410,7 @@ def parser() -> argparse.ArgumentParser:
     value = argparse.ArgumentParser()
     value.add_argument("--directory", type=Path, required=True)
     value.add_argument("--base-directory", type=Path, required=True)
+    value.add_argument("--target-directory", type=Path)
     value.add_argument("--control-root", type=Path, default=Path("."))
     value.add_argument("--repository", required=True)
     value.add_argument("--channel", choices=("stable", "dev"), required=True)
@@ -430,6 +432,9 @@ def main() -> int:
             args.revision,
             args.source_commit,
             args.publisher_commit,
+            target_directory=(
+                args.target_directory.resolve() if args.target_directory else None
+            ),
         )
     except (ContractError, OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
