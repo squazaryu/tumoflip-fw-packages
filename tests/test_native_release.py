@@ -149,6 +149,7 @@ class NativeReleaseTests(unittest.TestCase):
         self.assertEqual(after["package_release"]["catalog_channel"], "dev")
         self.assertEqual(after["package_release"]["catalog_revision"], 9)
         self.assertEqual(after["package_release"]["catalog_release_tag"], "fw-packages-dev-009")
+        self.assertEqual(after["package_release"]["catalog_install_scope"], "delta")
         self.assertEqual(
             after["package_release"]["source_firmware_version"], "t-dev-004-015"
         )

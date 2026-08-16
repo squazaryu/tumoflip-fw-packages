@@ -363,6 +363,9 @@ def _validate_final_manifest_identity(
         "source_repository": plan["sourceRepository"],
         "source_firmware_version": plan["targetFirmware"]["version"],
         "target_firmware_commit": plan["targetFirmware"]["commit"],
+        "catalog_install_scope": (
+            "firmwareSnapshot" if plan["mode"] == "firmwareSnapshot" else "delta"
+        ),
         "catalog_channel": plan["channel"],
         "catalog_revision": plan["revision"],
         "catalog_release_tag": plan["tag"],
@@ -720,6 +723,7 @@ def finalize_native_release(
             "source_repository": plan["sourceRepository"],
             "source_firmware_version": manifest["firmware"]["version"],
             "target_firmware_commit": plan["targetFirmware"]["commit"],
+            "catalog_install_scope": "delta",
         }
     )
     manifest["package_release"] = package_release
@@ -832,6 +836,7 @@ def _snapshot_package_release(
         "catalog_channel": plan["channel"],
         "catalog_revision": plan["revision"],
         "catalog_release_tag": plan["tag"],
+        "catalog_install_scope": "firmwareSnapshot",
         "source_repository": plan["sourceRepository"],
         "target_firmware_commit": plan["targetFirmware"]["commit"],
         "base_catalog": {

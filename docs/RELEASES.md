@@ -18,6 +18,10 @@ firmware-source repository and commit.
 
 - A revision is monotonically increasing within its channel.
 - Package revision and firmware version are independent values.
+- `package_release.catalog_install_scope` is explicit: `delta` exposes only the
+  cumulative package-owned target allowlist, while `firmwareSnapshot` exposes the
+  complete firmware package snapshot and is installable only on that exact firmware
+  identity.
 - Compatibility is explicit: target `f7`, API range, firmware release ID, and
   retained compatible build hashes.
 - A tag, revision, or release ID collision with different bytes is fatal.

@@ -157,6 +157,10 @@ class FirmwareSnapshotReleaseTests(unittest.TestCase):
         verify_native_release(output, self.plan, self.base, self.target)
         manifest = json.loads((output / "tumoflip-packages.json").read_text())
         self.assertEqual(manifest["package_release"]["catalog_release_tag"], "fw-packages-stable-002")
+        self.assertEqual(
+            manifest["package_release"]["catalog_install_scope"],
+            "firmwareSnapshot",
+        )
         self.assertEqual(manifest["package_release"]["target_release_id"], self.plan["targetFirmware"]["releaseId"])
         self.assertEqual(sha256(output / "tumoflip-packages.zip"), sha256(self.target / "tumoflip-packages.zip"))
         provenance = json.loads((output / "catalog-provenance.json").read_text())
