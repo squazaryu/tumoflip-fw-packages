@@ -84,6 +84,15 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn('if [[ "$ISSUE_STATE" == closed && "$CHANGES" == true ]]; then', text)
         self.assertNotIn('"$ISSUE_STATE" == OPEN', text)
         self.assertNotIn('"$ISSUE_STATE" == CLOSED', text)
+        self.assertIn(
+            "if [[ \"$ISSUE_STATE\" == closed && \"$CHANGES\" == true ]]; then\n"
+            "            gh issue reopen \"$ISSUE_NUMBER\" --repo \"$GITHUB_REPOSITORY\"\n"
+            "            load_canonical_issue\n"
+            "            ISSUE_STATE=\"$(jq -r .state \"$RUNNER_TEMP/issue.json\")\"\n"
+            "            [[ \"$ISSUE_STATE\" == open ]]\n"
+            "          fi",
+            text,
+        )
 
         first_revalidation = text.index("load_canonical_issue\n          ISSUE_STATE")
         self.assertLess(first_revalidation, text.index('gh issue reopen "$ISSUE_NUMBER"'))

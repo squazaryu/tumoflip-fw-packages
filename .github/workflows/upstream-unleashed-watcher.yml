@@ -139,6 +139,8 @@ jobs:
           if [[ "$ISSUE_STATE" == closed && "$CHANGES" == true ]]; then
             gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
             load_canonical_issue
+            ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
+            [[ "$ISSUE_STATE" == open ]]
           fi
           jq -r .body "$RUNNER_TEMP/issue.json" > "$RUNNER_TEMP/current-issue.md"
           if ! cmp -s "$REPORT" "$RUNNER_TEMP/current-issue.md"; then
