@@ -80,6 +80,11 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn('body.startswith(ISSUE_MARKER)', watcher)
         self.assertIn('author.get("login") != ISSUE_AUTHOR', watcher)
 
+        self.assertIn('[[ "$ISSUE_STATE" == open || "$ISSUE_STATE" == closed ]]', text)
+        self.assertIn('if [[ "$ISSUE_STATE" == closed && "$CHANGES" == true ]]; then', text)
+        self.assertNotIn('"$ISSUE_STATE" == OPEN', text)
+        self.assertNotIn('"$ISSUE_STATE" == CLOSED', text)
+
         first_revalidation = text.index("load_canonical_issue\n          ISSUE_STATE")
         self.assertLess(first_revalidation, text.index('gh issue reopen "$ISSUE_NUMBER"'))
         self.assertLess(first_revalidation, text.index('gh issue edit "$ISSUE_NUMBER"'))

@@ -233,13 +233,73 @@ class UnleashedWatcherTests(unittest.TestCase):
         self.assertNotIn("@octocat", text)
         self.assertIn("@\u200boctocat", text)
         self.assertNotIn("[click](https://example.test)", text)
-        self.assertIn(r"\[click\]\(https://example\.test\)", text)
+        self.assertIn(f"\\[click\\]\\(https:{watcher.URL_BREAK}//example\\.test\\)", text)
         self.assertNotIn("<tag>", text)
         self.assertIn(r"\<tag\>", text)
         self.assertIn(r"\*bold\*", text)
         self.assertIn(r"\`code\`", text)
         self.assertIn(r"\_italic\_", text)
         self.assertIn(r"\~strike\~", text)
+        watcher.verify_report(
+            contract=contract(),
+            report=report,
+            markdown=text,
+            control_repository="squazaryu/tumoflip-fw-packages",
+            control_commit=CONTROL,
+        )
+
+    def test_report_neutralizes_percent_encoded_host_urls_without_touching_trusted_links(self) -> None:
+        head = "a" * 40
+        merge = "b" * 40
+        untrusted_url = "https://evil%2eexample/review"
+        report = self._watch(
+            self._responses(
+                head=head,
+                status="ahead",
+                ahead=1,
+                commits=[{"sha": head, "commit": {"message": f"fix: inspect {untrusted_url}"}}],
+                search=[
+                    {
+                        "total_count": 1,
+                        "incomplete_results": False,
+                        "items": [
+                            {
+                                "number": 1085,
+                                "pull_request": {"merged_at": "2026-08-21T11:00:00Z"},
+                            }
+                        ],
+                    }
+                ],
+                pull_details={
+                    1085: {
+                        "number": 1085,
+                        "state": "closed",
+                        "merged_at": "2026-08-21T11:00:00Z",
+                        "base": {"ref": "dev"},
+                        "merge_commit_sha": merge,
+                        "title": f"Review {untrusted_url}",
+                    }
+                },
+            )
+        )
+
+        text = watcher.render_report(report)
+
+        neutralized_url = f"https:{watcher.URL_BREAK}//evil%2eexample/review"
+        self.assertNotIn(untrusted_url, text)
+        self.assertEqual(text.count(neutralized_url), 2)
+        self.assertIn(
+            f"[`{head}`](https://github.com/{REPOSITORY}/commit/{head})",
+            text,
+        )
+        self.assertIn(
+            f"[#1085](https://github.com/{REPOSITORY}/pull/1085)",
+            text,
+        )
+        self.assertNotIn(
+            f"https:{watcher.URL_BREAK}//github.com/{REPOSITORY}/commit/{head}",
+            text,
+        )
         watcher.verify_report(
             contract=contract(),
             report=report,

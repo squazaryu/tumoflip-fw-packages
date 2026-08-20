@@ -28,6 +28,8 @@ ISSUE_MARKER = "<!-- upstream-watch:DarkFlippers/unleashed-firmware -->"
 ISSUE_TITLE = "Watch DarkFlippers/unleashed-firmware upstream changes"
 ISSUE_AUTHOR = "github-actions[bot]"
 MARKDOWN_SPECIAL = re.compile(r"([\\`*_{}\[\]<>()#+.!|~\-])")
+BARE_HTTP_SCHEME = re.compile(r"\b(https?):(?=//)", re.IGNORECASE)
+URL_BREAK = "\u200b"
 
 
 class WatchError(RuntimeError):
@@ -76,7 +78,14 @@ def _normalise_text(value: Any, label: str) -> str:
 def _escape_markdown_text(value: Any, label: str) -> str:
     """Render upstream-controlled text as inert, non-mentioning Markdown."""
 
-    text = _normalise_text(value, label).replace("@", "@\u200b")
+    text = _normalise_text(value, label)
+    # Escaping Markdown punctuation does not stop GitHub from autolinking a
+    # bare HTTP(S) URL.  In particular, a hostname such as ``evil%2eexample``
+    # can become a clickable URL after URL normalization.  Break the URL
+    # scheme before Markdown sees it; trusted GitHub URLs are constructed by
+    # render_report and never pass through this untrusted-text renderer.
+    text = BARE_HTTP_SCHEME.sub(rf"\1:{URL_BREAK}", text)
+    text = text.replace("@", f"@{URL_BREAK}")
     return MARKDOWN_SPECIAL.sub(r"\\\1", text)
 
 

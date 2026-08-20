@@ -135,8 +135,8 @@ jobs:
           }
           load_canonical_issue
           ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
-          [[ "$ISSUE_STATE" == OPEN || "$ISSUE_STATE" == CLOSED ]]
-          if [[ "$ISSUE_STATE" == CLOSED && "$CHANGES" == true ]]; then
+          [[ "$ISSUE_STATE" == open || "$ISSUE_STATE" == closed ]]
+          if [[ "$ISSUE_STATE" == closed && "$CHANGES" == true ]]; then
             gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
             load_canonical_issue
           fi
