@@ -10,9 +10,13 @@ not an identity: the audit key is the tag plus the named SHA-256 of both ZIPs.
    both exact tags. The workflow downloads current ZIPs by numeric GitHub asset
    ID, checks their size and SHA-256, resolves both source commits, and creates
    or reuses one canonical issue in `squazaryu/tumoflip-fw-packages`.
-2. The scanner compares every registered source path and the original author
-   ref. A full `protectedKeys` inventory makes a new protected FAP/FAL that lacks
-   a registry route fail closed as an unregistered intersection.
+2. The scanner resolves every registered FAP by its declared pack and unique
+   `archiveFileName`, then derives the live archive and `/ext/apps` routes. A
+   category move therefore needs no registry edit; a missing, ambiguous, or
+   noncanonical leaf fails closed. Explicit FAL families retain their exact
+   family rules. The scanner also compares the original author ref. A full
+   `protectedKeys` inventory makes a new protected FAP/FAL that lacks a registry route fail
+   closed as an unregistered intersection.
 3. Reviewed and unresolved entries are merged into a strict cumulative schema-2
    ledger. The authoritative predecessor is the latest verified immutable audit
    release (or the content-addressed bootstrap for genesis), never the mutable raw
