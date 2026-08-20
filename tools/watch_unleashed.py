@@ -195,6 +195,29 @@ def _canonical_issue_number(value: Any, *, expected_number: int | None = None) -
     return number
 
 
+def _normalise_canonical_issue_body(value: Any, label: str) -> str:
+    """Keep only GitHub's line-ending and terminal-newline behavior flexible.
+
+    GitHub's issue API can return a different count of terminal line feeds than
+    the ``--body-file`` supplied to ``gh issue create`` or ``gh issue edit``.
+    That is presentation behavior, not a change to the report. Everything
+    else remains byte-significant after CRLF is represented as LF: internal
+    line breaks, whitespace, and even bare carriage returns must still match.
+    """
+
+    if not isinstance(value, str):
+        raise WatchError(f"{label} must be a string")
+    return value.replace("\r\n", "\n").rstrip("\n")
+
+
+def canonical_issue_body_matches(expected: Any, actual: Any) -> bool:
+    """Compare a generated report with its GitHub issue body fail-closed."""
+
+    return _normalise_canonical_issue_body(
+        expected, "expected canonical issue body"
+    ) == _normalise_canonical_issue_body(actual, "canonical issue body")
+
+
 def resolve_canonical_issue_number(value: Any) -> int | None:
     """Find exactly one bot-owned canonical issue, ignoring external spoofs."""
 
@@ -767,6 +790,10 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     verify_issue = commands.add_parser("verify-canonical-issue")
     verify_issue.add_argument("--issue", type=Path, required=True)
     verify_issue.add_argument("--expected-number", type=int, required=True)
+    compare_issue_body = commands.add_parser("compare-canonical-issue-body")
+    compare_issue_body.add_argument("--expected", type=Path, required=True)
+    compare_issue_body.add_argument("--issue", type=Path, required=True)
+    compare_issue_body.add_argument("--output", type=Path, required=True)
     return parser.parse_args(list(argv))
 
 
@@ -781,6 +808,16 @@ def main(argv: Iterable[str] | None = None) -> int:
         elif args.command == "verify-canonical-issue":
             _canonical_issue_number(
                 _read_object(args.issue), expected_number=args.expected_number
+            )
+        elif args.command == "compare-canonical-issue-body":
+            try:
+                expected = args.expected.read_text(encoding="utf-8")
+            except OSError as error:
+                raise WatchError(f"cannot read {args.expected}: {error}") from error
+            issue = _read_object(args.issue)
+            _write_json(
+                args.output,
+                {"matches": canonical_issue_body_matches(expected, issue.get("body"))},
             )
         else:
             contract = load_contract(args.contract)
