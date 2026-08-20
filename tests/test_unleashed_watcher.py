@@ -394,6 +394,79 @@ class UnleashedWatcherTests(unittest.TestCase):
                 0,
             )
 
+    def test_issue_body_comparator_allows_only_github_terminal_newlines(self) -> None:
+        expected = watcher.ISSUE_MARKER + "\n# Canonical report\n"
+        github_body = expected.replace("\n", "\r\n") + "\r\n"
+
+        self.assertTrue(watcher.canonical_issue_body_matches(expected, github_body))
+        self.assertFalse(
+            watcher.canonical_issue_body_matches(
+                expected, github_body.replace("Canonical", "Tampered")
+            )
+        )
+        self.assertFalse(
+            watcher.canonical_issue_body_matches(
+                expected, github_body.replace("# Canonical", "\n# Canonical")
+            )
+        )
+        self.assertFalse(
+            watcher.canonical_issue_body_matches(expected, expected[:-1] + "\r")
+        )
+        with self.assertRaisesRegex(watcher.WatchError, "canonical issue body must be a string"):
+            watcher.canonical_issue_body_matches(expected, None)
+
+    def test_issue_body_cli_reports_tampering_after_a_github_terminal_newline(self) -> None:
+        expected = watcher.ISSUE_MARKER + "\n# Canonical report\n"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            expected_path = root / "expected.md"
+            issue_path = root / "issue.json"
+            output_path = root / "comparison.json"
+            expected_path.write_text(expected, encoding="utf-8")
+
+            issue_path.write_text(
+                json.dumps({"body": expected + "\n"}), encoding="utf-8"
+            )
+            self.assertEqual(
+                watcher.main(
+                    [
+                        "compare-canonical-issue-body",
+                        "--expected",
+                        str(expected_path),
+                        "--issue",
+                        str(issue_path),
+                        "--output",
+                        str(output_path),
+                    ]
+                ),
+                0,
+            )
+            self.assertEqual(
+                json.loads(output_path.read_text(encoding="utf-8")), {"matches": True}
+            )
+
+            issue_path.write_text(
+                json.dumps({"body": expected.replace("Canonical", "Tampered") + "\n"}),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                watcher.main(
+                    [
+                        "compare-canonical-issue-body",
+                        "--expected",
+                        str(expected_path),
+                        "--issue",
+                        str(issue_path),
+                        "--output",
+                        str(output_path),
+                    ]
+                ),
+                0,
+            )
+            self.assertEqual(
+                json.loads(output_path.read_text(encoding="utf-8")), {"matches": False}
+            )
+
     def test_non_ancestor_boundary_stays_fail_closed(self) -> None:
         head = "e" * 40
         report = self._watch(

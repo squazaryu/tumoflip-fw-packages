@@ -142,10 +142,18 @@ jobs:
             ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
             [[ "$ISSUE_STATE" == open ]]
           fi
-          jq -r .body "$RUNNER_TEMP/issue.json" > "$RUNNER_TEMP/current-issue.md"
-          if ! cmp -s "$REPORT" "$RUNNER_TEMP/current-issue.md"; then
+          compare_canonical_issue_body() {
+            python3 control/tools/watch_unleashed.py compare-canonical-issue-body \
+              --expected "$REPORT" \
+              --issue "$RUNNER_TEMP/issue.json" \
+              --output "$RUNNER_TEMP/issue-body.json"
+            BODY_MATCHES="$(jq -r .matches "$RUNNER_TEMP/issue-body.json")"
+            [[ "$BODY_MATCHES" == true || "$BODY_MATCHES" == false ]]
+          }
+          compare_canonical_issue_body
+          if [[ "$BODY_MATCHES" == false ]]; then
             gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$REPORT"
             load_canonical_issue
-            jq -r .body "$RUNNER_TEMP/issue.json" > "$RUNNER_TEMP/current-issue.md"
-            cmp -s "$REPORT" "$RUNNER_TEMP/current-issue.md"
+            compare_canonical_issue_body
+            [[ "$BODY_MATCHES" == true ]]
           fi

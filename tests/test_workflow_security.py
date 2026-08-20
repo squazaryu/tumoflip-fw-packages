@@ -97,6 +97,14 @@ class WorkflowSecurityTests(unittest.TestCase):
         first_revalidation = text.index("load_canonical_issue\n          ISSUE_STATE")
         self.assertLess(first_revalidation, text.index('gh issue reopen "$ISSUE_NUMBER"'))
         self.assertLess(first_revalidation, text.index('gh issue edit "$ISSUE_NUMBER"'))
+        self.assertIn("compare-canonical-issue-body", text)
+        self.assertEqual(text.count("compare_canonical_issue_body"), 3)
+        self.assertIn('if [[ "$BODY_MATCHES" == false ]]; then', text)
+        self.assertIn('[[ "$BODY_MATCHES" == true ]]', text)
+        edit = text.index('gh issue edit "$ISSUE_NUMBER"')
+        self.assertLess(edit, text.index("compare_canonical_issue_body", edit))
+        self.assertLess(edit, text.index('[[ "$BODY_MATCHES" == true ]]', edit))
+        self.assertNotIn('cmp -s "$REPORT"', text)
 
     def test_history_mirror_is_exact_main_draft_first_and_reverified(self) -> None:
         text = (self.root / ".github/workflows/mirror-history.yml").read_text(
