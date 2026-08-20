@@ -72,11 +72,27 @@ class AuditControlPlaneTests(unittest.TestCase):
         )
         self.assertEqual(
             {item["githubReleaseId"] for item in packages.values()},
-            {369786610, 369803658, 370143096, 370143158},
+            {369786610, 369803658, 370143096, 370143158, 371276208},
         )
-        for item in packages.values():
-            self.assertIn("migrationProvenance", item["assets"])
+        for tag, item in packages.items():
             self.assertNotEqual(item["tagCommit"], item["manifestSourceCommit"])
+            if tag == "fw-packages-stable-003":
+                self.assertNotIn("migrationProvenance", item["assets"])
+                self.assertEqual(
+                    item["manifestSourceCommit"],
+                    "8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758",
+                )
+            else:
+                self.assertIn("migrationProvenance", item["assets"])
+        self.assertEqual(
+            contract["implementation"]["commit"],
+            "8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758",
+        )
+        firmware = {item["releaseTag"]: item for item in contract["firmware"]}
+        self.assertEqual(
+            firmware["v1.0.6"]["asset"]["sha256"],
+            "1c4d89691cd373e3b074cd4fce6a1e4967fb70ecb84faf676b6a510ab5346335",
+        )
 
     def test_target_contract_rejects_duplicate_release_identity(self) -> None:
         contract = json.loads((self.root / "contracts/protected-audit-targets.json").read_text())

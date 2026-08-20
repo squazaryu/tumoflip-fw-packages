@@ -199,7 +199,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: squazaryu/tumoflip
-          ref: a6bb38f027f5f17f2752d5dfca157478472b5c10
+          ref: 8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758
           path: firmware
           fetch-depth: 0
           persist-credentials: false

@@ -3,7 +3,7 @@
   "kind": "protectedAuditTargets",
   "implementation": {
     "repository": "squazaryu/tumoflip",
-    "commit": "a6bb38f027f5f17f2752d5dfca157478472b5c10"
+    "commit": "8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758"
   },
   "packages": [
     {
@@ -73,6 +73,29 @@
           "name": "migration-provenance.json",
           "bytes": 1204,
           "sha256": "0771fc7dd42b542709d0fc202793c6dc1fe7994e801b1430b6a3c919ebbd27ad"
+        }
+      }
+    },
+    {
+      "repository": "squazaryu/tumoflip-fw-packages",
+      "releaseTag": "fw-packages-stable-003",
+      "githubReleaseId": 371276208,
+      "tagCommit": "7b59eb014f7a953f4fc98b0937fef22f68da2044",
+      "prerelease": false,
+      "manifestSourceCommit": "8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758",
+      "manifestReleaseId": "e98adf556a4ef3028a97ce524d1385151626af628b3b038c949938bcf2c93c97",
+      "assets": {
+        "manifest": {
+          "id": 516622897,
+          "name": "tumoflip-packages.json",
+          "bytes": 42410,
+          "sha256": "28d771c6017aa9e630dbfe6cc2e63423e2ef1018b58c4f57515ee99f8f5dc918"
+        },
+        "archive": {
+          "id": 516622902,
+          "name": "tumoflip-packages.zip",
+          "bytes": 5222626,
+          "sha256": "d658cb783f8c4a38493e5c6dd5f4ac1ca0dd6a5113394a71eb86e0cc455573c0"
         }
       }
     },
@@ -161,6 +184,21 @@
         "name": "flipper-z-f7-update-t-flppr-fw-004.tgz",
         "bytes": 4490762,
         "sha256": "fe2580df2aaad3991a225fc5f2637bb5f6d775990880307490158c36729f240a"
+      }
+    },
+    {
+      "repository": "squazaryu/tumoflip",
+      "releaseTag": "v1.0.6",
+      "githubReleaseId": 371270313,
+      "tagCommit": "8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758",
+      "prerelease": false,
+      "resourceManifestSHA256": "d887e3aabfff457dc9b4a3e8b53c2ad51a97d7da251892325dfbac1d0c914258",
+      "resourcesSHA256": "09c42a4719e2d0a30942b8f71ac51da739c5a30d5ed75c2ff1ac2dbe3397dd8c",
+      "asset": {
+        "id": 516599064,
+        "name": "flipper-z-f7-update-t-flppr-fw-006.tgz",
+        "bytes": 4553038,
+        "sha256": "1c4d89691cd373e3b074cd4fce6a1e4967fb70ecb84faf676b6a510ab5346335"
       }
     },
     {
