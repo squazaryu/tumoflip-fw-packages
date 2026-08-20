@@ -27,13 +27,76 @@ class WorkflowSecurityTests(unittest.TestCase):
             if "pull_request:" in text:
                 self.assertNotIn("contents: write", text)
 
-    def test_only_protected_audit_is_scheduled(self) -> None:
+    def test_only_audits_and_read_only_watchers_are_scheduled(self) -> None:
         scheduled = [
             path.name
             for path in self.workflows
             if re.search(r"(?m)^\s*schedule\s*:", path.read_text(encoding="utf-8"))
         ]
-        self.assertEqual(scheduled, ["protected-app-audit.yml"])
+        self.assertEqual(
+            scheduled,
+            ["protected-app-audit.yml", "upstream-unleashed-watcher.yml"],
+        )
+
+    def test_unleashed_watcher_is_read_only_except_for_one_report_issue(self) -> None:
+        text = (self.root / ".github/workflows/upstream-unleashed-watcher.yml").read_text(
+            encoding="utf-8"
+        )
+        guard = (
+            "if: github.ref == 'refs/heads/main' && "
+            "github.event.repository.default_branch == 'main'"
+        )
+        self.assertEqual(text.count(guard), 2)
+        self.assertIn("issues: write", text)
+        self.assertIn("Reconcile one canonical human-review issue", text)
+        self.assertIn("contracts/upstream-watchers.json", text)
+        self.assertIn("tools/watch_unleashed.py verify", text)
+        self.assertIn("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", text)
+        self.assertIn("actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c", text)
+        for forbidden in (
+            "contents: write",
+            "git push",
+            "gh pr merge",
+            "gh release",
+            "publish_native.py",
+            "publish_audit.py",
+            "repository: squazaryu/tumoflip",
+        ):
+            self.assertNotIn(forbidden, text)
+
+    def test_unleashed_watcher_revalidates_bot_owned_issue_before_mutation(self) -> None:
+        text = (self.root / ".github/workflows/upstream-unleashed-watcher.yml").read_text(
+            encoding="utf-8"
+        )
+        watcher = (self.root / "tools/watch_unleashed.py").read_text(encoding="utf-8")
+
+        self.assertIn("resolve-canonical-issue", text)
+        self.assertIn("verify-canonical-issue", text)
+        self.assertIn('gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"', text)
+        self.assertNotIn("gh issue view", text)
+        self.assertNotIn("contains($marker)", text)
+        self.assertIn('ISSUE_AUTHOR = "github-actions[bot]"', watcher)
+        self.assertIn('value.get("title") != ISSUE_TITLE', watcher)
+        self.assertIn('body.startswith(ISSUE_MARKER)', watcher)
+        self.assertIn('author.get("login") != ISSUE_AUTHOR', watcher)
+
+        self.assertIn('[[ "$ISSUE_STATE" == open || "$ISSUE_STATE" == closed ]]', text)
+        self.assertIn('if [[ "$ISSUE_STATE" == closed && "$CHANGES" == true ]]; then', text)
+        self.assertNotIn('"$ISSUE_STATE" == OPEN', text)
+        self.assertNotIn('"$ISSUE_STATE" == CLOSED', text)
+        self.assertIn(
+            "if [[ \"$ISSUE_STATE\" == closed && \"$CHANGES\" == true ]]; then\n"
+            "            gh issue reopen \"$ISSUE_NUMBER\" --repo \"$GITHUB_REPOSITORY\"\n"
+            "            load_canonical_issue\n"
+            "            ISSUE_STATE=\"$(jq -r .state \"$RUNNER_TEMP/issue.json\")\"\n"
+            "            [[ \"$ISSUE_STATE\" == open ]]\n"
+            "          fi",
+            text,
+        )
+
+        first_revalidation = text.index("load_canonical_issue\n          ISSUE_STATE")
+        self.assertLess(first_revalidation, text.index('gh issue reopen "$ISSUE_NUMBER"'))
+        self.assertLess(first_revalidation, text.index('gh issue edit "$ISSUE_NUMBER"'))
 
     def test_history_mirror_is_exact_main_draft_first_and_reverified(self) -> None:
         text = (self.root / ".github/workflows/mirror-history.yml").read_text(
