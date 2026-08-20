@@ -1,0 +1,17 @@
+{
+  "schema": 2,
+  "decisions": [
+    {
+      "appId": "esp_flasher",
+      "throughAuthorCommit": "1f6f801c3ebecbc4afbf6500564bf99748710e24",
+      "sourceCommit": "85e56f4f2d15abda3b1ad327eb7e68e2bc2601a8",
+      "disposition": "rejected",
+      "changelog": "Reviewed Community Pack 18aug2026p2. The delta changes only the four embedded Marauder images for S2, WROOM/DevBoard Pro, C5 DevKitC-1, and S3 MultiBoard; ESP Flasher FAP C code and application.fam are unchanged. Tumoflip retains the exact ESP Flasher target bytes from FW Packages Stable003. Board firmware is delivered through a separate manual channel and is not accepted into the FW Packages FAP.",
+      "fwPackages": {
+        "channel": "stable",
+        "revision": 3,
+        "releaseTag": "fw-packages-stable-003"
+      }
+    }
+  ]
+}
