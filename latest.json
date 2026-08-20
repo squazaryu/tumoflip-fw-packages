@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "sourceRepository": "xMasterX/all-the-plugins",
-  "generatedAt": "2026-08-20T09:18:39+00:00",
+  "generatedAt": "2026-08-20T11:54:08+00:00",
   "audits": [
     {
       "sequence": 20260809193105,
@@ -20735,9 +20735,9 @@
       "issue": {
         "number": 20,
         "url": "https://github.com/squazaryu/tumoflip-fw-packages/issues/20",
-        "state": "open"
+        "state": "closed"
       },
-      "overallStatus": "pending",
+      "overallStatus": "verified",
       "archives": [
         {
           "pack": "base",
@@ -20856,6 +20856,28 @@
               "containerSHA256": "efb1d259115fcd938eb16b7548231052d75a739870a9fb66af075116aca9b552",
               "targetReleaseTag": "v1.0.4",
               "targetSourceCommit": "49b47de9044c1b135b31c0612740f4533c8d6eef"
+            }
+          ]
+        },
+        {
+          "remotePath": "/ext/apps/GPIO/ESP32/esp_flasher.fap",
+          "targetPath": "/ext/apps/Module One/ESP32 Wi-Fi/esp_flasher.fap",
+          "sourceMD5": "6a4c6b7d543c6358f92aee028934b2e7",
+          "disposition": "auditedDifference",
+          "note": "Reviewed Community Pack 18aug2026p2. The delta changes only the four embedded Marauder images for S2, WROOM/DevBoard Pro, C5 DevKitC-1, and S3 MultiBoard; ESP Flasher FAP C code and application.fam are unchanged. Tumoflip retains the exact ESP Flasher target bytes from FW Packages Stable003. Board firmware is delivered through a separate manual channel and is not accepted into the FW Packages FAP.",
+          "targetMD5s": [
+            "75b144d45cc6c3c0bce329e14367a5a4"
+          ],
+          "targetProvenance": [
+            {
+              "targetMD5": "75b144d45cc6c3c0bce329e14367a5a4",
+              "channel": "stable",
+              "releaseTag": "fw-packages-stable-003",
+              "manifestSHA256": "28d771c6017aa9e630dbfe6cc2e63423e2ef1018b58c4f57515ee99f8f5dc918",
+              "containerKind": "fwPackagesZip",
+              "containerSHA256": "d658cb783f8c4a38493e5c6dd5f4ac1ca0dd6a5113394a71eb86e0cc455573c0",
+              "targetReleaseTag": "v1.0.6",
+              "targetSourceCommit": "8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758"
             }
           ]
         },
@@ -23052,18 +23074,31 @@
             "changed": false,
             "license": "GPL-3.0"
           },
-          "status": "needsReview",
-          "disposition": "needsReview",
-          "note": "Tumoflip ships a package-aware protected ESP Flasher through FW Packages.",
+          "status": "verified",
+          "disposition": "auditedDifference",
+          "note": "Reviewed Community Pack 18aug2026p2. The delta changes only the four embedded Marauder images for S2, WROOM/DevBoard Pro, C5 DevKitC-1, and S3 MultiBoard; ESP Flasher FAP C code and application.fam are unchanged. Tumoflip retains the exact ESP Flasher target bytes from FW Packages Stable003. Board firmware is delivered through a separate manual channel and is not accepted into the FW Packages FAP.",
           "artifacts": [
             {
               "pack": "extra",
               "remotePath": "/ext/apps/GPIO/ESP32/esp_flasher.fap",
               "targetPath": "/ext/apps/Module One/ESP32 Wi-Fi/esp_flasher.fap",
               "sourceMD5": "6a4c6b7d543c6358f92aee028934b2e7",
-              "ledgerStatus": "needsReview"
+              "ledgerStatus": "accepted"
             }
-          ]
+          ],
+          "decisionDisposition": "rejected",
+          "decision": {
+            "appId": "esp_flasher",
+            "throughAuthorCommit": "1f6f801c3ebecbc4afbf6500564bf99748710e24",
+            "sourceCommit": "85e56f4f2d15abda3b1ad327eb7e68e2bc2601a8",
+            "disposition": "rejected",
+            "changelog": "Reviewed Community Pack 18aug2026p2. The delta changes only the four embedded Marauder images for S2, WROOM/DevBoard Pro, C5 DevKitC-1, and S3 MultiBoard; ESP Flasher FAP C code and application.fam are unchanged. Tumoflip retains the exact ESP Flasher target bytes from FW Packages Stable003. Board firmware is delivered through a separate manual channel and is not accepted into the FW Packages FAP.",
+            "fwPackages": {
+              "channel": "stable",
+              "revision": 3,
+              "releaseTag": "fw-packages-stable-003"
+            }
+          }
         },
         {
           "appId": "proto_pirate",
@@ -23451,10 +23486,8 @@
           ]
         }
       ],
-      "unresolved": [
-        "esp_flasher:/ext/apps/GPIO/ESP32/esp_flasher.fap: pack source changed"
-      ],
-      "generatedAt": "2026-08-20T09:18:39+00:00"
+      "unresolved": [],
+      "generatedAt": "2026-08-20T11:54:08+00:00"
     }
   ]
 }
