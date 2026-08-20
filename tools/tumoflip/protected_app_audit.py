@@ -57,6 +57,10 @@ MAX_TARGET_COMPRESSION_RATIO = 200
 MAX_RESOURCE_MEMBERS = 10_000
 MAX_RESOURCE_MEMBER_BYTES = 16 * 1024 * 1024
 MAX_RESOURCE_TOTAL_BYTES = 64 * 1024 * 1024
+PACK_ARTIFACT_PREFIXES = {
+    "base": "base_pack_build/artifacts-base/",
+    "extra": "extra_pack_build/artifacts-extra/",
+}
 
 
 class AuditError(RuntimeError):
@@ -271,7 +275,7 @@ def validate_registry(registry: dict[str, Any]) -> list[dict[str, Any]]:
     apps: list[dict[str, Any]] = []
     app_ids: set[str] = set()
     aliases: set[str] = set()
-    archive_paths: set[str] = set()
+    archive_file_names: set[tuple[str, str]] = set()
     target_paths: set[str] = set()
     for index, raw_app in enumerate(raw_apps):
         if not isinstance(raw_app, dict):
@@ -310,7 +314,7 @@ def validate_registry(registry: dict[str, Any]) -> list[dict[str, Any]]:
         if not isinstance(artifacts, list) or not artifacts:
             raise AuditError(f"artifacts must be a non-empty array for {app_id}")
         for artifact in artifacts:
-            _validate_artifact_spec(app_id, artifact, archive_paths, target_paths)
+            _validate_artifact_spec(app_id, artifact, archive_file_names, target_paths)
         family = raw_app.get("artifactFamily")
         if family is not None:
             if not isinstance(family, dict):
@@ -329,33 +333,40 @@ def validate_registry(registry: dict[str, Any]) -> list[dict[str, Any]]:
 def _validate_artifact_spec(
     app_id: str,
     artifact: Any,
-    archive_paths: set[str],
+    archive_file_names: set[tuple[str, str]],
     target_paths: set[str],
 ) -> None:
     if not isinstance(artifact, dict):
         raise AuditError(f"artifact must be an object for {app_id}")
-    if artifact.get("pack") not in {"base", "extra"}:
+    pack = artifact.get("pack")
+    if pack not in PACK_ARTIFACT_PREFIXES:
         raise AuditError(f"invalid artifact pack for {app_id}")
-    archive_path = require_string(
-        artifact.get("archivePath"), f"{app_id}.artifact.archivePath"
-    )
-    remote_path = require_string(
-        artifact.get("remotePath"), f"{app_id}.artifact.remotePath"
+    archive_file_name = require_string(
+        artifact.get("archiveFileName"), f"{app_id}.artifact.archiveFileName"
     )
     target_path = require_string(
         artifact.get("targetPath"), f"{app_id}.artifact.targetPath"
     )
-    if archive_path.startswith("/") or ".." in Path(archive_path).parts:
-        raise AuditError(f"unsafe archive path for {app_id}: {archive_path}")
-    if not remote_path.startswith("/ext/") or not target_path.startswith("/ext/"):
-        raise AuditError(f"artifact paths must stay below /ext for {app_id}")
-    if archive_path in archive_paths:
-        raise AuditError(f"duplicate protected archive path: {archive_path}")
+    if (
+        not archive_file_name.endswith(".fap")
+        or archive_file_name.startswith(".")
+        or "/" in archive_file_name
+        or "\\" in archive_file_name
+        or archive_file_name != Path(archive_file_name).name
+    ):
+        raise AuditError(f"unsafe archive file name for {app_id}: {archive_file_name}")
+    if not target_path.startswith("/ext/"):
+        raise AuditError(f"artifact target path must stay below /ext for {app_id}")
+    archive_key = (pack, archive_file_name)
+    if archive_key in archive_file_names:
+        raise AuditError(
+            f"duplicate protected archive file name: {pack}:{archive_file_name}"
+        )
     if target_path in target_paths and not target_path.startswith(
         "/ext/apps_data/totp/plugins/"
     ):
         raise AuditError(f"duplicate protected target path: {target_path}")
-    archive_paths.add(archive_path)
+    archive_file_names.add(archive_key)
     target_paths.add(target_path)
 
 
@@ -1198,49 +1209,72 @@ def load_firmware_updaters(descriptor_paths: list[Path]) -> list[dict[str, Any]]
 def materialize_artifacts(
     app: dict[str, Any], archives: dict[str, dict[str, bytes]]
 ) -> list[dict[str, str]]:
-    specs = [dict(spec) for spec in app["artifacts"]]
+    result = [
+        _materialize_declared_artifact(spec, archives) for spec in app["artifacts"]
+    ]
     family = app.get("artifactFamily")
-    if family is not None:
-        members = sorted(
-            path
-            for path in archives[family["pack"]]
-            if path.startswith(family["archivePrefix"])
-            and path.endswith(family["extension"])
-        )
-        if len(members) != family["expectedCount"]:
-            raise AuditError(
-                f"{app['id']} artifact family differs: "
-                f"{len(members)} != {family['expectedCount']}"
-            )
-        for archive_path in members:
-            filename = archive_path.removeprefix(family["archivePrefix"])
-            if "/" in filename or not filename:
-                raise AuditError(f"nested or empty family member for {app['id']}: {archive_path}")
-            specs.append(
-                {
-                    "pack": family["pack"],
-                    "archivePath": archive_path,
-                    "remotePath": family["remotePrefix"] + filename,
-                    "targetPath": family["targetPrefix"] + filename,
-                }
-            )
+    if family is None:
+        return sorted(result, key=lambda item: (item["remotePath"], item["targetPath"]))
 
-    result: list[dict[str, str]] = []
-    for spec in specs:
-        data = archives[spec["pack"]].get(spec["archivePath"])
-        if data is None:
-            raise AuditError(
-                f"protected artifact is missing: {spec['pack']}:{spec['archivePath']}"
-            )
+    members = sorted(
+        path
+        for path in archives[family["pack"]]
+        if path.startswith(family["archivePrefix"])
+        and path.endswith(family["extension"])
+    )
+    if len(members) != family["expectedCount"]:
+        raise AuditError(
+            f"{app['id']} artifact family differs: "
+            f"{len(members)} != {family['expectedCount']}"
+        )
+    for archive_path in members:
+        filename = archive_path.removeprefix(family["archivePrefix"])
+        if "/" in filename or not filename:
+            raise AuditError(f"nested or empty family member for {app['id']}: {archive_path}")
+        data = archives[family["pack"]][archive_path]
         result.append(
             {
-                "pack": spec["pack"],
-                "remotePath": spec["remotePath"],
-                "targetPath": spec["targetPath"],
+                "pack": family["pack"],
+                "remotePath": family["remotePrefix"] + filename,
+                "targetPath": family["targetPrefix"] + filename,
                 "sourceMD5": hashlib.md5(data).hexdigest(),
             }
         )
     return sorted(result, key=lambda item: (item["remotePath"], item["targetPath"]))
+
+
+def _materialize_declared_artifact(
+    spec: dict[str, str], archives: dict[str, dict[str, bytes]]
+) -> dict[str, str]:
+    pack = spec["pack"]
+    archive_file_name = spec["archiveFileName"]
+    archive_prefix = PACK_ARTIFACT_PREFIXES[pack]
+    matches = sorted(
+        archive_path
+        for archive_path in archives[pack]
+        if archive_path.startswith(archive_prefix)
+        and Path(archive_path).name == archive_file_name
+    )
+    if not matches:
+        raise AuditError(f"protected artifact is missing: {pack}:{archive_file_name}")
+    if len(matches) > 1:
+        raise AuditError(
+            "protected artifact is ambiguous: "
+            f"{pack}:{archive_file_name}: {', '.join(matches)}"
+        )
+    archive_path = matches[0]
+    relative_path = archive_path.removeprefix(archive_prefix)
+    if not relative_path or any(
+        segment in {"", ".", ".."} for segment in relative_path.split("/")
+    ):
+        raise AuditError(f"noncanonical protected artifact path: {pack}:{archive_path}")
+    remote_path = "/ext/apps/" + relative_path
+    return {
+        "pack": pack,
+        "remotePath": remote_path,
+        "targetPath": spec["targetPath"],
+        "sourceMD5": hashlib.md5(archives[pack][archive_path]).hexdigest(),
+    }
 
 
 def validate_protected_intersections(

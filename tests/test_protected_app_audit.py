@@ -106,12 +106,30 @@ class ProtectedAppAuditTests(unittest.TestCase):
             text=True,
         ).stdout.strip()
 
-    def _write_archives(self, *, omit: Optional[str] = None, add_unknown: bool = False) -> None:
+    def _artifact_archive_path(self, spec: dict[str, str], directory: str = "Fixtures") -> str:
+        return (
+            f"{spec['pack']}_pack_build/artifacts-{spec['pack']}/"
+            f"{directory}/{spec['archiveFileName']}"
+        )
+
+    def _write_archives(
+        self,
+        *,
+        omit: Optional[str] = None,
+        omit_artifact: Optional[tuple[str, str]] = None,
+        route_directories: Optional[dict[tuple[str, str], str]] = None,
+        duplicate_artifact: Optional[tuple[str, str]] = None,
+        add_unknown: bool = False,
+    ) -> None:
+        route_directories = route_directories or {}
         members: dict[str, dict[str, bytes]] = {"base": {}, "extra": {}}
         for app in self.apps:
             for spec in app["artifacts"]:
-                if spec["archivePath"] != omit:
-                    members[spec["pack"]][spec["archivePath"]] = spec["remotePath"].encode()
+                artifact_key = (spec["pack"], spec["archiveFileName"])
+                directory = route_directories.get(artifact_key, "Fixtures")
+                archive_path = self._artifact_archive_path(spec, directory)
+                if artifact_key != omit_artifact:
+                    members[spec["pack"]][archive_path] = archive_path.encode()
             family = app.get("artifactFamily")
             if family:
                 for index in range(family["expectedCount"]):
@@ -119,6 +137,11 @@ class ProtectedAppAuditTests(unittest.TestCase):
                     path = family["archivePrefix"] + name
                     if path != omit:
                         members[family["pack"]][path] = name.encode()
+        if duplicate_artifact is not None:
+            pack, archive_file_name = duplicate_artifact
+            members[pack][
+                f"{pack}_pack_build/artifacts-{pack}/Duplicate/{archive_file_name}"
+            ] = b"ambiguous protected artifact"
         if add_unknown:
             members["extra"][
                 "extra_pack_build/artifacts-extra/Tools/field_logger.fap"
@@ -331,7 +354,7 @@ class ProtectedAppAuditTests(unittest.TestCase):
         raw = next(app for app in self.apps if app["id"] == "subghz_raw_edit")
         spec = raw["artifacts"][0]
         with zipfile.ZipFile(self.extra) as archive:
-            source_data = archive.read(spec["archivePath"])
+            source_data = archive.read(self._artifact_archive_path(spec))
         for manifest_path, archive_path in (
             (self.stable_manifest, self.stable_archive),
             (self.dev_manifest, self.dev_archive),
@@ -375,7 +398,8 @@ class ProtectedAppAuditTests(unittest.TestCase):
         self.assertEqual(len(result["unresolved"]), 15)
         self.assertTrue(
             any(
-                value.startswith("subghz_raw_edit:/ext/apps/Sub-GHz/subghz_raw_edit.fap")
+                value.startswith("subghz_raw_edit:/ext/apps/")
+                and ": author source changed" in value
                 for value in result["unresolved"]
             )
         )
@@ -694,6 +718,102 @@ class ProtectedAppAuditTests(unittest.TestCase):
         self.assertEqual(result["overallStatus"], "verified")
         self.assertEqual(len(result["entries"]), 26)
         self.assertEqual(result["unresolved"], [])
+
+    def test_category_move_derives_current_archive_and_remote_paths(self) -> None:
+        marauder = next(app for app in self.apps if app["id"] == "esp32_wifi_marauder")
+        spec = marauder["artifacts"][0]
+        self._write_archives(
+            route_directories={
+                (spec["pack"], spec["archiveFileName"]): "GPIO/ESP32",
+            }
+        )
+
+        result, _ = audit.audit_release(self._args())
+
+        app = next(item for item in result["apps"] if item["appId"] == marauder["id"])
+        artifact = next(
+            item
+            for item in app["artifacts"]
+            if item["targetPath"] == spec["targetPath"]
+        )
+        self.assertEqual(
+            artifact["remotePath"],
+            "/ext/apps/GPIO/ESP32/esp32_wifi_marauder.fap",
+        )
+
+    def test_duplicate_declared_pack_leaf_fails_closed(self) -> None:
+        marauder = next(app for app in self.apps if app["id"] == "esp32_wifi_marauder")
+        spec = marauder["artifacts"][0]
+        self._write_archives(
+            duplicate_artifact=(spec["pack"], spec["archiveFileName"])
+        )
+
+        with self.assertRaisesRegex(
+            audit.AuditError,
+            r"protected artifact is ambiguous: base:esp32_wifi_marauder\.fap",
+        ):
+            audit.audit_release(self._args())
+
+    def test_missing_declared_pack_leaf_fails_closed(self) -> None:
+        marauder = next(app for app in self.apps if app["id"] == "esp32_wifi_marauder")
+        spec = marauder["artifacts"][0]
+        self._write_archives(
+            omit_artifact=(spec["pack"], spec["archiveFileName"])
+        )
+
+        with self.assertRaisesRegex(
+            audit.AuditError,
+            r"protected artifact is missing: base:esp32_wifi_marauder\.fap",
+        ):
+            audit.audit_release(self._args())
+
+    def test_noncanonical_declared_pack_leaf_fails_closed(self) -> None:
+        marauder = next(app for app in self.apps if app["id"] == "esp32_wifi_marauder")
+        spec = marauder["artifacts"][0]
+        self._write_archives(
+            route_directories={
+                (spec["pack"], spec["archiveFileName"]): "GPIO/.",
+            }
+        )
+
+        with self.assertRaisesRegex(
+            audit.AuditError,
+            r"noncanonical protected artifact path: "
+            r"base:base_pack_build/artifacts-base/GPIO/\./esp32_wifi_marauder\.fap",
+        ):
+            audit.audit_release(self._args())
+
+    def test_fap_route_resolution_preserves_totp_fal_family_rules(self) -> None:
+        totp = next(app for app in self.apps if app["id"] == "totp")
+        spec = totp["artifacts"][0]
+        family = totp["artifactFamily"]
+        self._write_archives(
+            route_directories={
+                (spec["pack"], spec["archiveFileName"]): "Tools/Crypto",
+            }
+        )
+
+        result, _ = audit.audit_release(self._args())
+
+        app = next(item for item in result["apps"] if item["appId"] == "totp")
+        fap = next(
+            item
+            for item in app["artifacts"]
+            if item["targetPath"] == spec["targetPath"]
+        )
+        family_members = [
+            item
+            for item in app["artifacts"]
+            if item["targetPath"].startswith(family["targetPrefix"])
+        ]
+        self.assertEqual(fap["remotePath"], "/ext/apps/Tools/Crypto/totp.fap")
+        self.assertEqual(len(family_members), family["expectedCount"])
+        self.assertTrue(
+            all(
+                item["remotePath"].startswith(family["remotePrefix"])
+                for item in family_members
+            )
+        )
 
     def test_changed_app_decision_requires_hardware_acceptance(self) -> None:
         decisions = self.root / "decisions.json"

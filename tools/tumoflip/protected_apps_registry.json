@@ -87,8 +87,7 @@
       "artifacts": [
         {
           "pack": "base",
-          "remotePath": "/ext/apps/GPIO/esp32_wifi_marauder.fap",
-          "archivePath": "base_pack_build/artifacts-base/GPIO/esp32_wifi_marauder.fap",
+          "archiveFileName": "esp32_wifi_marauder.fap",
           "targetPath": "/ext/apps/Module One/ESP32 Wi-Fi/esp32_wifi_marauder.fap"
         }
       ],
@@ -109,8 +108,7 @@
       "artifacts": [
         {
           "pack": "extra",
-          "remotePath": "/ext/apps/GPIO/esp_flasher.fap",
-          "archivePath": "extra_pack_build/artifacts-extra/GPIO/esp_flasher.fap",
+          "archiveFileName": "esp_flasher.fap",
           "targetPath": "/ext/apps/Module One/ESP32 Wi-Fi/esp_flasher.fap"
         }
       ],
@@ -131,8 +129,7 @@
       "artifacts": [
         {
           "pack": "base",
-          "remotePath": "/ext/apps/Sub-GHz/proto_pirate.fap",
-          "archivePath": "base_pack_build/artifacts-base/Sub-GHz/proto_pirate.fap",
+          "archiveFileName": "proto_pirate.fap",
           "targetPath": "/ext/apps_data/arf_subghz_full/modules/proto_pirate.fap"
         }
       ],
@@ -153,8 +150,7 @@
       "artifacts": [
         {
           "pack": "base",
-          "remotePath": "/ext/apps/Sub-GHz/subghz_bruteforcer.fap",
-          "archivePath": "base_pack_build/artifacts-base/Sub-GHz/subghz_bruteforcer.fap",
+          "archiveFileName": "subghz_bruteforcer.fap",
           "targetPath": "/ext/apps_data/arf_subghz_full/modules/subghz_bruteforcer.fap"
         }
       ],
@@ -175,8 +171,7 @@
       "artifacts": [
         {
           "pack": "base",
-          "remotePath": "/ext/apps/Sub-GHz/subghz_wardriving.fap",
-          "archivePath": "base_pack_build/artifacts-base/Sub-GHz/subghz_wardriving.fap",
+          "archiveFileName": "subghz_wardriving.fap",
           "targetPath": "/ext/apps/Sub-GHz/subghz_wardriving.fap"
         }
       ],
@@ -197,8 +192,7 @@
       "artifacts": [
         {
           "pack": "base",
-          "remotePath": "/ext/apps/Tools/quac.fap",
-          "archivePath": "base_pack_build/artifacts-base/Tools/quac.fap",
+          "archiveFileName": "quac.fap",
           "targetPath": "/ext/apps/Tools/quac.fap"
         }
       ],
@@ -227,8 +221,7 @@
       "artifacts": [
         {
           "pack": "base",
-          "remotePath": "/ext/apps/Tools/totp.fap",
-          "archivePath": "base_pack_build/artifacts-base/Tools/totp.fap",
+          "archiveFileName": "totp.fap",
           "targetPath": "/ext/apps/Tools/totp.fap"
         }
       ],
@@ -249,8 +242,7 @@
       "artifacts": [
         {
           "pack": "extra",
-          "remotePath": "/ext/apps/Bluetooth/claude_remote_ble.fap",
-          "archivePath": "extra_pack_build/artifacts-extra/Bluetooth/claude_remote_ble.fap",
+          "archiveFileName": "claude_remote_ble.fap",
           "targetPath": "/ext/apps/Bluetooth/claude_remote_ble.fap"
         }
       ],
@@ -271,8 +263,7 @@
       "artifacts": [
         {
           "pack": "extra",
-          "remotePath": "/ext/apps/Sub-GHz/freq_analyzer_ext.fap",
-          "archivePath": "extra_pack_build/artifacts-extra/Sub-GHz/freq_analyzer_ext.fap",
+          "archiveFileName": "freq_analyzer_ext.fap",
           "targetPath": "/ext/apps/Module One/Sub-GHz/freq_analyzer_ext.fap"
         }
       ],
@@ -293,8 +284,7 @@
       "artifacts": [
         {
           "pack": "extra",
-          "remotePath": "/ext/apps/GPIO/wifi_map.fap",
-          "archivePath": "extra_pack_build/artifacts-extra/GPIO/wifi_map.fap",
+          "archiveFileName": "wifi_map.fap",
           "targetPath": "/ext/apps/Module One/ESP32 Wi-Fi/wifi_map.fap"
         }
       ],
@@ -315,8 +305,7 @@
       "artifacts": [
         {
           "pack": "extra",
-          "remotePath": "/ext/apps/Infrared/flipper_xremote.fap",
-          "archivePath": "extra_pack_build/artifacts-extra/Infrared/flipper_xremote.fap",
+          "archiveFileName": "flipper_xremote.fap",
           "targetPath": "/ext/apps/Module One/IR Blaster/tumoflip_xremote.fap"
         }
       ],
@@ -337,8 +326,7 @@
       "artifacts": [
         {
           "pack": "extra",
-          "remotePath": "/ext/apps/Sub-GHz/subghz_raw_edit.fap",
-          "archivePath": "extra_pack_build/artifacts-extra/Sub-GHz/subghz_raw_edit.fap",
+          "archiveFileName": "subghz_raw_edit.fap",
           "targetPath": "/ext/apps/ARF Tools/subghz_raw_edit.fap"
         }
       ],
