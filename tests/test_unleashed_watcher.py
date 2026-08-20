@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import copy
+import io
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
@@ -42,6 +44,23 @@ def release(tag: str, commit: str, published_at: str) -> dict[str, object]:
         "published_at": published_at,
         "draft": False,
         "prerelease": False,
+    }
+
+
+def issue(
+    number: int,
+    *,
+    title: str = watcher.ISSUE_TITLE,
+    body: str = watcher.ISSUE_MARKER + "\nmanaged by the watcher\n",
+    author: str = watcher.ISSUE_AUTHOR,
+    pull_request: object | None = None,
+) -> dict[str, object]:
+    return {
+        "number": number,
+        "title": title,
+        "body": body,
+        "user": {"login": author},
+        "pull_request": pull_request,
     }
 
 
@@ -172,6 +191,148 @@ class UnleashedWatcherTests(unittest.TestCase):
         self.assertIn("#1083", text)
         self.assertIn("Fix NFC without Markdown injection", text)
         self.assertIn("Advance `contracts/upstream-watchers.json` only", text)
+
+    def test_report_escapes_upstream_text_and_neutralizes_mentions(self) -> None:
+        head = "a" * 40
+        merge = "b" * 40
+        subject = "fix [click](https://example.test) <tag> @octocat *bold* `code`"
+        title = "PR [click](https://example.test) <tag> @octocat _italic_ ~strike~"
+        report = self._watch(
+            self._responses(
+                head=head,
+                status="ahead",
+                ahead=1,
+                commits=[{"sha": head, "commit": {"message": subject}}],
+                search=[
+                    {
+                        "total_count": 1,
+                        "incomplete_results": False,
+                        "items": [
+                            {
+                                "number": 1084,
+                                "pull_request": {"merged_at": "2026-08-21T11:00:00Z"},
+                            }
+                        ],
+                    }
+                ],
+                pull_details={
+                    1084: {
+                        "number": 1084,
+                        "state": "closed",
+                        "merged_at": "2026-08-21T11:00:00Z",
+                        "base": {"ref": "dev"},
+                        "merge_commit_sha": merge,
+                        "title": title,
+                    }
+                },
+            )
+        )
+
+        text = watcher.render_report(report)
+
+        self.assertNotIn("@octocat", text)
+        self.assertIn("@\u200boctocat", text)
+        self.assertNotIn("[click](https://example.test)", text)
+        self.assertIn(r"\[click\]\(https://example\.test\)", text)
+        self.assertNotIn("<tag>", text)
+        self.assertIn(r"\<tag\>", text)
+        self.assertIn(r"\*bold\*", text)
+        self.assertIn(r"\`code\`", text)
+        self.assertIn(r"\_italic\_", text)
+        self.assertIn(r"\~strike\~", text)
+        watcher.verify_report(
+            contract=contract(),
+            report=report,
+            markdown=text,
+            control_repository="squazaryu/tumoflip-fw-packages",
+            control_commit=CONTROL,
+        )
+
+    def test_external_spoofs_cannot_be_reconciled_or_block_canonical_creation(self) -> None:
+        spoofed = [
+            issue(41, author="external-user"),
+            issue(42, title="External lookalike"),
+            issue(43, body="prefix " + watcher.ISSUE_MARKER),
+        ]
+
+        self.assertIsNone(watcher.resolve_canonical_issue_number([spoofed]))
+        for value in spoofed:
+            with self.assertRaisesRegex(watcher.WatchError, "canonical issue"):
+                watcher._canonical_issue_number(value)
+
+        canonical = issue(44)
+        self.assertEqual(
+            watcher.resolve_canonical_issue_number([spoofed + [canonical]]), 44
+        )
+        with self.assertRaisesRegex(watcher.WatchError, "multiple bot-owned canonical"):
+            watcher.resolve_canonical_issue_number([[canonical, issue(45)]])
+
+    def test_issue_cli_revalidates_ownership_after_discovery_or_creation(self) -> None:
+        spoofed = issue(51, author="external-user")
+        canonical = issue(52)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            pages_path = root / "issues.json"
+            output_path = root / "canonical.json"
+            issue_path = root / "issue.json"
+
+            pages_path.write_text(json.dumps([[spoofed]]), encoding="utf-8")
+            self.assertEqual(
+                watcher.main(
+                    [
+                        "resolve-canonical-issue",
+                        "--issues",
+                        str(pages_path),
+                        "--output",
+                        str(output_path),
+                    ]
+                ),
+                0,
+            )
+            self.assertEqual(json.loads(output_path.read_text(encoding="utf-8")), {"number": None})
+
+            pages_path.write_text(json.dumps([[spoofed, canonical]]), encoding="utf-8")
+            self.assertEqual(
+                watcher.main(
+                    [
+                        "resolve-canonical-issue",
+                        "--issues",
+                        str(pages_path),
+                        "--output",
+                        str(output_path),
+                    ]
+                ),
+                0,
+            )
+            self.assertEqual(json.loads(output_path.read_text(encoding="utf-8")), {"number": 52})
+
+            issue_path.write_text(json.dumps(spoofed), encoding="utf-8")
+            with redirect_stderr(io.StringIO()):
+                self.assertEqual(
+                    watcher.main(
+                        [
+                            "verify-canonical-issue",
+                            "--issue",
+                            str(issue_path),
+                            "--expected-number",
+                            "51",
+                        ]
+                    ),
+                    1,
+                )
+            issue_path.write_text(json.dumps(canonical), encoding="utf-8")
+            self.assertEqual(
+                watcher.main(
+                    [
+                        "verify-canonical-issue",
+                        "--issue",
+                        str(issue_path),
+                        "--expected-number",
+                        "52",
+                    ]
+                ),
+                0,
+            )
 
     def test_non_ancestor_boundary_stays_fail_closed(self) -> None:
         head = "e" * 40

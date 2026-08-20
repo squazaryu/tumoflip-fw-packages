@@ -26,6 +26,8 @@ RELEASE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 TIMESTAMP = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")
 ISSUE_MARKER = "<!-- upstream-watch:DarkFlippers/unleashed-firmware -->"
 ISSUE_TITLE = "Watch DarkFlippers/unleashed-firmware upstream changes"
+ISSUE_AUTHOR = "github-actions[bot]"
+MARKDOWN_SPECIAL = re.compile(r"([\\`*_{}\[\]<>()#+.!|~\-])")
 
 
 class WatchError(RuntimeError):
@@ -71,11 +73,22 @@ def _normalise_text(value: Any, label: str) -> str:
     return " ".join(value.replace("\r", " ").replace("\n", " ").split())
 
 
-def _read_object(path: Path) -> dict[str, Any]:
+def _escape_markdown_text(value: Any, label: str) -> str:
+    """Render upstream-controlled text as inert, non-mentioning Markdown."""
+
+    text = _normalise_text(value, label).replace("@", "@\u200b")
+    return MARKDOWN_SPECIAL.sub(r"\\\1", text)
+
+
+def _read_json(path: Path) -> Any:
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
         raise WatchError(f"cannot load {path}: {error}") from error
+
+
+def _read_object(path: Path) -> dict[str, Any]:
+    value = _read_json(path)
     if not isinstance(value, dict):
         raise WatchError(f"{path} must contain a JSON object")
     return value
@@ -136,6 +149,56 @@ def _pages(value: Any, label: str) -> list[Any]:
     if all(isinstance(item, dict) for item in value):
         return value
     raise WatchError(f"{label} paginated response is malformed")
+
+
+def _canonical_issue_number(value: Any, *, expected_number: int | None = None) -> int:
+    """Require the one issue the watcher is allowed to mutate.
+
+    Marker text alone is deliberately not an authority signal: repository users
+    can put it in an arbitrary issue.  The workflow may only touch the exact
+    bot-authored, exact-title issue whose marker is the first body content.
+    """
+
+    if not isinstance(value, dict):
+        raise WatchError("canonical issue response is invalid")
+    number = value.get("number")
+    if not isinstance(number, int) or isinstance(number, bool) or number < 1:
+        raise WatchError("canonical issue number is invalid")
+    if expected_number is not None:
+        if (
+            not isinstance(expected_number, int)
+            or isinstance(expected_number, bool)
+            or expected_number < 1
+        ):
+            raise WatchError("expected canonical issue number is invalid")
+        if number != expected_number:
+            raise WatchError("canonical issue number changed")
+    if value.get("pull_request") is not None:
+        raise WatchError("canonical issue is a pull request")
+    if value.get("title") != ISSUE_TITLE:
+        raise WatchError("canonical issue title differs")
+    body = value.get("body")
+    if not isinstance(body, str) or not body.startswith(ISSUE_MARKER):
+        raise WatchError("canonical issue marker is not at the body start")
+    author = value.get("user")
+    if not isinstance(author, dict) or author.get("login") != ISSUE_AUTHOR:
+        raise WatchError("canonical issue is not owned by github-actions[bot]")
+    return number
+
+
+def resolve_canonical_issue_number(value: Any) -> int | None:
+    """Find exactly one bot-owned canonical issue, ignoring external spoofs."""
+
+    matches: list[int] = []
+    for issue in _pages(value, "canonical issue"):
+        try:
+            number = _canonical_issue_number(issue)
+        except WatchError:
+            continue
+        matches.append(number)
+    if len(matches) > 1:
+        raise WatchError("multiple bot-owned canonical issues were found")
+    return matches[0] if matches else None
 
 
 def _tag_commit(repository: str, tag: str) -> str:
@@ -472,7 +535,8 @@ def render_report(report: dict[str, Any]) -> str:
         lines.extend(("## Unreviewed commit sample", ""))
         for item in commits:
             lines.append(
-                f"- [`{item['sha']}`](https://github.com/{watch_data['repository']}/commit/{item['sha']}) — {item['subject']}"
+                f"- [`{item['sha']}`](https://github.com/{watch_data['repository']}/commit/{item['sha']}) — "
+                f"{_escape_markdown_text(item['subject'], 'rendered commit subject')}"
             )
         if comparison["commitSampleTruncated"]:
             lines.append(
@@ -487,7 +551,7 @@ def render_report(report: dict[str, Any]) -> str:
         for item in pull_requests:
             lines.append(
                 f"- [#{item['number']}]({item['url']}) `{item['mergeCommit']}` "
-                f"({item['mergedAt']}) — {item['title']}"
+                f"({item['mergedAt']}) — {_escape_markdown_text(item['title'], 'rendered pull request title')}"
             )
     else:
         lines.append("- None detected.")
@@ -688,34 +752,50 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     verify.add_argument("--markdown", type=Path, required=True)
     verify.add_argument("--control-repository", required=True)
     verify.add_argument("--control-commit", required=True)
+    resolve_issue = commands.add_parser("resolve-canonical-issue")
+    resolve_issue.add_argument("--issues", type=Path, required=True)
+    resolve_issue.add_argument("--output", type=Path, required=True)
+    verify_issue = commands.add_parser("verify-canonical-issue")
+    verify_issue.add_argument("--issue", type=Path, required=True)
+    verify_issue.add_argument("--expected-number", type=int, required=True)
     return parser.parse_args(list(argv))
 
 
 def main(argv: Iterable[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     try:
-        contract = load_contract(args.contract)
-        if args.command == "watch":
-            report = watch(
-                contract=contract,
-                control_repository=args.control_repository,
-                control_commit=args.control_commit,
+        if args.command == "resolve-canonical-issue":
+            _write_json(
+                args.output,
+                {"number": resolve_canonical_issue_number(_read_json(args.issues))},
             )
-            _write_json(args.output, report)
-            args.markdown.write_text(render_report(report), encoding="utf-8")
+        elif args.command == "verify-canonical-issue":
+            _canonical_issue_number(
+                _read_object(args.issue), expected_number=args.expected_number
+            )
         else:
-            report = _read_object(args.report)
-            try:
-                markdown = args.markdown.read_text(encoding="utf-8")
-            except OSError as error:
-                raise WatchError(f"cannot read {args.markdown}: {error}") from error
-            verify_report(
-                contract=contract,
-                report=report,
-                markdown=markdown,
-                control_repository=args.control_repository,
-                control_commit=args.control_commit,
-            )
+            contract = load_contract(args.contract)
+            if args.command == "watch":
+                report = watch(
+                    contract=contract,
+                    control_repository=args.control_repository,
+                    control_commit=args.control_commit,
+                )
+                _write_json(args.output, report)
+                args.markdown.write_text(render_report(report), encoding="utf-8")
+            else:
+                report = _read_object(args.report)
+                try:
+                    markdown = args.markdown.read_text(encoding="utf-8")
+                except OSError as error:
+                    raise WatchError(f"cannot read {args.markdown}: {error}") from error
+                verify_report(
+                    contract=contract,
+                    report=report,
+                    markdown=markdown,
+                    control_repository=args.control_repository,
+                    control_commit=args.control_commit,
+                )
     except (WatchError, OSError, ValueError) as error:
         print(f"Unleashed watch failed closed: {error}", file=sys.stderr)
         return 1

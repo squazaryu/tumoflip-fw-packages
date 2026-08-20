@@ -64,6 +64,26 @@ class WorkflowSecurityTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, text)
 
+    def test_unleashed_watcher_revalidates_bot_owned_issue_before_mutation(self) -> None:
+        text = (self.root / ".github/workflows/upstream-unleashed-watcher.yml").read_text(
+            encoding="utf-8"
+        )
+        watcher = (self.root / "tools/watch_unleashed.py").read_text(encoding="utf-8")
+
+        self.assertIn("resolve-canonical-issue", text)
+        self.assertIn("verify-canonical-issue", text)
+        self.assertIn('gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER"', text)
+        self.assertNotIn("gh issue view", text)
+        self.assertNotIn("contains($marker)", text)
+        self.assertIn('ISSUE_AUTHOR = "github-actions[bot]"', watcher)
+        self.assertIn('value.get("title") != ISSUE_TITLE', watcher)
+        self.assertIn('body.startswith(ISSUE_MARKER)', watcher)
+        self.assertIn('author.get("login") != ISSUE_AUTHOR', watcher)
+
+        first_revalidation = text.index("load_canonical_issue\n          ISSUE_STATE")
+        self.assertLess(first_revalidation, text.index('gh issue reopen "$ISSUE_NUMBER"'))
+        self.assertLess(first_revalidation, text.index('gh issue edit "$ISSUE_NUMBER"'))
+
     def test_history_mirror_is_exact_main_draft_first_and_reverified(self) -> None:
         text = (self.root / ".github/workflows/mirror-history.yml").read_text(
             encoding="utf-8"

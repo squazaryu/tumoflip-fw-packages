@@ -112,32 +112,38 @@ jobs:
           set -euo pipefail
           REPORT=report/unleashed-watch.md
           STATE=report/unleashed-watch.json
-          MARKER='<!-- upstream-watch:DarkFlippers/unleashed-firmware -->'
           TITLE='Watch DarkFlippers/unleashed-firmware upstream changes'
           CHANGES="$(jq -r .changesDetected "$STATE")"
           [[ "$CHANGES" == true || "$CHANGES" == false ]]
           gh api "repos/$GITHUB_REPOSITORY/issues?state=all&per_page=100" \
             --paginate --slurp > "$RUNNER_TEMP/issue-pages.json"
-          jq --arg marker "$MARKER" \
-            '[.[][] | select(.pull_request == null and ((.body | type) == "string") and (.body | contains($marker)))]' \
-            "$RUNNER_TEMP/issue-pages.json" \
-            > "$RUNNER_TEMP/issue-matches.json"
-          test "$(jq 'length' "$RUNNER_TEMP/issue-matches.json")" -le 1
-          ISSUE_NUMBER="$(jq -r '.[0].number // empty' "$RUNNER_TEMP/issue-matches.json")"
+          python3 control/tools/watch_unleashed.py resolve-canonical-issue \
+            --issues "$RUNNER_TEMP/issue-pages.json" \
+            --output "$RUNNER_TEMP/canonical-issue.json"
+          ISSUE_NUMBER="$(jq -r '.number // empty' "$RUNNER_TEMP/canonical-issue.json")"
           if [[ -z "$ISSUE_NUMBER" ]]; then
             ISSUE_URL="$(gh issue create --repo "$GITHUB_REPOSITORY" \
               --title "$TITLE" --body-file "$REPORT")"
             ISSUE_NUMBER="${ISSUE_URL##*/}"
           fi
-          gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-            --json number,title,body,state,url > "$RUNNER_TEMP/issue.json"
-          jq -e --arg title "$TITLE" --arg marker "$MARKER" \
-            '.title == $title and (.body | contains($marker))' \
-            "$RUNNER_TEMP/issue.json" >/dev/null
-          if [[ "$(jq -r .state "$RUNNER_TEMP/issue.json")" == CLOSED && "$CHANGES" == true ]]; then
+          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          load_canonical_issue() {
+            gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/issue.json"
+            python3 control/tools/watch_unleashed.py verify-canonical-issue \
+              --issue "$RUNNER_TEMP/issue.json" \
+              --expected-number "$ISSUE_NUMBER"
+          }
+          load_canonical_issue
+          ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
+          [[ "$ISSUE_STATE" == OPEN || "$ISSUE_STATE" == CLOSED ]]
+          if [[ "$ISSUE_STATE" == CLOSED && "$CHANGES" == true ]]; then
             gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
+            load_canonical_issue
           fi
           jq -r .body "$RUNNER_TEMP/issue.json" > "$RUNNER_TEMP/current-issue.md"
           if ! cmp -s "$REPORT" "$RUNNER_TEMP/current-issue.md"; then
             gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$REPORT"
+            load_canonical_issue
+            jq -r .body "$RUNNER_TEMP/issue.json" > "$RUNNER_TEMP/current-issue.md"
+            cmp -s "$REPORT" "$RUNNER_TEMP/current-issue.md"
           fi
