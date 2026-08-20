@@ -56,5 +56,16 @@ scanner. Firmware and Community Pack checkouts are read-only evidence, package
 and firmware targets are numeric-release-ID contracts, and publication is
 blocked unless GitHub reports immutable releases enabled.
 
+## Read-only upstream watch
+
+`upstream-unleashed-watcher.yml` polls the public Unleashed `dev` branch and
+published releases on a separate schedule. Its reviewed boundary is the exact
+commit and release in `contracts/upstream-watchers.json`; the workflow cannot
+advance that file, modify Tumoflip, merge an upstream change, or publish a
+firmware/package release. It only maintains one canonical human-review issue
+with exact branch/release refs and merged-PR candidates. A reviewer records the
+decision first, then advances the boundary only through a separate reviewed
+control-plane pull request.
+
 See [Migration](docs/MIGRATION.md), [Release contract](docs/RELEASES.md), and
 [Security](SECURITY.md).

@@ -27,13 +27,42 @@ class WorkflowSecurityTests(unittest.TestCase):
             if "pull_request:" in text:
                 self.assertNotIn("contents: write", text)
 
-    def test_only_protected_audit_is_scheduled(self) -> None:
+    def test_only_audits_and_read_only_watchers_are_scheduled(self) -> None:
         scheduled = [
             path.name
             for path in self.workflows
             if re.search(r"(?m)^\s*schedule\s*:", path.read_text(encoding="utf-8"))
         ]
-        self.assertEqual(scheduled, ["protected-app-audit.yml"])
+        self.assertEqual(
+            scheduled,
+            ["protected-app-audit.yml", "upstream-unleashed-watcher.yml"],
+        )
+
+    def test_unleashed_watcher_is_read_only_except_for_one_report_issue(self) -> None:
+        text = (self.root / ".github/workflows/upstream-unleashed-watcher.yml").read_text(
+            encoding="utf-8"
+        )
+        guard = (
+            "if: github.ref == 'refs/heads/main' && "
+            "github.event.repository.default_branch == 'main'"
+        )
+        self.assertEqual(text.count(guard), 2)
+        self.assertIn("issues: write", text)
+        self.assertIn("Reconcile one canonical human-review issue", text)
+        self.assertIn("contracts/upstream-watchers.json", text)
+        self.assertIn("tools/watch_unleashed.py verify", text)
+        self.assertIn("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", text)
+        self.assertIn("actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c", text)
+        for forbidden in (
+            "contents: write",
+            "git push",
+            "gh pr merge",
+            "gh release",
+            "publish_native.py",
+            "publish_audit.py",
+            "repository: squazaryu/tumoflip",
+        ):
+            self.assertNotIn(forbidden, text)
 
     def test_history_mirror_is_exact_main_draft_first_and_reverified(self) -> None:
         text = (self.root / ".github/workflows/mirror-history.yml").read_text(

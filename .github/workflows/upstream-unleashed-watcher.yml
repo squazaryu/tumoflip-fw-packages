@@ -1,0 +1,143 @@
+name: Watch Unleashed upstream (read-only)
+
+on:
+  schedule:
+    - cron: "41 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upstream-unleashed-watcher
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    if: github.ref == 'refs/heads/main' && github.event.repository.default_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      changes_detected: ${{ steps.result.outputs.changes_detected }}
+    steps:
+      - name: Check out exact control commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Prove exact default-branch control commit
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Resolve exact read-only Unleashed evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 tools/watch_unleashed.py watch \
+            --contract contracts/upstream-watchers.json \
+            --control-repository "$GITHUB_REPOSITORY" \
+            --control-commit "$GITHUB_SHA" \
+            --output "$RUNNER_TEMP/unleashed-watch.json" \
+            --markdown "$RUNNER_TEMP/unleashed-watch.md"
+          python3 tools/watch_unleashed.py verify \
+            --contract contracts/upstream-watchers.json \
+            --report "$RUNNER_TEMP/unleashed-watch.json" \
+            --markdown "$RUNNER_TEMP/unleashed-watch.md" \
+            --control-repository "$GITHUB_REPOSITORY" \
+            --control-commit "$GITHUB_SHA"
+      - name: Export review state
+        id: result
+        run: |
+          set -euo pipefail
+          CHANGES="$(jq -r .changesDetected "$RUNNER_TEMP/unleashed-watch.json")"
+          [[ "$CHANGES" == true || "$CHANGES" == false ]]
+          echo "changes_detected=$CHANGES" >> "$GITHUB_OUTPUT"
+      - name: Upload read-only upstream report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: unleashed-upstream-watch-report
+          path: |
+            ${{ runner.temp }}/unleashed-watch.json
+            ${{ runner.temp }}/unleashed-watch.md
+          if-no-files-found: error
+          retention-days: 14
+
+  report:
+    if: github.ref == 'refs/heads/main' && github.event.repository.default_branch == 'main'
+    needs: resolve
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Check out exact control commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          persist-credentials: false
+      - name: Prove exact default-branch control commit
+        working-directory: control
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+      - name: Download upstream report
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: unleashed-upstream-watch-report
+          path: report
+      - name: Verify report before issue-write boundary
+        working-directory: control
+        run: |
+          set -euo pipefail
+          python3 tools/watch_unleashed.py verify \
+            --contract contracts/upstream-watchers.json \
+            --report ../report/unleashed-watch.json \
+            --markdown ../report/unleashed-watch.md \
+            --control-repository "$GITHUB_REPOSITORY" \
+            --control-commit "$GITHUB_SHA"
+      - name: Reconcile one canonical human-review issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REPORT=report/unleashed-watch.md
+          STATE=report/unleashed-watch.json
+          MARKER='<!-- upstream-watch:DarkFlippers/unleashed-firmware -->'
+          TITLE='Watch DarkFlippers/unleashed-firmware upstream changes'
+          CHANGES="$(jq -r .changesDetected "$STATE")"
+          [[ "$CHANGES" == true || "$CHANGES" == false ]]
+          gh api "repos/$GITHUB_REPOSITORY/issues?state=all&per_page=100" \
+            --paginate --slurp > "$RUNNER_TEMP/issue-pages.json"
+          jq --arg marker "$MARKER" \
+            '[.[][] | select(.pull_request == null and ((.body | type) == "string") and (.body | contains($marker)))]' \
+            "$RUNNER_TEMP/issue-pages.json" \
+            > "$RUNNER_TEMP/issue-matches.json"
+          test "$(jq 'length' "$RUNNER_TEMP/issue-matches.json")" -le 1
+          ISSUE_NUMBER="$(jq -r '.[0].number // empty' "$RUNNER_TEMP/issue-matches.json")"
+          if [[ -z "$ISSUE_NUMBER" ]]; then
+            ISSUE_URL="$(gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "$TITLE" --body-file "$REPORT")"
+            ISSUE_NUMBER="${ISSUE_URL##*/}"
+          fi
+          gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+            --json number,title,body,state,url > "$RUNNER_TEMP/issue.json"
+          jq -e --arg title "$TITLE" --arg marker "$MARKER" \
+            '.title == $title and (.body | contains($marker))' \
+            "$RUNNER_TEMP/issue.json" >/dev/null
+          if [[ "$(jq -r .state "$RUNNER_TEMP/issue.json")" == CLOSED && "$CHANGES" == true ]]; then
+            gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
+          fi
+          jq -r .body "$RUNNER_TEMP/issue.json" > "$RUNNER_TEMP/current-issue.md"
+          if ! cmp -s "$REPORT" "$RUNNER_TEMP/current-issue.md"; then
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$REPORT"
+          fi
