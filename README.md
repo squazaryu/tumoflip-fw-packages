@@ -52,9 +52,14 @@ promotions use the separate exact-snapshot mode and pin the firmware tag,
 commit, release ID, manifest hash, and ZIP hash.
 
 The protected-app workflow likewise executes only this repository's audited
-scanner. Firmware and Community Pack checkouts are read-only evidence, package
-and firmware targets are numeric-release-ID contracts, and publication is
-blocked unless GitHub reports immutable releases enabled.
+scanner. Firmware and Community Pack checkouts are read-only evidence. Package
+and historical firmware targets are numeric-release-ID contracts; each audit
+also resolves exactly one latest official Tumoflip stable release and one dev
+prerelease through a fixed, fail-closed selector. The selected numeric release
+ID, peeled tag commit, updater digest, resource manifest and resources digest
+are frozen into the immutable audit evidence before any device bytes are
+accepted. Publication is blocked unless GitHub reports immutable releases
+enabled.
 
 ## Read-only upstream watch
 

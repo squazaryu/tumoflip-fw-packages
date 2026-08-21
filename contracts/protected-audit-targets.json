@@ -215,6 +215,31 @@
         "bytes": 4529887,
         "sha256": "55e23f1976e73e7bff27b345695d484fac8b21cddd522b3c4e96c6b0758028ab"
       }
+    },
+    {
+      "repository": "squazaryu/tumoflip",
+      "releaseTag": "t-dev-007-001",
+      "githubReleaseId": 373781819,
+      "tagCommit": "adf7431acdd735dcd3d714fa339d76cef71df0a3",
+      "prerelease": true,
+      "resourceManifestSHA256": "87a5e52b76d0b8e2f3fee704a9f546a80c5c2d1d13c4d3a66c25734901055d0d",
+      "resourcesSHA256": "fd9976ff1ff455982392a8d251ab35f6c48f453c60ba72659ec127b6f2a57577",
+      "asset": {
+        "id": 522333188,
+        "name": "flipper-z-f7-update-t-dev-007-001.tgz",
+        "bytes": 4552801,
+        "sha256": "9253d71a9fe3396bf9afe81c2a174ad6d08898cdcb17c64139077dd4e86257a4"
+      }
+    }
+  ],
+  "rollingFirmware": [
+    {
+      "repository": "squazaryu/tumoflip",
+      "channel": "stable"
+    },
+    {
+      "repository": "squazaryu/tumoflip",
+      "channel": "dev"
     }
   ]
 }
