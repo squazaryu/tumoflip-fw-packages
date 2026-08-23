@@ -8,7 +8,12 @@ from pathlib import Path
 from typing import Any, Callable
 
 from tools.audit_bootstrap import BootstrapError, validate_index, verify
-from tools.audit_inputs import InputError, validate_source_fixture, validate_targets
+from tools.audit_inputs import (
+    InputError,
+    select_rolling_firmware_release,
+    validate_source_fixture,
+    validate_targets,
+)
 from tools.audit_release import (
     CHECKSUM_ASSET,
     LEDGER_ASSET,
@@ -93,12 +98,108 @@ class AuditControlPlaneTests(unittest.TestCase):
             firmware["v1.0.6"]["asset"]["sha256"],
             "1c4d89691cd373e3b074cd4fce6a1e4967fb70ecb84faf676b6a510ab5346335",
         )
+        self.assertEqual(
+            firmware["t-dev-007-001"]["tagCommit"],
+            "adf7431acdd735dcd3d714fa339d76cef71df0a3",
+        )
+        self.assertEqual(
+            contract["rollingFirmware"],
+            [
+                {"repository": "squazaryu/tumoflip", "channel": "stable"},
+                {"repository": "squazaryu/tumoflip", "channel": "dev"},
+            ],
+        )
 
     def test_target_contract_rejects_duplicate_release_identity(self) -> None:
         contract = json.loads((self.root / "contracts/protected-audit-targets.json").read_text())
         contract["packages"].append(copy.deepcopy(contract["packages"][0]))
         with self.assertRaisesRegex(InputError, "duplicated"):
             validate_targets(contract)
+
+    def test_target_contract_rejects_duplicate_rolling_firmware_channel(self) -> None:
+        contract = json.loads((self.root / "contracts/protected-audit-targets.json").read_text())
+        contract["rollingFirmware"][1]["channel"] = "stable"
+        with self.assertRaisesRegex(InputError, "rolling firmware selector"):
+            validate_targets(contract)
+
+    def test_rolling_firmware_selector_pins_latest_exact_dev_release(self) -> None:
+        def release(release_id: int, tag: str, published_at: str, prerelease: bool) -> dict[str, Any]:
+            return {
+                "id": release_id,
+                "tag_name": tag,
+                "published_at": published_at,
+                "draft": False,
+                "prerelease": prerelease,
+                "assets": [
+                    {
+                        "id": release_id + 1000,
+                        "name": f"flipper-z-f7-update-{tag}.tgz",
+                        "size": 123,
+                        "digest": "sha256:" + "a" * 64,
+                    }
+                ],
+            }
+
+        selected = select_rolling_firmware_release(
+            {"repository": "squazaryu/tumoflip", "channel": "dev"},
+            [
+                release(1, "t-dev-007-001", "2026-08-20T12:00:00Z", True),
+                release(2, "t-dev-008-001", "2026-08-21T12:00:00Z", True),
+                release(3, "v1.0.7", "2026-08-22T12:00:00Z", False),
+                {"id": 4, "tag_name": "t-dev-009-001", "draft": True, "prerelease": True},
+            ],
+        )
+        self.assertEqual(selected["releaseTag"], "t-dev-008-001")
+        self.assertEqual(selected["githubReleaseId"], 2)
+        self.assertEqual(selected["asset"]["sha256"], "a" * 64)
+
+    def test_rolling_firmware_selector_rejects_ambiguous_publication_order(self) -> None:
+        releases = [
+            {
+                "id": release_id,
+                "tag_name": f"t-dev-007-00{release_id}",
+                "published_at": "2026-08-21T12:00:00Z",
+                "draft": False,
+                "prerelease": True,
+                "assets": [
+                    {
+                        "id": release_id + 1000,
+                        "name": f"flipper-z-f7-update-t-dev-007-00{release_id}.tgz",
+                        "size": 123,
+                        "digest": "sha256:" + "a" * 64,
+                    }
+                ],
+            }
+            for release_id in (1, 2)
+        ]
+        with self.assertRaisesRegex(InputError, "ambiguous"):
+            select_rolling_firmware_release(
+                {"repository": "squazaryu/tumoflip", "channel": "dev"}, releases
+            )
+
+    def test_rolling_firmware_selector_rejects_invalid_latest_release_metadata(self) -> None:
+        releases = [
+            {
+                "id": 1,
+                "tag_name": "t-dev-007-001",
+                "published_at": "2026-08-20T12:00:00Z",
+                "draft": False,
+                "prerelease": True,
+                "assets": [],
+            },
+            {
+                "id": 2,
+                "tag_name": "t-dev-008-001",
+                "published_at": None,
+                "draft": False,
+                "prerelease": True,
+                "assets": [],
+            },
+        ]
+        with self.assertRaisesRegex(InputError, "metadata is invalid: t-dev-008-001"):
+            select_rolling_firmware_release(
+                {"repository": "squazaryu/tumoflip", "channel": "dev"}, releases
+            )
 
     def test_e2e_fixture_is_exact_schema_two_source_input(self) -> None:
         fixture = validate_source_fixture(
