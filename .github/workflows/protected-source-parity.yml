@@ -132,6 +132,7 @@ jobs:
               gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "$BODY"
             fi
           elif [[ -n "$ISSUE_NUMBER" ]]; then
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "$BODY"
             gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --comment \
               "Protected source parity is verified at the latest scheduled scan."
           fi

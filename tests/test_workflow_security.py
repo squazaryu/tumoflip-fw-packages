@@ -53,6 +53,11 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("--community-repo ../community", text)
         self.assertIn("Reconcile one canonical review issue", text)
         self.assertIn("Fail closed when an import needs review", text)
+        self.assertEqual(text.count('gh issue edit "$ISSUE_NUMBER"'), 2)
+        self.assertLess(
+            text.rindex('gh issue edit "$ISSUE_NUMBER"'),
+            text.index('gh issue close "$ISSUE_NUMBER"'),
+        )
         self.assertNotIn("contents: write", text)
         self.assertNotIn("git push", text)
         self.assertNotIn("gh release", text)
