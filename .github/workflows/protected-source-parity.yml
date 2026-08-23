@@ -103,7 +103,7 @@ jobs:
           REPORT="$RUNNER_TEMP/protected-source-parity.md"
           MARKER='<!-- protected-source-parity -->'
           TITLE='Review protected app source imports'
-          BODY="$MARKER\n$(cat "$REPORT")"
+          BODY="$(printf '%s\n' "$MARKER"; cat "$REPORT")"
           gh api "repos/$GITHUB_REPOSITORY/issues?state=all&per_page=100" \
             --paginate --slurp > "$RUNNER_TEMP/issues.json"
           ISSUE_NUMBER="$(jq -r --arg marker "$MARKER" --arg title "$TITLE" \
