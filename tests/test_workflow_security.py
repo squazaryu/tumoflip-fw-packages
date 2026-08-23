@@ -49,6 +49,8 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("contracts/protected-source-parity.json", text)
         self.assertIn("tools/protected_source_parity.py", text)
         self.assertIn("--implementation-repo ../firmware", text)
+        self.assertIn("path: community", text)
+        self.assertIn("--community-repo ../community", text)
         self.assertIn("Reconcile one canonical review issue", text)
         self.assertIn("Fail closed when an import needs review", text)
         self.assertNotIn("contents: write", text)

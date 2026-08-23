@@ -69,6 +69,15 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Check out exact Community Pack source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: ${{ steps.refs.outputs.community_repository }}
+          ref: ${{ steps.refs.outputs.community_commit }}
+          path: community
+          fetch-depth: 0
+          persist-credentials: false
+
       - name: Run fail-closed parity scan
         id: parity
         working-directory: control
@@ -82,6 +91,7 @@ jobs:
             --imports ../firmware/tools/tumoflip/protected_app_imports.json \
             --implementation-repo ../firmware \
             --community-commit "$COMMUNITY_COMMIT" \
+            --community-repo ../community \
             --output "$RUNNER_TEMP/protected-source-parity.json" \
             --markdown "$RUNNER_TEMP/protected-source-parity.md"
           STATUS=$?

@@ -114,6 +114,28 @@ def git_ok(repo: Path, *args: str) -> bool:
     ).returncode == 0
 
 
+def git_path_changed(repo: Path, base_commit: str, head_commit: str, source_path: str) -> bool:
+    """Return whether a protected source subtree changed between two commits."""
+
+    for commit in (base_commit, head_commit):
+        if not git_ok(repo, "cat-file", "-e", f"{commit}^{{commit}}"):
+            raise ParityError(f"community commit is unavailable: {commit}")
+        if not git_ok(repo, "cat-file", "-e", f"{commit}:{source_path}"):
+            raise ParityError(f"protected source path missing at {commit}: {source_path}")
+    result = subprocess.run(
+        ["git", "diff", "--quiet", base_commit, head_commit, "--", source_path],
+        cwd=repo,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+    if result.returncode not in (0, 1):
+        detail = result.stderr.strip() or "git diff failed"
+        raise ParityError(f"unable to compare protected source path {source_path}: {detail}")
+    return result.returncode == 1
+
+
 def fetch_head(repository: str, ref: str, fixtures: dict[str, str]) -> str:
     fixture_key = f"{repository} {ref}"
     if fixture_key in fixtures:
@@ -152,6 +174,7 @@ def scan(
     community_commit: str | None,
     author_heads: Path | None,
     generated_at: str | None,
+    community_repo: Path | None = None,
 ) -> dict[str, Any]:
     registry_apps, contract = validate_inputs(read_json(registry_path), read_json(imports_path))
     fixtures = load_fixtures(author_heads)
@@ -168,6 +191,7 @@ def scan(
         author = app["author"]
         item = contract["imports"][app_id]
         errors: list[str] = []
+        notes: list[str] = []
         if item["localSourcePath"] != app["localSourcePath"]:
             errors.append("local source path differs from protected registry")
         if item["upstreamRepository"] != author["repository"] or item["upstreamRef"] != author["ref"]:
@@ -186,13 +210,35 @@ def scan(
                 current_commit = None
             else:
                 current_commit = require_commit(community_commit, "community commit")
+                if current_commit != item["upstreamCommit"]:
+                    source_path = app.get("packSourcePath")
+                    if not isinstance(source_path, str) or not source_path.strip():
+                        errors.append("release-source requires a protected pack source path")
+                    elif community_repo is None:
+                        errors.append("release-source path comparison requires a Community Pack checkout")
+                    else:
+                        try:
+                            source_changed = git_path_changed(
+                                community_repo, item["upstreamCommit"], current_commit, source_path
+                            )
+                        except ParityError as error:
+                            errors.append(str(error))
+                        else:
+                            if source_changed:
+                                errors.append(
+                                    f"protected source path changed: {source_path}"
+                                )
+                            else:
+                                notes.append(
+                                    f"release advanced but protected source path unchanged: {source_path}"
+                                )
         else:
             try:
                 current_commit = fetch_head(author["repository"], author["ref"], fixtures)
             except ParityError as error:
                 current_commit = None
                 errors.append(str(error))
-        if current_commit and current_commit != item["upstreamCommit"]:
+        if current_commit and current_commit != item["upstreamCommit"] and author["ref"] != "release-source":
             errors.append(
                 f"upstream changed: reviewed={item['upstreamCommit']} current={current_commit}"
             )
@@ -212,6 +258,7 @@ def scan(
                     "currentCommit": current_commit,
                 },
                 "errors": errors,
+                "notes": notes,
             }
         )
     return {
@@ -240,7 +287,7 @@ def markdown(report: dict[str, Any]) -> str:
     ]
     for app in report["apps"]:
         upstream = app["upstream"]
-        details = "; ".join(app["errors"]) or "source import recorded"
+        details = "; ".join(app["errors"] + app.get("notes", [])) or "source import recorded"
         lines.append(
             f"| `{app['appId']}` | `{app['status']}` | `{upstream['reviewedCommit']}` | "
             f"`{upstream['currentCommit'] or 'unresolved'}` | {details} |"
@@ -254,6 +301,7 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--imports", type=Path, required=True)
     parser.add_argument("--implementation-repo", type=Path, required=True)
     parser.add_argument("--community-commit")
+    parser.add_argument("--community-repo", type=Path)
     parser.add_argument("--author-heads", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--markdown", type=Path, required=True)
@@ -269,6 +317,7 @@ def main(argv: Iterable[str] | None = None) -> int:
             imports_path=args.imports,
             implementation_repo=args.implementation_repo,
             community_commit=args.community_commit,
+            community_repo=args.community_repo,
             author_heads=args.author_heads,
             generated_at=args.generated_at,
         )
