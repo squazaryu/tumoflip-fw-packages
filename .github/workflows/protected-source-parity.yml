@@ -42,7 +42,13 @@ jobs:
           IMPLEMENTATION_COMMIT="$(jq -r .implementation.commit contracts/protected-source-parity.json)"
           COMMUNITY_REPOSITORY="$(jq -r .community.repository contracts/protected-source-parity.json)"
           COMMUNITY_TAG="$(gh api "repos/$COMMUNITY_REPOSITORY/releases/latest" --jq .tag_name)"
-          COMMUNITY_COMMIT="$(git ls-remote "https://github.com/$COMMUNITY_REPOSITORY.git" "refs/tags/$COMMUNITY_TAG^{}" | cut -f1)"
+          COMMUNITY_URL="https://github.com/$COMMUNITY_REPOSITORY.git"
+          # Releases may point at either annotated or lightweight tags. Try
+          # the peeled annotated ref first, then fall back to the tag ref.
+          COMMUNITY_COMMIT="$(git ls-remote "$COMMUNITY_URL" "refs/tags/$COMMUNITY_TAG^{}" | cut -f1)"
+          if [[ -z "$COMMUNITY_COMMIT" ]]; then
+            COMMUNITY_COMMIT="$(git ls-remote "$COMMUNITY_URL" "refs/tags/$COMMUNITY_TAG" | cut -f1)"
+          fi
           [[ "$IMPLEMENTATION_REPOSITORY" == squazaryu/tumoflip ]]
           [[ "$IMPLEMENTATION_COMMIT" =~ ^[0-9a-f]{40}$ ]]
           [[ "$COMMUNITY_COMMIT" =~ ^[0-9a-f]{40}$ ]]
