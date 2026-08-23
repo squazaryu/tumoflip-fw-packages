@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "implementation": {
+    "repository": "squazaryu/tumoflip",
+    "commit": "d472d815a1e47ac00dfb63a34af2d55fce037776",
+    "importsPath": "tools/tumoflip/protected_app_imports.json"
+  },
+  "community": {
+    "repository": "xMasterX/all-the-plugins"
+  }
+}

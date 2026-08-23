@@ -44,6 +44,23 @@ not an identity: the audit key is the tag plus the named SHA-256 of both ZIPs.
    closes it automatically. Status and issue identity are read from the verified,
    release-bound audit rather than from an untrusted inter-job summary.
 
+## Source parity watcher
+
+The Community Pack ledger is intentionally not the source-import ledger. A
+protected app may live in an author repository (for example ProtoPirate) while
+the Community Pack still contains unchanged bytes. The scheduled
+`protected-source-parity.yml` workflow therefore checks the exact author ref
+for every registry app and compares it with
+`tools/tumoflip/protected_app_imports.json` in the pinned Tumoflip checkout.
+
+Each import record binds four facts: the protected app id, its local source
+path, the Tumoflip implementation commit that imported or adapted it, and the
+exact upstream commit reviewed. The workflow fails closed and opens one
+canonical issue when an author head advances, a `release-source` Community Pack
+commit changes, a source path is missing, or the import manifest is incomplete.
+The firmware commit is pinned in `contracts/protected-source-parity.json`, so a
+moving `main` branch cannot silently change the audit input.
+
 The immutable history files are content-addressed by the semantic audit payload
 (excluding only `generatedAt`), so a scheduled no-op never creates churn and new
 target evidence never overwrites an older record. The cumulative `latest.json`

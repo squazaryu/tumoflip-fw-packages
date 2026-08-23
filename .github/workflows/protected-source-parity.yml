@@ -1,0 +1,127 @@
+name: Watch protected source parity
+
+on:
+  schedule:
+    - cron: "29 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: protected-source-parity
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    if: github.ref == 'refs/heads/main' && github.event.repository.default_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact control commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Resolve exact implementation and Community Pack commits
+        id: refs
+        working-directory: control
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          IMPLEMENTATION_REPOSITORY="$(jq -r .implementation.repository contracts/protected-source-parity.json)"
+          IMPLEMENTATION_COMMIT="$(jq -r .implementation.commit contracts/protected-source-parity.json)"
+          COMMUNITY_REPOSITORY="$(jq -r .community.repository contracts/protected-source-parity.json)"
+          COMMUNITY_TAG="$(gh api "repos/$COMMUNITY_REPOSITORY/releases/latest" --jq .tag_name)"
+          COMMUNITY_COMMIT="$(git ls-remote "https://github.com/$COMMUNITY_REPOSITORY.git" "refs/tags/$COMMUNITY_TAG^{}" | cut -f1)"
+          [[ "$IMPLEMENTATION_REPOSITORY" == squazaryu/tumoflip ]]
+          [[ "$IMPLEMENTATION_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$COMMUNITY_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          {
+            echo "implementation_repository=$IMPLEMENTATION_REPOSITORY"
+            echo "implementation_commit=$IMPLEMENTATION_COMMIT"
+            echo "community_repository=$COMMUNITY_REPOSITORY"
+            echo "community_tag=$COMMUNITY_TAG"
+            echo "community_commit=$COMMUNITY_COMMIT"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Check out exact Tumoflip implementation
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: ${{ steps.refs.outputs.implementation_repository }}
+          ref: ${{ steps.refs.outputs.implementation_commit }}
+          path: firmware
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run fail-closed parity scan
+        id: parity
+        working-directory: control
+        env:
+          IMPLEMENTATION_COMMIT: ${{ steps.refs.outputs.implementation_commit }}
+          COMMUNITY_COMMIT: ${{ steps.refs.outputs.community_commit }}
+        run: |
+          set +e
+          python3 tools/protected_source_parity.py \
+            --registry tools/tumoflip/protected_apps_registry.json \
+            --imports ../firmware/tools/tumoflip/protected_app_imports.json \
+            --implementation-repo ../firmware \
+            --community-commit "$COMMUNITY_COMMIT" \
+            --output "$RUNNER_TEMP/protected-source-parity.json" \
+            --markdown "$RUNNER_TEMP/protected-source-parity.md"
+          STATUS=$?
+          set -e
+          [[ "$STATUS" == 0 || "$STATUS" == 1 ]]
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload parity report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: protected-source-parity
+          path: |
+            ${{ runner.temp }}/protected-source-parity.json
+            ${{ runner.temp }}/protected-source-parity.md
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Reconcile one canonical review issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATUS: ${{ steps.parity.outputs.status }}
+        run: |
+          set -euo pipefail
+          REPORT="$RUNNER_TEMP/protected-source-parity.md"
+          MARKER='<!-- protected-source-parity -->'
+          TITLE='Review protected app source imports'
+          BODY="$MARKER\n$(cat "$REPORT")"
+          gh api "repos/$GITHUB_REPOSITORY/issues?state=all&per_page=100" \
+            --paginate --slurp > "$RUNNER_TEMP/issues.json"
+          ISSUE_NUMBER="$(jq -r --arg marker "$MARKER" --arg title "$TITLE" \
+            '[.[][] | select(.pull_request == null) | select(.title == $title and (.body | contains($marker)))][0].number // empty' \
+            "$RUNNER_TEMP/issues.json")"
+          if [[ "$STATUS" == 1 ]]; then
+            if [[ -z "$ISSUE_NUMBER" ]]; then
+              gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$BODY"
+            else
+              gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+            fi
+          elif [[ -n "$ISSUE_NUMBER" ]]; then
+            gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --comment \
+              "Protected source parity is verified at the latest scheduled scan."
+          fi
+
+      - name: Fail closed when an import needs review
+        if: steps.parity.outputs.status == '1'
+        run: |
+          echo "Protected source parity requires review; see the canonical issue and uploaded report." >&2
+          exit 1

@@ -35,8 +35,25 @@ class WorkflowSecurityTests(unittest.TestCase):
         ]
         self.assertEqual(
             scheduled,
-            ["protected-app-audit.yml", "upstream-unleashed-watcher.yml"],
+            [
+                "protected-app-audit.yml",
+                "protected-source-parity.yml",
+                "upstream-unleashed-watcher.yml",
+            ],
         )
+
+    def test_protected_source_parity_is_fail_closed_and_read_only(self) -> None:
+        text = (self.root / ".github/workflows/protected-source-parity.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("contracts/protected-source-parity.json", text)
+        self.assertIn("tools/protected_source_parity.py", text)
+        self.assertIn("--implementation-repo ../firmware", text)
+        self.assertIn("Reconcile one canonical review issue", text)
+        self.assertIn("Fail closed when an import needs review", text)
+        self.assertNotIn("contents: write", text)
+        self.assertNotIn("git push", text)
+        self.assertNotIn("gh release", text)
 
     def test_unleashed_watcher_is_read_only_except_for_one_report_issue(self) -> None:
         text = (self.root / ".github/workflows/upstream-unleashed-watcher.yml").read_text(
