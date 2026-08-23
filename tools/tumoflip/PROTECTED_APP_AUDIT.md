@@ -62,8 +62,16 @@ import manifest is incomplete. A release tag may advance for unrelated apps,
 categories, or documentation: when the recorded `packSourcePath` is
 byte-for-byte unchanged between the reviewed and current release commits, that
 import remains verified and the report records the no-source-change explanation.
-The firmware commit is pinned in `contracts/protected-source-parity.json`, so a
-moving `main` branch cannot silently change the audit input.
+The protected package-audit firmware commits are pinned per channel in
+`contracts/protected-audit-targets.json` (`implementations.stable` and
+`implementations.dev`), so a moving `main` or `dev` branch cannot silently
+change that audit input. The legacy singular `implementation` field is a
+checked alias of the dev pin for schema-1 consumers; it is not a package
+compatibility rule. Package evidence records the matching channel pin for
+each stable/dev catalog target. The separate source-parity workflow keeps its
+own exact implementation contract. This keeps audit provenance separate from
+the catalog itself: if package bytes and manifests do not change, no new FW
+Packages catalog or release is created.
 
 The immutable history files are content-addressed by the semantic audit payload
 (excluding only `generatedAt`), so a scheduled no-op never creates churn and new

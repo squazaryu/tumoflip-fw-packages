@@ -335,10 +335,25 @@ def validate_targets(contract: dict[str, Any]) -> dict[str, Any]:
     if contract.get("schema") != 1 or contract.get("kind") != "protectedAuditTargets":
         raise InputError("protected audit target contract is invalid")
     implementation = contract.get("implementation")
-    if not isinstance(implementation, dict) or implementation.get("repository") != "squazaryu/tumoflip":
-        raise InputError("implementation contract is invalid")
-    if not isinstance(implementation.get("commit"), str) or HEX_40.fullmatch(implementation["commit"]) is None:
-        raise InputError("implementation commit is invalid")
+    implementations = contract.get("implementations")
+    if not isinstance(implementation, dict) or not isinstance(implementations, dict):
+        raise InputError("implementation contracts are incomplete")
+    if set(implementations) != {"stable", "dev"}:
+        raise InputError("stable and dev implementation pins are required")
+    for channel in ("stable", "dev"):
+        channel_implementation = implementations[channel]
+        if (
+            not isinstance(channel_implementation, dict)
+            or channel_implementation.get("repository") != "squazaryu/tumoflip"
+            or not isinstance(channel_implementation.get("commit"), str)
+            or HEX_40.fullmatch(channel_implementation["commit"]) is None
+        ):
+            raise InputError(f"{channel} implementation pin is invalid")
+    # Keep the old singular field as a checked compatibility alias for tools
+    # that still need one exact checkout. It intentionally points at dev,
+    # which is a descendant of the stable pin and contains both audit views.
+    if implementation != implementations["dev"]:
+        raise InputError("legacy implementation alias must equal the dev pin")
     packages = contract.get("packages")
     firmware = contract.get("firmware")
     rolling_firmware = contract.get("rollingFirmware")
@@ -481,6 +496,7 @@ def materialize(
                 "githubReleaseId": target["githubReleaseId"],
                 "tagCommit": target["tagCommit"],
                 "sourceCommit": target["manifestSourceCommit"],
+                "implementation": targets["implementations"][channel],
                 "manifestReleaseId": target["manifestReleaseId"],
                 "manifestSHA256": target["assets"]["manifest"]["sha256"],
                 "archiveSHA256": target["assets"]["archive"]["sha256"],
@@ -521,7 +537,10 @@ def materialize(
         "schema": 1,
         "kind": "protectedAppAuditEvidence",
         "control": {"repository": control_repository, "commit": control_commit},
+        # Keep the singular dev alias for schema-1 audit consumers and record
+        # both channel-specific pins for new provenance readers.
         "implementation": targets["implementation"],
+        "implementations": targets["implementations"],
         "community": {
             "repository": current["repository"],
             "tag": current["releaseTag"],
