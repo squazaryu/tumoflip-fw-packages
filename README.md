@@ -13,6 +13,10 @@ packages. Firmware source and firmware images remain in
 - `stable` and `dev` package revisions are independent from firmware versions.
   Compatibility remains fail-closed on Flipper target, API, firmware lineage,
   and manifest evidence.
+- A firmware-only release does not create a new package catalog. A package
+  revision advances only when its manifest, archive, or accepted provenance
+  changes; otherwise the existing catalog remains valid for compatible
+  firmware revisions.
 - Published releases are immutable. Corrections use a higher revision; releases
   and protected tags are never rewritten.
 - Protected-app audit results use their own immutable release stream and do not

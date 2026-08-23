@@ -195,11 +195,25 @@ jobs:
           ref: ${{ github.sha }}
           path: control
           persist-credentials: false
+      - name: Resolve exact channel implementation pins
+        id: implementation
+        working-directory: control
+        run: |
+          set -euo pipefail
+          jq -e '
+            (.implementations.stable.repository == "squazaryu/tumoflip") and
+            (.implementations.dev.repository == "squazaryu/tumoflip") and
+            (.implementations.stable.commit | test("^[0-9a-f]{40}$")) and
+            (.implementations.dev.commit | test("^[0-9a-f]{40}$")) and
+            (.implementation == .implementations.dev)
+          ' contracts/protected-audit-targets.json >/dev/null
+          echo "dev_repository=$(jq -r .implementations.dev.repository contracts/protected-audit-targets.json)" >> "$GITHUB_OUTPUT"
+          echo "dev_commit=$(jq -r .implementations.dev.commit contracts/protected-audit-targets.json)" >> "$GITHUB_OUTPUT"
       - name: Check out exact firmware implementation
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          repository: squazaryu/tumoflip
-          ref: 8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758
+          repository: ${{ steps.implementation.outputs.dev_repository }}
+          ref: ${{ steps.implementation.outputs.dev_commit }}
           path: firmware
           fetch-depth: 0
           persist-credentials: false
@@ -236,8 +250,10 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git -C control rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$(git -C firmware rev-parse HEAD)" = \
-            "$(jq -r .implementation.commit control/contracts/protected-audit-targets.json)"
+          IMPLEMENTATION_DEV="$(jq -r .implementations.dev.commit control/contracts/protected-audit-targets.json)"
+          IMPLEMENTATION_STABLE="$(jq -r .implementations.stable.commit control/contracts/protected-audit-targets.json)"
+          test "$(git -C firmware rev-parse HEAD)" = "$IMPLEMENTATION_DEV"
+          git -C firmware merge-base --is-ancestor "$IMPLEMENTATION_STABLE" HEAD
           test "$(git -C community rev-parse HEAD)" = "$EXPECTED_COMMUNITY"
           test "$(git -C control ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
       - name: Download and verify exact release inputs by numeric ID

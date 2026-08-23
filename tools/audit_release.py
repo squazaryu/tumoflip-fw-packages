@@ -86,6 +86,17 @@ def validate_evidence(document: dict[str, Any]) -> dict[str, Any]:
     if implementation.get("repository") != "squazaryu/tumoflip":
         raise AuditReleaseError("implementation repository is invalid")
     require_digest(implementation.get("commit"), HEX_40, "implementation commit")
+    implementations = document.get("implementations")
+    if implementations is not None:
+        if not isinstance(implementations, dict) or set(implementations) != {"stable", "dev"}:
+            raise AuditReleaseError("channel implementation pins are incomplete")
+        for channel in ("stable", "dev"):
+            pin = implementations[channel]
+            if not isinstance(pin, dict) or pin.get("repository") != "squazaryu/tumoflip":
+                raise AuditReleaseError(f"{channel} implementation repository is invalid")
+            require_digest(pin.get("commit"), HEX_40, f"{channel} implementation commit")
+        if implementation != implementations["dev"]:
+            raise AuditReleaseError("legacy implementation alias differs from dev pin")
     if community.get("repository") != audit_tool.SOURCE_REPOSITORY:
         raise AuditReleaseError("Community Pack repository is invalid")
     require_string(community.get("tag"), "Community Pack tag")
@@ -123,6 +134,13 @@ def validate_evidence(document: dict[str, Any]) -> dict[str, Any]:
         require_digest(item.get("manifestSHA256"), HEX_64, "package manifest SHA-256")
         require_digest(item.get("archiveSHA256"), HEX_64, "package archive SHA-256")
         require_digest(item.get("manifestReleaseId"), HEX_64, "package manifest release ID")
+        package_pin = item.get("implementation")
+        if package_pin is not None:
+            channel = tag.split("-")[2]
+            if not isinstance(package_pin, dict) or package_pin != (
+                implementations or {}
+            ).get(channel):
+                raise AuditReleaseError(f"package {channel} implementation pin differs")
         package_release = item.get("packageRelease")
         if not isinstance(package_release, dict):
             raise AuditReleaseError("package release provenance is required")

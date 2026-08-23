@@ -210,7 +210,9 @@ class WorkflowSecurityTests(unittest.TestCase):
         text = (self.root / ".github/workflows/protected-app-audit.yml").read_text(
             encoding="utf-8"
         )
-        self.assertIn("ref: 8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758", text)
+        self.assertIn("ref: ${{ steps.implementation.outputs.dev_commit }}", text)
+        self.assertIn(".implementations.stable.commit", text)
+        self.assertIn(".implementations.dev.commit", text)
         self.assertIn("repository: xMasterX/all-the-plugins", text)
         self.assertGreaterEqual(text.count("persist-credentials: false"), 6)
         self.assertIn("Download and verify exact release inputs by numeric ID", text)

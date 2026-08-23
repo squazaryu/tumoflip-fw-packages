@@ -192,6 +192,36 @@ class UnleashedWatcherTests(unittest.TestCase):
         self.assertIn("Fix NFC without Markdown injection", text)
         self.assertIn("Advance `contracts/upstream-watchers.json` only", text)
 
+    def test_forward_change_accepts_compare_without_duplicate_head_commit(self) -> None:
+        head = "a" * 40
+        responses = self._responses(
+            head=head,
+            status="ahead",
+            ahead=1,
+            commits=[{"sha": head, "commit": {"message": "fix: compare evidence"}}],
+        )
+        responses[f"repos/{REPOSITORY}/compare/{BASELINE}...dev"]["head_commit"] = None
+
+        report = self._watch(responses)
+
+        self.assertEqual(report["current"]["branch"]["commit"], head)
+        self.assertEqual(report["current"]["comparison"]["status"], "ahead")
+
+    def test_compare_rejects_a_present_head_commit_that_disagrees_with_branch(self) -> None:
+        head = "a" * 40
+        responses = self._responses(
+            head=head,
+            status="ahead",
+            ahead=1,
+            commits=[{"sha": head, "commit": {"message": "fix: compare evidence"}}],
+        )
+        responses[f"repos/{REPOSITORY}/compare/{BASELINE}...dev"]["head_commit"] = {
+            "sha": "b" * 40
+        }
+
+        with self.assertRaisesRegex(watcher.WatchError, "comparison head differs"):
+            self._watch(responses)
+
     def test_report_escapes_upstream_text_and_neutralizes_mentions(self) -> None:
         head = "a" * 40
         merge = "b" * 40

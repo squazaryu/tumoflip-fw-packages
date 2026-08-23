@@ -334,7 +334,13 @@ def _comparison(repository: str, baseline: str, branch: str, head: str) -> dict[
         if not isinstance(response_head, dict) or _require_sha(response_head.get("sha"), "comparison head commit") != head:
             raise WatchError("upstream comparison head differs from branch evidence")
     elif status != "identical":
-        raise WatchError("non-identical comparison is missing its head commit")
+        # GitHub's compare endpoint can omit head_commit for a valid named
+        # branch comparison (notably for diverged histories). The branch
+        # endpoint above is independently resolved and is the authoritative
+        # identity for the current head, so do not fail merely because the
+        # duplicate compare-field is absent. Any non-null value is still
+        # checked against that branch evidence above.
+        pass
     if status == "identical" and (ahead != 0 or behind != 0 or head != baseline):
         raise WatchError("identical comparison is internally inconsistent")
     if status == "ahead" and (ahead < 1 or behind != 0):
