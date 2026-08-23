@@ -40,6 +40,11 @@ class ProtectedSourceParityTests(unittest.TestCase):
             ["git", *args], cwd=self.repo, check=True, capture_output=True, text=True
         ).stdout.strip()
 
+    def community_git(self, community: Path, *args: str) -> str:
+        return subprocess.run(
+            ["git", *args], cwd=community, check=True, capture_output=True, text=True
+        ).stdout.strip()
+
     def _write_inputs(self) -> None:
         first = "a" * 40
         second = "b" * 40
@@ -131,6 +136,64 @@ class ProtectedSourceParityTests(unittest.TestCase):
         )
         self.assertEqual(report["overallStatus"], "needsReview")
         self.assertEqual(report["unresolved"], ["proto"])
+
+    def test_release_source_advance_with_unchanged_pack_path_is_verified(self) -> None:
+        community = self.root / "community"
+        community.mkdir()
+        self.community_git(community, "init", "-q")
+        self.community_git(community, "config", "user.email", "test@example.invalid")
+        self.community_git(community, "config", "user.name", "Parity Test")
+        source = community / "apps/proto"
+        source.mkdir(parents=True)
+        (source / "application.fam").write_text("unchanged", encoding="utf-8")
+        self.community_git(community, "add", ".")
+        self.community_git(community, "commit", "-qm", "reviewed")
+        reviewed = self.community_git(community, "rev-parse", "HEAD")
+        (community / "release-notes.md").write_text("metadata only", encoding="utf-8")
+        self.community_git(community, "add", ".")
+        self.community_git(community, "commit", "-qm", "release metadata")
+        current = self.community_git(community, "rev-parse", "HEAD")
+
+        registry = json.loads(self.registry.read_text(encoding="utf-8"))
+        registry["apps"][0]["packSourcePath"] = "apps/proto"
+        registry["apps"][0]["author"]["repository"] = "https://example.invalid/all-the-plugins.git"
+        registry["apps"][0]["author"]["ref"] = "release-source"
+        imports = json.loads(self.imports.read_text(encoding="utf-8"))
+        imports["imports"][0]["upstreamRepository"] = "https://example.invalid/all-the-plugins.git"
+        imports["imports"][0]["upstreamRef"] = "release-source"
+        imports["imports"][0]["upstreamCommit"] = reviewed
+        self.registry.write_text(json.dumps(registry), encoding="utf-8")
+        self.imports.write_text(json.dumps(imports), encoding="utf-8")
+
+        report = scan(
+            registry_path=self.registry,
+            imports_path=self.imports,
+            implementation_repo=self.repo,
+            community_commit=current,
+            community_repo=community,
+            author_heads=self.fixtures,
+            generated_at="2026-08-23T00:00:00+00:00",
+        )
+        self.assertEqual(report["overallStatus"], "verified")
+        self.assertEqual(report["unresolved"], [])
+        proto = next(app for app in report["apps"] if app["appId"] == "proto")
+        self.assertIn("protected source path unchanged", proto["notes"][0])
+
+        (source / "application.fam").write_text("changed", encoding="utf-8")
+        self.community_git(community, "add", ".")
+        self.community_git(community, "commit", "-qm", "source change")
+        changed = self.community_git(community, "rev-parse", "HEAD")
+        changed_report = scan(
+            registry_path=self.registry,
+            imports_path=self.imports,
+            implementation_repo=self.repo,
+            community_commit=changed,
+            community_repo=community,
+            author_heads=self.fixtures,
+            generated_at="2026-08-23T00:00:00+00:00",
+        )
+        self.assertEqual(changed_report["overallStatus"], "needsReview")
+        self.assertEqual(changed_report["unresolved"], ["proto"])
 
     def test_import_manifest_must_cover_registry_exactly(self) -> None:
         document = json.loads(self.imports.read_text(encoding="utf-8"))

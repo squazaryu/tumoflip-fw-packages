@@ -57,7 +57,11 @@ Each import record binds four facts: the protected app id, its local source
 path, the Tumoflip implementation commit that imported or adapted it, and the
 exact upstream commit reviewed. The workflow fails closed and opens one
 canonical issue when an author head advances, a `release-source` Community Pack
-commit changes, a source path is missing, or the import manifest is incomplete.
+commit changes the protected app subtree, a source path is missing, or the
+import manifest is incomplete. A release tag may advance for unrelated apps,
+categories, or documentation: when the recorded `packSourcePath` is
+byte-for-byte unchanged between the reviewed and current release commits, that
+import remains verified and the report records the no-source-change explanation.
 The firmware commit is pinned in `contracts/protected-source-parity.json`, so a
 moving `main` branch cannot silently change the audit input.
 
