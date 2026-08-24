@@ -10,6 +10,7 @@ from pathlib import Path
 
 from tools.catalog_contract import ContractError, manifest_release_id, sha256
 from tools.native_release import (
+    build_baseline_release,
     build_firmware_snapshot_release,
     load_native_plan,
     verify_native_release,
@@ -103,6 +104,8 @@ class FirmwareSnapshotReleaseTests(unittest.TestCase):
                 "firmwareReleaseId": target_manifest["release_id"],
                 "packageManifestSHA256": sha256(self.target / "tumoflip-packages.json"),
                 "packageZipSHA256": sha256(self.target / "tumoflip-packages.zip"),
+                "api": target_manifest["firmware"]["api"],
+                "target": target_manifest["firmware"]["target"],
             }
         )
         baseline_path.write_text(json.dumps(baselines))
@@ -174,6 +177,34 @@ class FirmwareSnapshotReleaseTests(unittest.TestCase):
             stream.write(b"tamper")
         with self.assertRaisesRegex(ContractError, "snapshot ZIP SHA-256 differs"):
             verify_native_release(output, self.plan, self.base, self.target)
+
+    def test_baseline_is_independent_and_has_no_managed_overlays(self) -> None:
+        policy_path = self.control / "contracts/native-build-policy.json"
+        policy = json.loads(policy_path.read_text())
+        policy["releasePlans"]["fw-packages-stable-002"] = {
+            "mode": "baseline",
+            "sourceCommit": self.source_commit,
+            "selectedOverlays": [],
+        }
+        policy_path.write_text(json.dumps(policy))
+        plan = load_native_plan(
+            self.control, "stable", 2, self.source_commit, self.publisher_commit
+        )
+        output = self.root / "stable002-baseline"
+        build_baseline_release(self.target, self.base, output, plan)
+        verify_native_release(output, plan, self.base, self.target)
+        manifest = json.loads((output / "tumoflip-packages.json").read_text())
+        package_release = manifest["package_release"]
+        self.assertEqual(package_release["catalog_install_scope"], "baseline")
+        self.assertEqual(package_release["overlay_targets"], [])
+        self.assertEqual(package_release["catalog_modified_targets"], [])
+        self.assertEqual(
+            sha256(output / "tumoflip-packages.zip"),
+            sha256(self.target / "tumoflip-packages.zip"),
+        )
+        provenance = json.loads((output / "catalog-provenance.json").read_text())
+        self.assertEqual(provenance["kind"], "nativeBaselinePackageRelease")
+        self.assertEqual(provenance["overlayPolicy"], {"targets": [], "maxChangedTargets": 0})
 
 
 if __name__ == "__main__":

@@ -140,6 +140,9 @@ def validate_manifest(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
             raise ContractError("package release source_commit is invalid")
         if package_release.get("source_dirty") is not False:
             raise ContractError("package release source must be clean")
+        scope = package_release.get("catalog_install_scope")
+        if scope is not None and scope not in {"baseline", "delta", "firmwareSnapshot"}:
+            raise ContractError("package release catalog_install_scope is invalid")
 
     packages = manifest.get("packages")
     if not isinstance(packages, dict) or not packages:
