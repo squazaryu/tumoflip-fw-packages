@@ -41,6 +41,8 @@ def verify_contract(root: Path) -> None:
     checkouts = load_json(root / "contracts/source-checkouts.json")
     clients = load_json(root / "contracts/client-sources.json")
     policy = load_json(root / "contracts/native-build-policy.json")
+    index = load_json(root / "catalog-index.json")
+    lifecycle = load_json(root / "contracts/catalog-index-policy.json")
     for name, document in (
         ("legacy", legacy),
         ("current", current),
@@ -49,9 +51,19 @@ def verify_contract(root: Path) -> None:
         ("checkouts", checkouts),
         ("clients", clients),
         ("native policy", policy),
+        ("catalog index policy", lifecycle),
     ):
         if document.get("schema") != 1:
             raise ContractError(f"{name} contract schema must be 1")
+    try:
+        from .catalog_index import validate_index
+    except ImportError:
+        from catalog_index import validate_index
+    validate_index(index)
+    if index.get("channels", {}).get("stable", {}).get("current_revision") != current["channels"]["stable"]["revision"]:
+        raise ContractError("catalog index stable head differs from current release")
+    if index.get("channels", {}).get("dev", {}).get("current_revision") != current["channels"]["dev"]["revision"]:
+        raise ContractError("catalog index dev head differs from current release")
     if legacy.get("repository") != baselines.get("firmwareRepository"):
         raise ContractError("legacy and baseline firmware repositories differ")
     if current.get("repository") != lineage.get("publisherRepository"):
@@ -76,6 +88,14 @@ def verify_contract(root: Path) -> None:
         "release_id",
     ]:
         raise ContractError("client package identity fields differ")
+    if not isinstance(package_sources.get("indexURL"), str) or not package_sources["indexURL"].endswith("/catalog-index.json"):
+        raise ContractError("client package index URL is invalid")
+    if package_sources.get("selection") != {
+        "automatic": "highest-compatible-active",
+        "manual": "compatible-active-or-legacy",
+        "withdrawn": "never-install",
+    }:
+        raise ContractError("client package selection policy differs")
     for label, source in (("packages", package_sources), ("audit", audit_sources)):
         fallback = set(source.get("fallbackOn", []))
         terminal = set(source.get("terminalFailures", []))

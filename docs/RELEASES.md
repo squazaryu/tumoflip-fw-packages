@@ -29,8 +29,17 @@ firmware-source repository and commit.
   retained compatible build hashes.
 - A tag, revision, or release ID collision with different bytes is fatal.
 - `stable-002` and `stable-003` are historical firmware snapshots. `stable-004`
-  is the first independent stable baseline for firmware v1.0.7. `dev-009` remains the first reserved
-  native development revision.
+  is the first independent stable baseline. `dev-008` is the migrated legacy
+  development head; the next native revision is allocated only when the
+  independent overlay snapshot actually changes.
+
+The complete rollback inventory is `catalog-index.json`. It is an append-only
+control-plane document, not a replacement for the immutable release assets. Auto
+selection uses the highest compatible `active` revision; manual selection may
+use any compatible `active` or migrated `legacy` revision. A bad release is
+marked `withdrawn` in the index and corrected at a new revision. The index is
+never allowed to point at a missing, withdrawn, or digest-mismatched current
+release.
 
 ## Build boundary
 

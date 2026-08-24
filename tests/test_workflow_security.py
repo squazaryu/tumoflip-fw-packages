@@ -36,8 +36,10 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertEqual(
             scheduled,
             [
+                "catalog-index.yml",
                 "protected-app-audit.yml",
                 "protected-source-parity.yml",
+                "reconcile-community-catalog.yml",
                 "upstream-unleashed-watcher.yml",
             ],
         )

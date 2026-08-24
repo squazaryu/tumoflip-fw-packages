@@ -22,12 +22,30 @@ packages. Firmware source and firmware images remain in
 - Protected-app audit results use their own immutable release stream and do not
   share client-visible provenance identities.
 
+## Independent catalog and rollback
+
+FW Packages is an overlay catalog, not a firmware release. A firmware version
+can advance without creating a package revision, and a package revision can be
+used by every compatible firmware build. The compatibility gate uses the
+Flipper target and API major; a firmware release tag is provenance only.
+
+[`catalog-index.json`](catalog-index.json) is the client-facing history. It
+contains every stable/dev revision, immutable asset digests, compatibility
+evidence and an explicit `active`, `legacy` or `withdrawn` state. TumoCompanion
+selects the highest compatible active revision automatically, while the user
+can choose any compatible historical revision for rollback. Releases are never
+deleted or overwritten; a bad release is withdrawn and corrected with a new
+revision.
+
+The complete lifecycle, rollback transaction and Community Pack reconciliation
+are documented in [Catalog lifecycle](docs/CATALOG_LIFECYCLE.md).
+
 ## Channels and tags
 
 | Stream | Tag | First native release |
 | --- | --- | --- |
-| Stable packages | `fw-packages-stable-NNN` | `fw-packages-stable-002` |
-| Dev packages | `fw-packages-dev-NNN` | `fw-packages-dev-009` |
+| Stable packages | `fw-packages-stable-NNN` | `fw-packages-stable-004` |
+| Dev packages | `fw-packages-dev-NNN` | `fw-packages-dev-008` |
 | Audit ledger | `audit-ledger-YYYYMMDD-NNN` | next successful audit |
 
 The exact legacy `stable-001` and `dev-008` assets are seeded as byte-for-byte
@@ -45,15 +63,12 @@ application source, `fbt`, firmware builds, API checks, and firmware releases.
 Package workflows check out that repository by exact commit and never copy its
 source here.
 
-Stable002 is the first native stable release. Stable003 is the current stable
-catalog and promotes the exact package snapshot published with firmware
-`v1.0.6`; its ZIP payload is byte-identical to that firmware release and its
-catalog identity is independent. Dev009 remains
-fail-closed without an authorized source/overlay plan. Overlay builds start from
-the exact current catalog and may replace only reviewed paths, so build-only
-metadata drift cannot become a false application update. Stable firmware
-promotions use the separate exact-snapshot mode and pin the firmware tag,
-commit, release ID, manifest hash, and ZIP hash.
+Stable004 is the current independent stable baseline. The index retains the
+historical legacy stable001 and dev revisions, so a compatible older package
+can be selected without restoring an old firmware image. Overlay builds start
+from a complete immutable catalog snapshot and may replace only reviewed paths,
+so a Community Pack category move cannot become a false duplicate. Firmware
+promotions and package catalog revisions are separate operations.
 
 The protected-app workflow likewise executes only this repository's audited
 scanner. Firmware and Community Pack checkouts are read-only evidence. Package
