@@ -1,0 +1,144 @@
+name: Reconcile Community Pack with FW Packages
+
+on:
+  schedule:
+    - cron: "53 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: community-catalog-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: github.ref == 'refs/heads/main' && github.event.repository.default_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out control plane
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          persist-credentials: false
+
+      - name: Resolve exact Community Pack release
+        id: source
+        working-directory: control
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          repository="xMasterX/all-the-plugins"
+          tag="$(gh api "repos/$repository/releases/latest" --jq .tag_name)"
+          commit="$(git ls-remote "https://github.com/$repository.git" "refs/tags/$tag^{}" | cut -f1)"
+          if [[ -z "$commit" ]]; then
+            commit="$(git ls-remote "https://github.com/$repository.git" "refs/tags/$tag" | cut -f1)"
+          fi
+          [[ "$commit" =~ ^[0-9a-f]{40}$ ]]
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+
+      - name: Check out Community Pack source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: xMasterX/all-the-plugins
+          ref: ${{ steps.source.outputs.commit }}
+          path: community
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve pinned implementation checkout
+        working-directory: control
+        run: |
+          set -euo pipefail
+          implementation="$(jq -r .implementation.commit contracts/protected-source-parity.json)"
+          git clone --quiet https://github.com/squazaryu/tumoflip.git ../firmware
+          git -C ../firmware checkout --quiet "$implementation"
+
+      - name: Download latest immutable audit ledger
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-all-errors \
+            https://raw.githubusercontent.com/squazaryu/tumoflip-fw-packages/protected-app-audit-ledger/latest.json \
+            --output ledger.json
+
+      - name: Run protected source parity
+        id: parity
+        working-directory: control
+        env:
+          COMMUNITY_COMMIT: ${{ steps.source.outputs.commit }}
+        run: |
+          set +e
+          python3 tools/protected_source_parity.py \
+            --registry tools/tumoflip/protected_apps_registry.json \
+            --imports ../firmware/tools/tumoflip/protected_app_imports.json \
+            --implementation-repo ../firmware \
+            --community-commit "$COMMUNITY_COMMIT" \
+            --community-repo ../community \
+            --output "$RUNNER_TEMP/parity.json" \
+            --markdown "$RUNNER_TEMP/parity.md"
+          status=$?
+          set -e
+          [[ "$status" == 0 || "$status" == 1 ]]
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Build deterministic reconciliation report
+        id: reconciliation
+        working-directory: control
+        run: |
+          set +e
+          python3 tools/reconcile_community_catalog.py \
+            --parity "$RUNNER_TEMP/parity.json" \
+            --ledger ../ledger.json \
+            --output "$RUNNER_TEMP/catalog-reconciliation.json" \
+            --markdown "$RUNNER_TEMP/catalog-reconciliation.md"
+          status=$?
+          set -e
+          [[ "$status" == 0 || "$status" == 1 ]]
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Upload reconciliation report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: catalog-reconciliation
+          path: |
+            ${{ runner.temp }}/parity.json
+            ${{ runner.temp }}/parity.md
+            ${{ runner.temp }}/catalog-reconciliation.json
+            ${{ runner.temp }}/catalog-reconciliation.md
+            ledger.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Reconcile one canonical review issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATUS: ${{ steps.reconciliation.outputs.status }}
+          SOURCE_TAG: ${{ steps.source.outputs.tag }}
+        run: |
+          set -euo pipefail
+          marker='<!-- community-catalog-reconciliation -->'
+          title='Review Community Pack to FW Packages reconciliation'
+          body="$marker
+          $(cat "$RUNNER_TEMP/catalog-reconciliation.md")"
+          gh api "repos/$GITHUB_REPOSITORY/issues?state=all&per_page=100" --paginate --slurp > "$RUNNER_TEMP/issues.json"
+          issue="$(jq -r --arg marker "$marker" --arg title "$title" \
+            '[.[][] | select(.pull_request == null) | select(.title == $title and (.body | contains($marker)))][0].number // empty' \
+            "$RUNNER_TEMP/issues.json")"
+          decision="$(jq -r .decision "$RUNNER_TEMP/catalog-reconciliation.json")"
+          if [[ "$decision" == needsReview ]]; then
+            if [[ -z "$issue" ]]; then
+              gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body"
+            else
+              gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --body "$body"
+            fi
+          elif [[ -n "$issue" ]]; then
+            gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --body "$body"
+            gh issue close "$issue" --repo "$GITHUB_REPOSITORY" --comment \
+              "Automated reconciliation is verified for Community Pack $SOURCE_TAG."
+          fi

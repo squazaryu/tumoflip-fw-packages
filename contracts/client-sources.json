@@ -3,7 +3,14 @@
   "packages": {
     "primaryRepository": "squazaryu/tumoflip-fw-packages",
     "legacyRepository": "squazaryu/tumoflip",
+    "indexURL": "https://raw.githubusercontent.com/squazaryu/tumoflip-fw-packages/main/catalog-index.json",
     "identityFields": ["catalog_channel", "catalog_revision", "release_id"],
+    "historyFields": ["revision", "tag", "repository", "release_id", "manifest_sha256", "archive_sha256", "state", "compatibility"],
+    "selection": {
+      "automatic": "highest-compatible-active",
+      "manual": "compatible-active-or-legacy",
+      "withdrawn": "never-install"
+    },
     "fallbackOn": ["transport", "http404", "compatibleChannelAbsent"],
     "terminalFailures": [
       "malformedPrimary",

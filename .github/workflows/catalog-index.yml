@@ -1,0 +1,65 @@
+name: Maintain independent FW Packages catalog index
+
+on:
+  schedule:
+    - cron: "41 */6 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "contracts/current-releases.json"
+      - "catalog-index.json"
+      - "tools/catalog_index.py"
+      - "schemas/catalog-index-v1.schema.json"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: catalog-index
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: github.ref == 'refs/heads/main' && github.event.repository.default_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out control plane
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Validate and merge current release heads into history
+        run: |
+          set -euo pipefail
+          python3 tools/catalog_index.py build \
+            --current contracts/current-releases.json \
+            --existing catalog-index.json \
+            --output catalog-index.json
+          python3 tools/catalog_index.py validate --index catalog-index.json
+          python3 tools/verify_catalog.py contract --root .
+
+      - name: Open one catalog-index PR when history changed
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- catalog-index.json; then
+            echo "catalog index is current"
+            exit 0
+          fi
+          BRANCH="automation/catalog-index-${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add catalog-index.json
+          git commit -m "chore(catalog): reconcile immutable package history"
+          git push --set-upstream origin "$BRANCH"
+          gh pr create --repo "$GITHUB_REPOSITORY" \
+            --head "$BRANCH" --base main \
+            --title "chore(catalog): reconcile immutable package history" \
+            --body "Automated catalog reconciliation. This PR updates only catalog-index.json; immutable releases and firmware labels are untouched."

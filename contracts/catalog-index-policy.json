@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "identity": ["channel", "revision", "manifest_release_id"],
+  "selection": {
+    "auto": "highest-compatible-active",
+    "manual": "compatible-active-or-legacy",
+    "firmwareVersionBinding": false
+  },
+  "rollback": {
+    "immutableReleases": true,
+    "withdrawalState": "withdrawn",
+    "fullOverlaySnapshots": true,
+    "removalRequiresCleanupEntry": true
+  },
+  "reconciliation": {
+    "source": "xMasterX/all-the-plugins",
+    "identityFields": ["app_id", "sha256", "canonical_target", "aliases"],
+    "manualUserVerification": false,
+    "protectedSourceChangesRequireReview": true
+  }
+}
