@@ -95,6 +95,8 @@ jobs:
           python3 tools/reconcile_community_catalog.py \
             --parity "$RUNNER_TEMP/parity.json" \
             --ledger ../ledger.json \
+            --expected-source-tag "${{ steps.source.outputs.tag }}" \
+            --expected-source-commit "${{ steps.source.outputs.commit }}" \
             --output "$RUNNER_TEMP/catalog-reconciliation.json" \
             --markdown "$RUNNER_TEMP/catalog-reconciliation.md"
           status=$?

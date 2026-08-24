@@ -56,7 +56,12 @@ def validate_parity(report: dict[str, Any]) -> None:
         ids.add(item["appId"])
 
 
-def validate_ledger(ledger: dict[str, Any]) -> dict[str, Any]:
+def validate_ledger(
+    ledger: dict[str, Any],
+    *,
+    expected_source_tag: str | None = None,
+    expected_source_commit: str | None = None,
+) -> dict[str, Any]:
     if ledger.get("schema") != 2 or ledger.get("sourceRepository") != "xMasterX/all-the-plugins":
         raise ReconciliationError("protected audit ledger identity is invalid")
     audits = ledger.get("audits")
@@ -67,12 +72,31 @@ def validate_ledger(ledger: dict[str, Any]) -> dict[str, Any]:
         raise ReconciliationError("latest protected audit status is invalid")
     if not HEX_40.fullmatch(str(latest.get("sourceCommit", ""))):
         raise ReconciliationError("latest protected audit commit is invalid")
+    if expected_source_tag is not None and latest.get("sourceTag") != expected_source_tag:
+        raise ReconciliationError(
+            "latest protected audit tag does not match the current Community Pack release"
+        )
+    if expected_source_commit is not None and latest.get("sourceCommit") != expected_source_commit:
+        raise ReconciliationError(
+            "latest protected audit commit does not match the current Community Pack release"
+        )
     return latest
 
 
-def reconcile(parity: dict[str, Any], ledger: dict[str, Any], generated_at: str | None = None) -> dict[str, Any]:
+def reconcile(
+    parity: dict[str, Any],
+    ledger: dict[str, Any],
+    generated_at: str | None = None,
+    *,
+    expected_source_tag: str | None = None,
+    expected_source_commit: str | None = None,
+) -> dict[str, Any]:
     validate_parity(parity)
-    latest = validate_ledger(ledger)
+    latest = validate_ledger(
+        ledger,
+        expected_source_tag=expected_source_tag,
+        expected_source_commit=expected_source_commit,
+    )
     reasons: list[str] = []
     if parity["overallStatus"] != "verified":
         reasons.append("protected source parity requires review")
@@ -121,9 +145,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--ledger", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--markdown", type=Path, required=True)
+    parser.add_argument("--expected-source-tag")
+    parser.add_argument("--expected-source-commit")
     args = parser.parse_args(argv)
     try:
-        report = reconcile(read(args.parity), read(args.ledger))
+        report = reconcile(
+            read(args.parity),
+            read(args.ledger),
+            expected_source_tag=args.expected_source_tag,
+            expected_source_commit=args.expected_source_commit,
+        )
         args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         args.markdown.write_text(markdown(report), encoding="utf-8")
         print(json.dumps({"decision": report["decision"]}))
