@@ -56,12 +56,7 @@ def validate_parity(report: dict[str, Any]) -> None:
         ids.add(item["appId"])
 
 
-def validate_ledger(
-    ledger: dict[str, Any],
-    *,
-    expected_source_tag: str | None = None,
-    expected_source_commit: str | None = None,
-) -> dict[str, Any]:
+def validate_ledger(ledger: dict[str, Any]) -> dict[str, Any]:
     if ledger.get("schema") != 2 or ledger.get("sourceRepository") != "xMasterX/all-the-plugins":
         raise ReconciliationError("protected audit ledger identity is invalid")
     audits = ledger.get("audits")
@@ -72,14 +67,6 @@ def validate_ledger(
         raise ReconciliationError("latest protected audit status is invalid")
     if not HEX_40.fullmatch(str(latest.get("sourceCommit", ""))):
         raise ReconciliationError("latest protected audit commit is invalid")
-    if expected_source_tag is not None and latest.get("sourceTag") != expected_source_tag:
-        raise ReconciliationError(
-            "latest protected audit tag does not match the current Community Pack release"
-        )
-    if expected_source_commit is not None and latest.get("sourceCommit") != expected_source_commit:
-        raise ReconciliationError(
-            "latest protected audit commit does not match the current Community Pack release"
-        )
     return latest
 
 
@@ -92,12 +79,12 @@ def reconcile(
     expected_source_commit: str | None = None,
 ) -> dict[str, Any]:
     validate_parity(parity)
-    latest = validate_ledger(
-        ledger,
-        expected_source_tag=expected_source_tag,
-        expected_source_commit=expected_source_commit,
-    )
+    latest = validate_ledger(ledger)
     reasons: list[str] = []
+    if expected_source_tag is not None and latest.get("sourceTag") != expected_source_tag:
+        reasons.append("latest protected-app audit tag does not match the current Community Pack release")
+    if expected_source_commit is not None and latest.get("sourceCommit") != expected_source_commit:
+        reasons.append("latest protected-app audit commit does not match the current Community Pack release")
     if parity["overallStatus"] != "verified":
         reasons.append("protected source parity requires review")
     if latest["overallStatus"] != "verified":
@@ -113,9 +100,11 @@ def reconcile(
         },
         "community": {
             "repository": ledger["sourceRepository"],
-            "releaseTag": latest["sourceTag"],
-            "commit": latest["sourceCommit"],
+            "releaseTag": expected_source_tag or latest["sourceTag"],
+            "commit": expected_source_commit or latest["sourceCommit"],
             "auditStatus": latest["overallStatus"],
+            "auditedReleaseTag": latest["sourceTag"],
+            "auditedCommit": latest["sourceCommit"],
         },
         "implementation": parity["implementation"],
         "protectedSourceParity": parity["overallStatus"],

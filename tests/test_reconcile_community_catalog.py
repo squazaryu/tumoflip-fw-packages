@@ -34,13 +34,14 @@ class ReconcileCommunityCatalogTests(unittest.TestCase):
         self.assertIn("parity", report["reviewReasons"][0])
 
     def test_stale_ledger_cannot_be_accepted_for_new_community_release(self) -> None:
-        with self.assertRaises(ReconciliationError):
-            reconcile(
-                parity(),
-                ledger(),
-                expected_source_tag="25aug2026",
-                expected_source_commit="c" * 40,
-            )
+        report = reconcile(
+            parity(),
+            ledger(),
+            expected_source_tag="25aug2026",
+            expected_source_commit="c" * 40,
+        )
+        self.assertEqual(report["decision"], "needsReview")
+        self.assertEqual(len(report["reviewReasons"]), 2)
 
     def test_matching_community_identity_is_recorded(self) -> None:
         report = reconcile(
@@ -52,6 +53,7 @@ class ReconcileCommunityCatalogTests(unittest.TestCase):
         )
         self.assertEqual(report["decision"], "readyForCatalogPR")
         self.assertEqual(report["community"]["commit"], "b" * 40)
+        self.assertEqual(report["community"]["auditedCommit"], "b" * 40)
 
     def test_malformed_ledger_fails_closed(self) -> None:
         with self.assertRaises(ReconciliationError):
