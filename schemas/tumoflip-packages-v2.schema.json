@@ -33,7 +33,7 @@
           "type": "string",
           "pattern": "^fw-packages-(stable|dev)-[0-9]{3}$"
         },
-        "catalog_install_scope": {"enum": ["delta", "firmwareSnapshot"]},
+        "catalog_install_scope": {"enum": ["baseline", "delta", "firmwareSnapshot"]},
         "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
         "source_dirty": {"const": false}
       },

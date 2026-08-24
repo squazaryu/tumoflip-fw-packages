@@ -132,7 +132,7 @@ def verify_contract(root: Path) -> None:
             if (
                 channel != "stable"
                 or not isinstance(plan, dict)
-                or plan.get("mode") != "firmwareSnapshot"
+                or plan.get("mode") not in {"firmwareSnapshot", "baseline"}
                 or plan.get("sourceCommit") != baseline["firmwareCommit"]
                 or plan.get("selectedOverlays") != []
                 or not isinstance(baseline.get("packageManifestSHA256"), str)
