@@ -42,12 +42,14 @@ its archive digests and commit, then runs both controls against that same source
 2. the protected-app audit ledger checks package bytes, paths, aliases and target
    hashes by app identity rather than by the display path.
 
-The workflow writes a deterministic reconciliation report. If the report is
-unchanged, no package release is produced and the canonical review issue is
-closed. If a source, byte, route or alias changes, the workflow opens/updates a
-single PR containing the generated overlay snapshot, provenance and ledger
-digest. Human review is required only for a protected source change or a device
-acceptance decision; routine Community Pack publication no longer requires a
+The workflow writes a deterministic reconciliation report and keeps one
+canonical review issue. If the exact source, byte, route and alias comparison is
+verified, the issue is closed and no package release is produced. If anything
+changes, the issue is opened or updated with the exact Community Pack commit,
+parity result and audit identity. A package-generation PR is then created from
+that reviewed decision; the scheduled audit itself never publishes bytes or
+mutates a Flipper. Human review is required only for a protected source change
+or a device-acceptance decision; routine catalog discovery no longer requires a
 manual Verify action in TumoCompanion.
 
 ## Release procedure
