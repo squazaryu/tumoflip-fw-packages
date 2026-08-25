@@ -93,3 +93,18 @@ control-plane pull request.
 
 See [Migration](docs/MIGRATION.md), [Release contract](docs/RELEASES.md), and
 [Security](SECURITY.md).
+
+## Protected implementation automation
+
+The package control plane also checks the implementation surface independently
+of package publication. `implementation-drift.yml` compares the reviewed
+Tumoflip `dev` and `main` commits with the live branches, detects changes in
+protected or NFC/Sub-GHz/loader paths, inventories new or removed
+`applications_user` roots, and fails closed on stale audit pins. The separate
+`source-matrix-watcher.yml` checks the exact ARF and ProtoPirate refs that are
+not reliably covered by a generic GitHub release watcher. Both workflows are
+read-only and maintain one canonical review issue; they never update a
+baseline, import code, build FAPs, or publish a release automatically.
+
+See [Protected FAP automation](docs/PROTECTED_FAP_AUTOMATION.md) for the
+provenance chain and the human decision boundary.

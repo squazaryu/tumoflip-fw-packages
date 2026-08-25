@@ -1,0 +1,110 @@
+name: Watch ARF and ProtoPirate sources
+
+on:
+  schedule:
+    - cron: "47 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: protected-source-matrix
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    if: github.ref == 'refs/heads/main' && github.event.repository.default_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Check out exact control commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Prove exact control checkout
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+
+      - name: Set up pinned Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Run exact source matrix watcher
+        id: scan
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          set +e
+          python3 tools/watch_sources.py scan \
+            --contract contracts/source-watchers.json \
+            --output "$RUNNER_TEMP/source-matrix.json" \
+            --markdown "$RUNNER_TEMP/source-matrix.md"
+          status=$?
+          set -e
+          [[ "$status" == 0 || "$status" == 1 ]]
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Upload source matrix report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: protected-source-matrix
+          path: |
+            ${{ runner.temp }}/source-matrix.json
+            ${{ runner.temp }}/source-matrix.md
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Reconcile one canonical source review issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REPORT="$RUNNER_TEMP/source-matrix.md"
+          STATE="$RUNNER_TEMP/source-matrix.json"
+          MARKER='<!-- source-matrix-watch -->'
+          TITLE='Watch ARF and ProtoPirate source changes'
+          STATUS="$(jq -r .status "$STATE")"
+          [[ "$STATUS" == verified || "$STATUS" == needsReview ]]
+          gh api "repos/$GITHUB_REPOSITORY/issues?state=all&per_page=100" \
+            --paginate --slurp > "$RUNNER_TEMP/issue-pages.json"
+          ISSUE_NUMBER="$(jq -r --arg marker "$MARKER" --arg title "$TITLE" \
+            '[.[][] | select(.pull_request == null) | select(.user.login == "github-actions[bot]") | select(.title == $title and ((.body // "") | startswith($marker)))][0].number // empty' \
+            "$RUNNER_TEMP/issue-pages.json")"
+          verify_issue() {
+            gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/issue.json"
+            jq -e --arg marker "$MARKER" --arg title "$TITLE" \
+              '.pull_request == null and .user.login == "github-actions[bot]" and .title == $title and ((.body // "") | startswith($marker))' \
+              "$RUNNER_TEMP/issue.json" >/dev/null
+          }
+          if [[ "$STATUS" == needsReview ]]; then
+            if [[ -z "$ISSUE_NUMBER" ]]; then
+              ISSUE_URL="$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body-file "$REPORT")"
+              ISSUE_NUMBER="${ISSUE_URL##*/}"
+              verify_issue
+            else
+              verify_issue
+              gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$REPORT"
+              verify_issue
+            fi
+          elif [[ -n "$ISSUE_NUMBER" ]]; then
+            verify_issue
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$REPORT"
+            verify_issue
+            gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+              --comment "ARF and ProtoPirate sources match the reviewed commits."
+          fi
+
+      - name: Fail closed when source review is required
+        if: steps.scan.outputs.status == '1'
+        run: |
+          echo "An ARF or ProtoPirate source changed or is unavailable; review is required." >&2
+          exit 1

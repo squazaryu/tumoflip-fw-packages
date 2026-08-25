@@ -1,0 +1,126 @@
+name: Watch Tumoflip implementation drift
+
+on:
+  schedule:
+    - cron: "11 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tumoflip-implementation-drift
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    if: github.ref == 'refs/heads/main' && github.event.repository.default_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Check out exact control commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          persist-credentials: false
+
+      - name: Prove exact control checkout
+        working-directory: control
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+
+      - name: Set up pinned Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Check out Tumoflip history without credentials
+        run: |
+          set -euo pipefail
+          git clone --quiet --filter=blob:none --no-checkout \
+            https://github.com/squazaryu/tumoflip.git firmware
+          git -C firmware fetch --quiet origin \
+            refs/heads/dev:refs/remotes/origin/dev \
+            refs/heads/main:refs/remotes/origin/main
+
+      - name: Run fail-closed implementation surface scan
+        id: scan
+        working-directory: control
+        run: |
+          set +e
+          python3 tools/protected_surface.py scan \
+            --firmware-repo ../firmware \
+            --contract contracts/protected-surface.json \
+            --registry tools/tumoflip/protected_apps_registry.json \
+            --ref dev=origin/dev \
+            --ref main=origin/main \
+            --audit-targets contracts/protected-audit-targets.json \
+            --parity-contract contracts/protected-source-parity.json \
+            --output "$RUNNER_TEMP/tumoflip-drift.json" \
+            --markdown "$RUNNER_TEMP/tumoflip-drift.md"
+          status=$?
+          set -e
+          [[ "$status" == 0 || "$status" == 1 ]]
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Upload implementation drift report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: tumoflip-implementation-drift
+          path: |
+            ${{ runner.temp }}/tumoflip-drift.json
+            ${{ runner.temp }}/tumoflip-drift.md
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Reconcile one canonical implementation review issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REPORT="$RUNNER_TEMP/tumoflip-drift.md"
+          STATE="$RUNNER_TEMP/tumoflip-drift.json"
+          MARKER='<!-- tumoflip-implementation-drift -->'
+          TITLE='Review Tumoflip implementation drift'
+          STATUS="$(jq -r .status "$STATE")"
+          [[ "$STATUS" == verified || "$STATUS" == baselineStale || "$STATUS" == needsReview ]]
+          gh api "repos/$GITHUB_REPOSITORY/issues?state=all&per_page=100" \
+            --paginate --slurp > "$RUNNER_TEMP/issue-pages.json"
+          ISSUE_NUMBER="$(jq -r --arg marker "$MARKER" --arg title "$TITLE" \
+            '[.[][] | select(.pull_request == null) | select(.user.login == "github-actions[bot]") | select(.title == $title and ((.body // "") | startswith($marker)))][0].number // empty' \
+            "$RUNNER_TEMP/issue-pages.json")"
+          verify_issue() {
+            gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/issue.json"
+            jq -e --arg marker "$MARKER" --arg title "$TITLE" \
+              '.pull_request == null and .user.login == "github-actions[bot]" and .title == $title and ((.body // "") | startswith($marker))' \
+              "$RUNNER_TEMP/issue.json" >/dev/null
+          }
+          if [[ "$STATUS" == needsReview ]]; then
+            if [[ -z "$ISSUE_NUMBER" ]]; then
+              ISSUE_URL="$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body-file "$REPORT")"
+              ISSUE_NUMBER="${ISSUE_URL##*/}"
+              verify_issue
+            else
+              verify_issue
+              gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$REPORT"
+              verify_issue
+            fi
+          elif [[ -n "$ISSUE_NUMBER" ]]; then
+            verify_issue
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$REPORT"
+            verify_issue
+            gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+              --comment "Tumoflip implementation drift is clear for the reviewed surface."
+          fi
+
+      - name: Fail closed when implementation review is required
+        if: steps.scan.outputs.status == '1'
+        run: |
+          echo "Tumoflip implementation drift requires review; see the canonical issue and report." >&2
+          exit 1

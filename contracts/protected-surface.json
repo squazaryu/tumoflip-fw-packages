@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "kind": "protectedSurface",
+  "firmwareRepository": "squazaryu/tumoflip",
+  "reviewedImplementations": {
+    "dev": {
+      "ref": "refs/heads/dev",
+      "commit": "60fcab4870cb783654486b8127271b2720b028b4",
+      "label": "t-dev-007-012"
+    },
+    "main": {
+      "ref": "refs/heads/main",
+      "commit": "148a2618b57016ce053519b74cc0aba689f24e26",
+      "label": "main-2026-08-24"
+    }
+  },
+  "ownedSourcePaths": [
+    "applications_user/ai_dashboard",
+    "applications_user/app_bridge_terminal",
+    "applications_user/arf_tools",
+    "applications_user/ble_gatt_lab",
+    "applications_user/field_logger",
+    "applications_user/flipper_companion",
+    "applications_user/flipper_relay",
+    "applications_user/garage_door_remote",
+    "applications_user/keeloq_keystore_decryptor",
+    "applications_user/module_one_cockpit",
+    "applications_user/module_one_sensor_logger",
+    "applications_user/nfc_ccid_bridge",
+    "applications_user/rolljam",
+    "applications_user/rolljam_standalone",
+    "applications_user/runtime_trace_viewer",
+    "applications_user/signal_workbench",
+    "applications_user/subghz_protocols",
+    "applications_user/tumo_acceptance_suite",
+    "applications_user/tumo_ir_lab",
+    "applications_user/tumo_macro_deck",
+    "applications_user/tumo_uart_console",
+    "applications_user/tumocard_os",
+    "applications_user/tumofabric_node",
+    "applications_user/tumoflip_packages",
+    "applications_user/tumoflow",
+    "applications_user/tumokey",
+    "applications_user/tumokey_phase_a",
+    "applications_user/tumomodule_runtime",
+    "applications_user/tumonet_bench",
+    "applications_user/tumonet_gateway",
+    "applications_user/tumoscope",
+    "applications_user/tumoscript",
+    "applications_user/tumotag_verify",
+    "applications_user/tumovgm_bridge",
+    "applications_user/tumovm_peripherals",
+    "applications_user/tumovm_poc",
+    "applications_user/usb_sd_mode"
+  ],
+  "reviewPrefixes": [
+    "applications_user/",
+    "applications/main/nfc/",
+    "applications/main/subghz/",
+    "lib/nfc/",
+    "lib/subghz/",
+    "applications/services/loader/",
+    "targets/f7/"
+  ],
+  "policy": {
+    "unknownApplicationRoot": "needsReview",
+    "removedApplicationRoot": "needsReview",
+    "protectedPathChange": "needsReview",
+    "staleAuditPin": "needsReview"
+  }
+}
