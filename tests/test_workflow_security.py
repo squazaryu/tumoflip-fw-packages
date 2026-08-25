@@ -37,12 +37,43 @@ class WorkflowSecurityTests(unittest.TestCase):
             scheduled,
             [
                 "catalog-index.yml",
+                "implementation-drift.yml",
                 "protected-app-audit.yml",
                 "protected-source-parity.yml",
                 "reconcile-community-catalog.yml",
+                "source-matrix-watcher.yml",
                 "upstream-unleashed-watcher.yml",
             ],
         )
+
+    def test_implementation_drift_is_review_only_and_fail_closed(self) -> None:
+        text = (self.root / ".github/workflows/implementation-drift.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("tools/protected_surface.py scan", text)
+        self.assertIn("contracts/protected-surface.json", text)
+        self.assertIn("--audit-targets contracts/protected-audit-targets.json", text)
+        self.assertIn("issues: write", text)
+        self.assertIn("Fail closed when implementation review is required", text)
+        self.assertIn('.user.login == "github-actions[bot]"', text)
+        self.assertIn("verify_issue()", text)
+        self.assertNotIn("contents: write", text)
+        self.assertNotIn("git push", text)
+        self.assertNotIn("gh pr merge", text)
+
+    def test_source_matrix_watcher_is_review_only(self) -> None:
+        text = (self.root / ".github/workflows/source-matrix-watcher.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("contracts/source-watchers.json", text)
+        self.assertIn("tools/watch_sources.py scan", text)
+        self.assertIn("issues: write", text)
+        self.assertIn("Fail closed when source review is required", text)
+        self.assertIn('.user.login == "github-actions[bot]"', text)
+        self.assertIn("verify_issue()", text)
+        self.assertNotIn("contents: write", text)
+        self.assertNotIn("git push", text)
+        self.assertNotIn("gh release", text)
 
     def test_protected_source_parity_is_fail_closed_and_read_only(self) -> None:
         text = (self.root / ".github/workflows/protected-source-parity.yml").read_text(

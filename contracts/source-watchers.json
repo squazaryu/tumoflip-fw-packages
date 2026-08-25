@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "kind": "sourceWatchers",
+  "policy": "review-only",
+  "watchers": [
+    {
+      "id": "arf-main",
+      "repository": "https://github.com/D4C1-Labs/Flipper-ARF.git",
+      "ref": "refs/heads/main",
+      "reviewedCommit": "56701a815b54121a4b4d102e361add5468ffa92b",
+      "relatedLocalPaths": [
+        "applications_user/arf_subghz_full",
+        "applications_user/arf_tools",
+        "applications_user/claude_buddy"
+      ]
+    },
+    {
+      "id": "protopirate-main",
+      "repository": "https://protopirate.net/ProtoPirate/ProtoPirate.git",
+      "ref": "refs/heads/main",
+      "reviewedCommit": "4b039064a02d95c9bc23d390caacee1d40efe790",
+      "relatedLocalPaths": [
+        "applications_user/protopirate",
+        "applications_user/garage_door_remote"
+      ]
+    }
+  ]
+}
