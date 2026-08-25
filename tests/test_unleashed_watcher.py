@@ -13,8 +13,8 @@ from unittest import mock
 from tools import watch_unleashed as watcher
 
 
-BASELINE = "8bbf9fc09f58881145b2b7bacd50cbf2e407d78b"
-RELEASE = "941f302d0377f3d8553df0a6628bf329e3e63941"
+BASELINE = "240ba3db883cb0792b06c3445f9c38476e1dc5ec"
+RELEASE = "3c9be0fdd9d301a9436765099a2d1780b36a1795"
 CONTROL = "c" * 40
 REPOSITORY = "DarkFlippers/unleashed-firmware"
 
@@ -29,9 +29,9 @@ def contract() -> dict[str, object]:
             "commit": BASELINE,
             "reviewedAt": "2026-08-20T08:31:45Z",
             "release": {
-                "tag": "unlshd-091",
+                "tag": "unlshd-092",
                 "commit": RELEASE,
-                "publishedAt": "2026-08-15T22:11:08Z",
+                "publishedAt": "2026-08-21T23:00:27Z",
             },
         },
     }
@@ -72,7 +72,7 @@ class UnleashedWatcherTests(unittest.TestCase):
         self.assertEqual(checked_in["repository"], REPOSITORY)
         self.assertEqual(checked_in["branch"], "dev")
         self.assertEqual(checked_in["reviewed"]["commit"], BASELINE)
-        self.assertEqual(checked_in["reviewed"]["release"]["tag"], "unlshd-091")
+        self.assertEqual(checked_in["reviewed"]["release"]["tag"], "unlshd-092")
 
     def _responses(
         self,
@@ -87,10 +87,10 @@ class UnleashedWatcherTests(unittest.TestCase):
         pull_details: dict[int, dict[str, object]] | None = None,
     ) -> dict[str, object]:
         commits = commits if commits is not None else []
-        latest = latest or release("unlshd-091", RELEASE, "2026-08-15T22:11:08Z")
+        latest = latest or release("unlshd-092", RELEASE, "2026-08-21T23:00:27Z")
         releases = [latest]
-        if latest["tag_name"] != "unlshd-091":
-            releases.append(release("unlshd-091", RELEASE, "2026-08-15T22:11:08Z"))
+        if latest["tag_name"] != "unlshd-092":
+            releases.append(release("unlshd-092", RELEASE, "2026-08-21T23:00:27Z"))
         responses: dict[str, object] = {
             f"repos/{REPOSITORY}": {"default_branch": "dev"},
             f"repos/{REPOSITORY}/branches/dev": {"commit": {"sha": head}},
@@ -104,17 +104,17 @@ class UnleashedWatcherTests(unittest.TestCase):
                 "commits": commits,
             },
             f"repos/{REPOSITORY}/releases?per_page=100": [releases],
-            f"repos/{REPOSITORY}/git/ref/tags/unlshd-091": {
+            f"repos/{REPOSITORY}/git/ref/tags/unlshd-092": {
                 "object": {"type": "commit", "sha": RELEASE}
             },
         }
-        if latest["tag_name"] != "unlshd-091":
+        if latest["tag_name"] != "unlshd-092":
             responses[f"repos/{REPOSITORY}/git/ref/tags/{latest['tag_name']}"] = {
                 "object": {"type": "commit", "sha": latest["_test_commit"]}
             }
         search_query = watcher.urlencode(
             {
-                "q": f"repo:{REPOSITORY} is:pr is:merged base:dev merged:>=2026-08-20",
+                "q": f"repo:{REPOSITORY} is:pr is:merged base:dev merged:>={contract()['reviewed']['reviewedAt'][:10]}",
                 "per_page": "100",
             }
         )
@@ -155,7 +155,7 @@ class UnleashedWatcherTests(unittest.TestCase):
             status="ahead",
             ahead=1,
             commits=[{"sha": head, "commit": {"message": "fix: bounded NFC state\n\nbody"}}],
-            latest=release("unlshd-092", "d" * 40, "2026-08-21T12:00:00Z"),
+            latest=release("unlshd-093", "d" * 40, "2026-08-22T12:00:00Z"),
             search=[
                 {
                     "total_count": 1,
@@ -185,7 +185,7 @@ class UnleashedWatcherTests(unittest.TestCase):
         self.assertTrue(report["changesDetected"])
         self.assertTrue(report["humanReviewRequired"])
         self.assertEqual(report["current"]["branch"]["commit"], head)
-        self.assertEqual(report["current"]["latestRelease"]["tag"], "unlshd-092")
+        self.assertEqual(report["current"]["latestRelease"]["tag"], "unlshd-093")
         self.assertEqual(report["current"]["mergedPullRequests"][0]["mergeCommit"], merge)
         text = watcher.render_report(report)
         self.assertIn("#1083", text)
@@ -514,8 +514,8 @@ class UnleashedWatcherTests(unittest.TestCase):
         responses = self._responses()
         responses[f"repos/{REPOSITORY}/releases?per_page=100"] = [
             [
-                release("unlshd-091", RELEASE, "2026-08-15T22:11:08Z"),
-                release(unknown_tag, unknown_commit, "2026-08-21T12:00:00Z"),
+                release("unlshd-092", RELEASE, "2026-08-21T23:00:27Z"),
+                release(unknown_tag, unknown_commit, "2026-08-22T12:00:00Z"),
             ]
         ]
         responses[f"repos/{REPOSITORY}/git/ref/tags/{unknown_tag}"] = {
@@ -532,7 +532,7 @@ class UnleashedWatcherTests(unittest.TestCase):
 
     def test_retagged_reviewed_release_is_terminal(self) -> None:
         responses = self._responses()
-        responses[f"repos/{REPOSITORY}/git/ref/tags/unlshd-091"] = {
+        responses[f"repos/{REPOSITORY}/git/ref/tags/unlshd-092"] = {
             "object": {"type": "commit", "sha": "f" * 40}
         }
         with self.assertRaisesRegex(watcher.WatchError, "release identity changed"):

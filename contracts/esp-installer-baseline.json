@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "kind": "espInstallerAuditBaseline",
+  "repository": "justcallmekoko/ESP32Marauder",
+  "observed": [
+    {
+      "tag": "v1.15.1",
+      "releaseId": 375460837,
+      "sourceCommit": "91724fd8e964cb6f55cd7da60a3320570919de5b",
+      "carrierSha256": "ddf5244c943d00474bea6cc4a62803929d9d7710242910fc3fff962383b11b17",
+      "manifestSha256": "5c9fc98f620cfd1d97785e1b835f5117c652bf4c89ecebe2727d1acf3ce2685b",
+      "observedAt": "2026-08-25T00:00:00Z"
+    }
+  ]
+}

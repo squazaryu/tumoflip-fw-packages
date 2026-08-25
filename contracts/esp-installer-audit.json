@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "kind": "espInstallerAudit",
+  "repository": "justcallmekoko/ESP32Marauder",
+  "selection": {
+    "releasePattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
+    "includePrereleases": false
+  },
+  "profiles": [
+    {
+      "board": "esp32-c5-devkitc-1",
+      "recipe": "factory",
+      "status": "needsReview",
+      "roles": ["bootloader", "partition-table", "application"],
+      "offsets": [8192, 32768, 65536],
+      "sizes": [20464, 3072, 0],
+      "notes": "The upstream four-file 20784-byte bootloader recipe is not the accepted Tumoflip three-file C5 profile."
+    },
+    {
+      "board": "marauder-v6-1",
+      "recipe": "factory",
+      "status": "needsReview",
+      "roles": ["bootloader", "partition-table", "ota-data", "application"],
+      "offsets": [4096, 32768, 57344, 65536],
+      "sizes": [0, 3072, 8192, 0],
+      "notes": "Requires explicit Module One hardware evidence before an upstream recipe can authorize Flash Package."
+    }
+  ],
+  "hardwareEvidence": {
+    "minimumPerBoard": true,
+    "requiredChecks": ["board", "flash", "boot", "smoke"]
+  }
+}
