@@ -17,6 +17,7 @@ upstream ref
 | --- | --- | --- | --- |
 | Community Pack bytes | `Protected App Audit` | Exact archive, route, source MD5 and target provenance | No |
 | Imported source parity | `Watch protected source parity` | Checks every registered upstream app and release-source path against the current Tumoflip `dev` checkout | No |
+| Community Pack source history | `Audit protected Community Pack source history` | Replays every published release and records protected source-path changes after the reviewed boundary | No |
 | Tumoflip surface drift | `Watch Tumoflip implementation drift` | Checks current `main`/`dev`, protected paths, new application roots and stale audit pins | No |
 | ARF / ProtoPirate refs | `Watch ARF and ProtoPirate sources` | Watches the repositories that previously escaped the generic Unleashed watcher | No |
 | Unleashed upstream | `Watch Unleashed upstream` | Records the human-review boundary for upstream firmware changes | No |

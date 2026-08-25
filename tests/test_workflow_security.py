@@ -39,6 +39,7 @@ class WorkflowSecurityTests(unittest.TestCase):
                 "catalog-index.yml",
                 "implementation-drift.yml",
                 "protected-app-audit.yml",
+                "protected-source-history.yml",
                 "protected-source-parity.yml",
                 "reconcile-community-catalog.yml",
                 "source-matrix-watcher.yml",
@@ -109,6 +110,20 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("implementation-identity.json", text)
         self.assertIn("--implementation-checkout-commit", text)
         self.assertNotIn("Resolve pinned implementation checkout", text)
+
+    def test_protected_source_history_is_fail_closed_and_read_only(self) -> None:
+        text = (self.root / ".github/workflows/protected-source-history.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("tools/protected_source_history.py", text)
+        self.assertIn("releases?per_page=100", text)
+        self.assertIn("fetch-depth: 0", text)
+        self.assertIn("Reconcile one canonical history review issue", text)
+        self.assertIn("Fail closed when historical source review is required", text)
+        self.assertIn('.user.login == "github-actions[bot]"', text)
+        self.assertNotIn("contents: write", text)
+        self.assertNotIn("git push", text)
+        self.assertNotIn("gh release", text)
 
     def test_unleashed_watcher_is_read_only_except_for_one_report_issue(self) -> None:
         text = (self.root / ".github/workflows/upstream-unleashed-watcher.yml").read_text(
