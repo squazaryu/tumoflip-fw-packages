@@ -21,6 +21,7 @@ import struct
 import subprocess
 import sys
 import tarfile
+import time
 import zipfile
 from pathlib import Path
 from typing import Any, Iterable
@@ -445,22 +446,29 @@ def git_path_changed(repo: Path, before: str, after: str, path: str) -> bool:
 
 
 def fetch_author_head(repository: str, ref: str) -> str:
-    try:
-        result = subprocess.run(
-            ["git", "ls-remote", repository, ref],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-    except (OSError, subprocess.TimeoutExpired) as error:
-        raise AuditError(f"author source fetch failed for {repository} {ref}: {error}") from error
-    if result.returncode:
-        raise AuditError(f"author source fetch failed for {repository} {ref}")
-    rows = [row.split() for row in result.stdout.splitlines() if row.strip()]
-    if len(rows) != 1 or len(rows[0]) < 2 or not HEX_40.fullmatch(rows[0][0]):
-        raise AuditError(f"author ref is missing or ambiguous: {repository} {ref}")
-    return rows[0][0]
+    last_error = "author source fetch failed"
+    for attempt in range(3):
+        try:
+            result = subprocess.run(
+                ["git", "ls-remote", repository, ref],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+        except (OSError, subprocess.TimeoutExpired) as error:
+            last_error = f"author source fetch failed for {repository} {ref}: {error}"
+        else:
+            if result.returncode:
+                last_error = f"author source fetch failed for {repository} {ref}"
+            else:
+                rows = [row.split() for row in result.stdout.splitlines() if row.strip()]
+                if len(rows) == 1 and len(rows[0]) >= 2 and HEX_40.fullmatch(rows[0][0]):
+                    return rows[0][0]
+                last_error = f"author ref is missing or ambiguous: {repository} {ref}"
+        if attempt < 2:
+            time.sleep(2**attempt)
+    raise AuditError(last_error)
 
 
 def load_author_heads(path: Path | None) -> dict[str, str]:

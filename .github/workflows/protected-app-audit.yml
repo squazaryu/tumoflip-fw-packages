@@ -253,7 +253,10 @@ jobs:
           IMPLEMENTATION_DEV="$(jq -r .implementations.dev.commit control/contracts/protected-audit-targets.json)"
           IMPLEMENTATION_STABLE="$(jq -r .implementations.stable.commit control/contracts/protected-audit-targets.json)"
           test "$(git -C firmware rev-parse HEAD)" = "$IMPLEMENTATION_DEV"
-          git -C firmware merge-base --is-ancestor "$IMPLEMENTATION_STABLE" HEAD
+          # Stable and dev are independently pinned release snapshots.  A stable
+          # promotion can legitimately be a descendant of the dev snapshot, so
+          # do not assume one channel's commit is an ancestor of the other.
+          git -C firmware cat-file -e "$IMPLEMENTATION_STABLE^{commit}"
           test "$(git -C community rev-parse HEAD)" = "$EXPECTED_COMMUNITY"
           test "$(git -C control ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
       - name: Download and verify exact release inputs by numeric ID
