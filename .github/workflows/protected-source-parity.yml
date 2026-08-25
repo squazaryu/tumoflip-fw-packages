@@ -138,16 +138,35 @@ jobs:
           gh api "repos/$GITHUB_REPOSITORY/issues?state=all&per_page=100" \
             --paginate --slurp > "$RUNNER_TEMP/issues.json"
           ISSUE_NUMBER="$(jq -r --arg marker "$MARKER" --arg title "$TITLE" \
-            '[.[][] | select(.pull_request == null) | select(.title == $title and (.body | contains($marker)))][0].number // empty' \
+            '[.[][] | select(.pull_request == null) | select(.user.login == "github-actions[bot]") | select(.title == $title and ((.body // "") | startswith($marker)))][0].number // empty' \
             "$RUNNER_TEMP/issues.json")"
+          verify_issue() {
+            gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/issue.json"
+            jq -e --arg marker "$MARKER" --arg title "$TITLE" \
+              '.pull_request == null and .user.login == "github-actions[bot]" and .title == $title and ((.body // "") | startswith($marker))' \
+              "$RUNNER_TEMP/issue.json" >/dev/null
+          }
           if [[ "$STATUS" == 1 ]]; then
             if [[ -z "$ISSUE_NUMBER" ]]; then
-              gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$BODY"
+              ISSUE_URL="$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$BODY")"
+              ISSUE_NUMBER="${ISSUE_URL##*/}"
+              verify_issue
             else
+              verify_issue
+              ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
+              [[ "$ISSUE_STATE" == open || "$ISSUE_STATE" == closed ]]
+              if [[ "$ISSUE_STATE" == closed ]]; then
+                gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
+                verify_issue
+                [[ "$(jq -r .state "$RUNNER_TEMP/issue.json")" == open ]]
+              fi
               gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+              verify_issue
             fi
           elif [[ -n "$ISSUE_NUMBER" ]]; then
+            verify_issue
             gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+            verify_issue
             gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --comment \
               "Protected source parity is verified at the latest scheduled scan."
           fi
