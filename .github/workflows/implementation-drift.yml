@@ -108,6 +108,13 @@ jobs:
               verify_issue
             else
               verify_issue
+              ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
+              [[ "$ISSUE_STATE" == open || "$ISSUE_STATE" == closed ]]
+              if [[ "$ISSUE_STATE" == closed ]]; then
+                gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
+                verify_issue
+                [[ "$(jq -r .state "$RUNNER_TEMP/issue.json")" == open ]]
+              fi
               gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$REPORT"
               verify_issue
             fi
