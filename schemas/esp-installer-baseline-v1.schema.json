@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Tumoflip ESP installer audit baseline",
+  "type": "object",
+  "required": ["schema", "kind", "repository", "observed"],
+  "properties": {
+    "schema": {"const": 1},
+    "kind": {"const": "espInstallerAuditBaseline"},
+    "repository": {"const": "justcallmekoko/ESP32Marauder"},
+    "observed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["tag", "releaseId", "sourceCommit", "carrierSha256", "manifestSha256", "observedAt"],
+        "properties": {
+          "tag": {"pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$"},
+          "releaseId": {"type": "integer", "minimum": 0},
+          "sourceCommit": {"pattern": "^[0-9a-f]{40}$"},
+          "carrierSha256": {"pattern": "^[0-9a-f]{64}$"},
+          "manifestSha256": {"pattern": "^[0-9a-f]{64}$"},
+          "observedAt": {"pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

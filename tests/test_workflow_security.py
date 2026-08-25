@@ -37,6 +37,7 @@ class WorkflowSecurityTests(unittest.TestCase):
             scheduled,
             [
                 "catalog-index.yml",
+                "esp-installer-audit.yml",
                 "implementation-drift.yml",
                 "protected-app-audit.yml",
                 "protected-source-history.yml",
@@ -76,6 +77,20 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertNotIn("contents: write", text)
         self.assertNotIn("git push", text)
         self.assertNotIn("gh release", text)
+
+    def test_esp_installer_audit_is_read_only_and_fail_closed(self) -> None:
+        text = (self.root / ".github/workflows/esp-installer-audit.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("contracts/esp-installer-audit.json", text)
+        self.assertIn("tools/esp_installer_audit.py", text)
+        self.assertIn("scan-github", text)
+        self.assertIn("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", text)
+        self.assertIn("Fail closed when review is required", text)
+        self.assertNotIn("contents: write", text)
+        self.assertNotIn("issues: write", text)
+        self.assertNotIn("gh release", text)
+        self.assertNotIn("git push", text)
 
     def test_protected_source_parity_is_fail_closed_and_read_only(self) -> None:
         text = (self.root / ".github/workflows/protected-source-parity.yml").read_text(

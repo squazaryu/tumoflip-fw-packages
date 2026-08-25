@@ -1,0 +1,82 @@
+name: Audit ESP installer manifests
+
+on:
+  schedule:
+    - cron: "23 6 * * *"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Optional stable Marauder release tag (for example v1.15.1)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: esp-installer-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    if: github.ref == 'refs/heads/main' && github.event.repository.default_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Check out exact control commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Prove exact default-branch control commit
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+
+      - name: Set up pinned Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Resolve latest stable installer carrier
+        id: scan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag || '' }}
+        run: |
+          set +e
+          args=(
+            scan-github
+            --contract contracts/esp-installer-audit.json
+            --baseline contracts/esp-installer-baseline.json
+            --output "$RUNNER_TEMP/esp-installer-audit.json"
+            --markdown "$RUNNER_TEMP/esp-installer-audit.md"
+          )
+          if [[ -n "$RELEASE_TAG" ]]; then
+            args+=(--release-tag "$RELEASE_TAG")
+          fi
+          python3 tools/esp_installer_audit.py "${args[@]}"
+          rc=$?
+          set -e
+          [[ "$rc" == 0 || "$rc" == 1 || "$rc" == 2 ]]
+          echo "status=$rc" >> "$GITHUB_OUTPUT"
+
+      - name: Upload immutable audit report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: esp-installer-audit
+          path: |
+            ${{ runner.temp }}/esp-installer-audit.json
+            ${{ runner.temp }}/esp-installer-audit.md
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Fail closed when review is required
+        if: steps.scan.outputs.status != '0'
+        run: |
+          echo "ESP installer manifest evidence is not authorized for Flash Package publication; inspect the uploaded report." >&2
+          exit 1

@@ -43,6 +43,8 @@ def verify_contract(root: Path) -> None:
     policy = load_json(root / "contracts/native-build-policy.json")
     index = load_json(root / "catalog-index.json")
     lifecycle = load_json(root / "contracts/catalog-index-policy.json")
+    esp_installer = load_json(root / "contracts/esp-installer-audit.json")
+    esp_baseline = load_json(root / "contracts/esp-installer-baseline.json")
     for name, document in (
         ("legacy", legacy),
         ("current", current),
@@ -55,6 +57,20 @@ def verify_contract(root: Path) -> None:
     ):
         if document.get("schema") != 1:
             raise ContractError(f"{name} contract schema must be 1")
+    try:
+        from .esp_installer_audit import validate_baseline as validate_esp_installer_baseline
+        from .esp_installer_audit import validate_contract as validate_esp_installer_contract
+    except ImportError:
+        from esp_installer_audit import validate_baseline as validate_esp_installer_baseline
+        from esp_installer_audit import validate_contract as validate_esp_installer_contract
+    try:
+        validate_esp_installer_contract(esp_installer)
+    except Exception as error:
+        raise ContractError(f"ESP installer audit contract is invalid: {error}") from error
+    try:
+        validate_esp_installer_baseline(esp_baseline)
+    except Exception as error:
+        raise ContractError(f"ESP installer audit baseline is invalid: {error}") from error
     try:
         from .catalog_index import validate_index
     except ImportError:

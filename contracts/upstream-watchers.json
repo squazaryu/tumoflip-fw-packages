@@ -3,13 +3,13 @@
   "kind": "upstreamWatch",
   "repository": "DarkFlippers/unleashed-firmware",
   "reviewed": {
-    "commit": "8bbf9fc09f58881145b2b7bacd50cbf2e407d78b",
+    "commit": "240ba3db883cb0792b06c3445f9c38476e1dc5ec",
     "release": {
-      "commit": "941f302d0377f3d8553df0a6628bf329e3e63941",
-      "publishedAt": "2026-08-15T22:11:08Z",
-      "tag": "unlshd-091"
+      "commit": "3c9be0fdd9d301a9436765099a2d1780b36a1795",
+      "publishedAt": "2026-08-21T23:00:27Z",
+      "tag": "unlshd-092"
     },
-    "reviewedAt": "2026-08-20T08:31:45Z"
+    "reviewedAt": "2026-08-25T10:53:04Z"
   },
   "schema": 1
 }
