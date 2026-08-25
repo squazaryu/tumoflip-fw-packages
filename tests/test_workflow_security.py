@@ -82,6 +82,11 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("contracts/protected-source-parity.json", text)
         self.assertIn("tools/protected_source_parity.py", text)
         self.assertIn("--implementation-repo ../firmware", text)
+        self.assertIn("refs/heads/dev", text)
+        self.assertIn("implementation_current_commit", text)
+        self.assertIn("implementation_baseline_commit", text)
+        self.assertIn("git merge-base --is-ancestor", text)
+        self.assertIn("--implementation-checkout-commit", text)
         self.assertIn("path: community", text)
         self.assertIn("--community-repo ../community", text)
         self.assertIn("Reconcile one canonical review issue", text)
@@ -94,6 +99,16 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertNotIn("contents: write", text)
         self.assertNotIn("git push", text)
         self.assertNotIn("gh release", text)
+
+    def test_catalog_reconciliation_uses_current_implementation_checkout(self) -> None:
+        text = (self.root / ".github/workflows/reconcile-community-catalog.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("refs/heads/dev", text)
+        self.assertIn("git -C ../firmware merge-base --is-ancestor", text)
+        self.assertIn("implementation-identity.json", text)
+        self.assertIn("--implementation-checkout-commit", text)
+        self.assertNotIn("Resolve pinned implementation checkout", text)
 
     def test_unleashed_watcher_is_read_only_except_for_one_report_issue(self) -> None:
         text = (self.root / ".github/workflows/upstream-unleashed-watcher.yml").read_text(
