@@ -5,8 +5,8 @@
   "reviewedImplementations": {
     "dev": {
       "ref": "refs/heads/dev",
-      "commit": "60fcab4870cb783654486b8127271b2720b028b4",
-      "label": "t-dev-007-012"
+      "commit": "ae101b1d68119f5cf9f8b4486a039b7eabbcc7cd",
+      "label": "dev-aligned-main-2026-08-25"
     },
     "main": {
       "ref": "refs/heads/main",
