@@ -58,6 +58,7 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("Fail closed when implementation review is required", text)
         self.assertIn('.user.login == "github-actions[bot]"', text)
         self.assertIn("verify_issue()", text)
+        self.assertIn('gh issue reopen "$ISSUE_NUMBER"', text)
         self.assertNotIn("contents: write", text)
         self.assertNotIn("git push", text)
         self.assertNotIn("gh pr merge", text)
@@ -92,6 +93,7 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("--community-repo ../community", text)
         self.assertIn("Reconcile one canonical review issue", text)
         self.assertIn("Fail closed when an import needs review", text)
+        self.assertIn('gh issue reopen "$ISSUE_NUMBER"', text)
         self.assertEqual(text.count('gh issue edit "$ISSUE_NUMBER"'), 2)
         self.assertLess(
             text.rindex('gh issue edit "$ISSUE_NUMBER"'),
@@ -121,6 +123,7 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("Reconcile one canonical history review issue", text)
         self.assertIn("Fail closed when historical source review is required", text)
         self.assertIn('.user.login == "github-actions[bot]"', text)
+        self.assertIn('gh issue reopen "$ISSUE_NUMBER"', text)
         self.assertNotIn("contents: write", text)
         self.assertNotIn("git push", text)
         self.assertNotIn("gh release", text)
