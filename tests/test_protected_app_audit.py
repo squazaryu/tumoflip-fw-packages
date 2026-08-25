@@ -32,6 +32,27 @@ class ProtectedAppAuditTests(unittest.TestCase):
         self.assertTrue(REGISTRY_PATH.is_relative_to(checkout))
         self.assertTrue(REGISTRY_PATH.is_file())
 
+    def test_author_head_fetch_retries_transient_timeout(self) -> None:
+        completed = SimpleNamespace(
+            returncode=0,
+            stdout=("a" * 40) + "\trefs/heads/main\n",
+            stderr="",
+        )
+        with (
+            mock.patch.object(
+                audit.subprocess,
+                "run",
+                side_effect=[subprocess.TimeoutExpired(["git", "ls-remote"], 30), completed],
+            ) as run,
+            mock.patch.object(audit.time, "sleep") as sleep,
+        ):
+            self.assertEqual(
+                audit.fetch_author_head("https://example.invalid/repo.git", "refs/heads/main"),
+                "a" * 40,
+            )
+        self.assertEqual(run.call_count, 2)
+        sleep.assert_called_once_with(1)
+
     def test_14aug_replacement_decisions_cover_new_legacy_apps(self) -> None:
         decisions = audit.load_decisions(
             REPO_ROOT / "tools/tumoflip/protected_audit_decisions/14aug2026.json"

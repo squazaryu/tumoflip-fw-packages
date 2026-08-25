@@ -3,16 +3,16 @@
   "kind": "protectedAuditTargets",
   "implementation": {
     "repository": "squazaryu/tumoflip",
-    "commit": "a5110cfd15ccf739c442ccb68893ec22f09f74d3"
+    "commit": "60fcab4870cb783654486b8127271b2720b028b4"
   },
   "implementations": {
     "stable": {
       "repository": "squazaryu/tumoflip",
-      "commit": "8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758"
+      "commit": "eba1cfd8cfb022d788433bd540a82cc2e4e25245"
     },
     "dev": {
       "repository": "squazaryu/tumoflip",
-      "commit": "a5110cfd15ccf739c442ccb68893ec22f09f74d3"
+      "commit": "60fcab4870cb783654486b8127271b2720b028b4"
     }
   },
   "packages": [
@@ -141,6 +141,41 @@
           "name": "migration-provenance.json",
           "bytes": 1192,
           "sha256": "cb831e8e394f0f3468f999e91ad2fc05c3b9c8e7d34a85781a96bc95107257c8"
+        }
+      }
+    },
+    {
+      "repository": "squazaryu/tumoflip-fw-packages",
+      "releaseTag": "fw-packages-stable-004",
+      "githubReleaseId": 375940307,
+      "tagCommit": "d8822c5dd764e91e8f7190d4db8b8a1a65f04b97",
+      "prerelease": false,
+      "manifestSourceCommit": "eba1cfd8cfb022d788433bd540a82cc2e4e25245",
+      "manifestReleaseId": "f71db8a62d8a1fd01daeefa1756ecee298dea0eb8b65a244d6a0fd616112400c",
+      "assets": {
+        "manifest": {
+          "id": 528084105,
+          "name": "tumoflip-packages.json",
+          "bytes": 42524,
+          "sha256": "ecb111e05784eff7b57d1e5e0fef25152d74a6829ad8c11387886eea4e3df8f8"
+        },
+        "archive": {
+          "id": 528084115,
+          "name": "tumoflip-packages.zip",
+          "bytes": 5226290,
+          "sha256": "0b28b0d8d5dc00764a30280bf78545cffbb526f227cb5da42df27801a011206e"
+        },
+        "checksums": {
+          "id": 528084083,
+          "name": "fw-packages-stable-004-SHA256SUMS",
+          "bytes": 177,
+          "sha256": "7db86f03438569edfc845481c2787277c373518092f3a21f623d9033adff6a07"
+        },
+        "catalogProvenance": {
+          "id": 528084048,
+          "name": "catalog-provenance.json",
+          "bytes": 6938,
+          "sha256": "68defce44ab3c926e03b194ddacc03b0e1f79b40a14f4eb81e8c3705bab493ca"
         }
       }
     },

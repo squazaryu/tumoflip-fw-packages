@@ -77,7 +77,7 @@ class AuditControlPlaneTests(unittest.TestCase):
         )
         self.assertEqual(
             {item["githubReleaseId"] for item in packages.values()},
-            {369786610, 369803658, 370143096, 370143158, 371276208},
+            {369786610, 369803658, 370143096, 370143158, 371276208, 375940307},
         )
         for tag, item in packages.items():
             self.assertNotEqual(item["tagCommit"], item["manifestSourceCommit"])
@@ -87,15 +87,22 @@ class AuditControlPlaneTests(unittest.TestCase):
                     item["manifestSourceCommit"],
                     "8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758",
                 )
+            elif tag == "fw-packages-stable-004":
+                self.assertIn("catalogProvenance", item["assets"])
+                self.assertNotIn("migrationProvenance", item["assets"])
+                self.assertEqual(
+                    item["manifestSourceCommit"],
+                    "eba1cfd8cfb022d788433bd540a82cc2e4e25245",
+                )
             else:
                 self.assertIn("migrationProvenance", item["assets"])
         self.assertEqual(
             contract["implementations"]["stable"]["commit"],
-            "8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758",
+            "eba1cfd8cfb022d788433bd540a82cc2e4e25245",
         )
         self.assertEqual(
             contract["implementations"]["dev"]["commit"],
-            "a5110cfd15ccf739c442ccb68893ec22f09f74d3",
+            "60fcab4870cb783654486b8127271b2720b028b4",
         )
         self.assertEqual(contract["implementation"], contract["implementations"]["dev"])
         firmware = {item["releaseTag"]: item for item in contract["firmware"]}
