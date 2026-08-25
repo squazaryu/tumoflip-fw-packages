@@ -186,6 +186,26 @@ def build_from_current(
     return validate_index(result)
 
 
+def write_index(path: Path, document: dict[str, Any]) -> None:
+    """Write an index without creating formatting-only automation churn.
+
+    Existing indexes may have been produced by an older serializer. When the
+    validated JSON document is semantically unchanged, preserve those bytes so
+    the scheduled reconciler does not open a PR merely to reformat history.
+    New or changed indexes use the canonical two-space representation.
+    """
+
+    encoded = json.dumps(document, indent=2, ensure_ascii=False) + "\n"
+    if path.is_file():
+        try:
+            existing = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            existing = None
+        if existing == document:
+            return
+    path.write_text(encoded, encoding="utf-8")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("validate", "build"))
@@ -201,7 +221,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             output = args.output or args.index
             document = build_from_current(args.current, existing=args.existing)
-            output.write_text(json.dumps(document, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            write_index(output, document)
             print(f"generated: {output}")
     except (ContractError, OSError, KeyError, TypeError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
