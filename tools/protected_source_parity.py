@@ -114,6 +114,16 @@ def git_ok(repo: Path, *args: str) -> bool:
     ).returncode == 0
 
 
+def git_output(repo: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", *args], cwd=repo, capture_output=True, text=True, check=False
+    )
+    if result.returncode:
+        detail = result.stderr.strip() or "git command failed"
+        raise ParityError(f"{detail}: git {' '.join(args)}")
+    return result.stdout.strip()
+
+
 def git_path_changed(repo: Path, base_commit: str, head_commit: str, source_path: str) -> bool:
     """Return whether a protected source subtree changed between two commits."""
 
@@ -175,10 +185,24 @@ def scan(
     author_heads: Path | None,
     generated_at: str | None,
     community_repo: Path | None = None,
+    implementation_checkout_commit: str | None = None,
 ) -> dict[str, Any]:
     registry_apps, contract = validate_inputs(read_json(registry_path), read_json(imports_path))
     fixtures = load_fixtures(author_heads)
     implementation_commit = contract["implementation"]["commit"]
+    checkout_commit = require_commit(
+        git_output(implementation_repo, "rev-parse", "HEAD"),
+        "implementation checkout commit",
+    )
+    if implementation_checkout_commit is not None:
+        expected_checkout = require_commit(
+            implementation_checkout_commit, "expected implementation checkout commit"
+        )
+        if checkout_commit != expected_checkout:
+            raise ParityError(
+                "implementation checkout does not match resolved current commit: "
+                f"expected={expected_checkout}, actual={checkout_commit}"
+            )
     if not git_ok(implementation_repo, "cat-file", "-e", f"{implementation_commit}^{{commit}}"):
         raise ParityError(f"implementation commit is unavailable: {implementation_commit}")
     if not git_ok(implementation_repo, "merge-base", "--is-ancestor", implementation_commit, "HEAD"):
@@ -267,6 +291,7 @@ def scan(
         "implementation": {
             "repository": contract["implementation"]["repository"],
             "commit": implementation_commit,
+            "checkoutCommit": checkout_commit,
         },
         "overallStatus": "needsReview" if unresolved else "verified",
         "unresolved": unresolved,
@@ -280,6 +305,7 @@ def markdown(report: dict[str, Any]) -> str:
         "",
         f"- status: **{report['overallStatus']}**",
         f"- implementation: `{report['implementation']['repository']}@{report['implementation']['commit']}`",
+        f"- implementation checkout: `{report['implementation']['checkoutCommit']}`",
         f"- unresolved apps: `{len(report['unresolved'])}`",
         "",
         "| App | Status | Reviewed upstream | Current upstream | Details |",
@@ -303,6 +329,7 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--community-commit")
     parser.add_argument("--community-repo", type=Path)
     parser.add_argument("--author-heads", type=Path)
+    parser.add_argument("--implementation-checkout-commit")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--markdown", type=Path, required=True)
     parser.add_argument("--generated-at")
@@ -320,6 +347,7 @@ def main(argv: Iterable[str] | None = None) -> int:
             community_repo=args.community_repo,
             author_heads=args.author_heads,
             generated_at=args.generated_at,
+            implementation_checkout_commit=args.implementation_checkout_commit,
         )
     except ParityError as error:
         print(f"FAIL: {error}", file=sys.stderr)

@@ -39,6 +39,7 @@ class WorkflowSecurityTests(unittest.TestCase):
                 "catalog-index.yml",
                 "implementation-drift.yml",
                 "protected-app-audit.yml",
+                "protected-source-history.yml",
                 "protected-source-parity.yml",
                 "reconcile-community-catalog.yml",
                 "source-matrix-watcher.yml",
@@ -82,6 +83,11 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("contracts/protected-source-parity.json", text)
         self.assertIn("tools/protected_source_parity.py", text)
         self.assertIn("--implementation-repo ../firmware", text)
+        self.assertIn("refs/heads/dev", text)
+        self.assertIn("implementation_current_commit", text)
+        self.assertIn("implementation_baseline_commit", text)
+        self.assertIn("git merge-base --is-ancestor", text)
+        self.assertIn("--implementation-checkout-commit", text)
         self.assertIn("path: community", text)
         self.assertIn("--community-repo ../community", text)
         self.assertIn("Reconcile one canonical review issue", text)
@@ -91,6 +97,30 @@ class WorkflowSecurityTests(unittest.TestCase):
             text.rindex('gh issue edit "$ISSUE_NUMBER"'),
             text.index('gh issue close "$ISSUE_NUMBER"'),
         )
+        self.assertNotIn("contents: write", text)
+        self.assertNotIn("git push", text)
+        self.assertNotIn("gh release", text)
+
+    def test_catalog_reconciliation_uses_current_implementation_checkout(self) -> None:
+        text = (self.root / ".github/workflows/reconcile-community-catalog.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("refs/heads/dev", text)
+        self.assertIn("git -C ../firmware merge-base --is-ancestor", text)
+        self.assertIn("implementation-identity.json", text)
+        self.assertIn("--implementation-checkout-commit", text)
+        self.assertNotIn("Resolve pinned implementation checkout", text)
+
+    def test_protected_source_history_is_fail_closed_and_read_only(self) -> None:
+        text = (self.root / ".github/workflows/protected-source-history.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("tools/protected_source_history.py", text)
+        self.assertIn("releases?per_page=100", text)
+        self.assertIn("fetch-depth: 0", text)
+        self.assertIn("Reconcile one canonical history review issue", text)
+        self.assertIn("Fail closed when historical source review is required", text)
+        self.assertIn('.user.login == "github-actions[bot]"', text)
         self.assertNotIn("contents: write", text)
         self.assertNotIn("git push", text)
         self.assertNotIn("gh release", text)

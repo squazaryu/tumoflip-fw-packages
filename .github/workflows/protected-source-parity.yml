@@ -31,7 +31,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Resolve exact implementation and Community Pack commits
+      - name: Resolve current implementation and Community Pack commits
         id: refs
         working-directory: control
         env:
@@ -39,7 +39,9 @@ jobs:
         run: |
           set -euo pipefail
           IMPLEMENTATION_REPOSITORY="$(jq -r .implementation.repository contracts/protected-source-parity.json)"
-          IMPLEMENTATION_COMMIT="$(jq -r .implementation.commit contracts/protected-source-parity.json)"
+          IMPLEMENTATION_BASELINE_COMMIT="$(jq -r .implementation.commit contracts/protected-source-parity.json)"
+          IMPLEMENTATION_URL="https://github.com/$IMPLEMENTATION_REPOSITORY.git"
+          IMPLEMENTATION_CURRENT_COMMIT="$(git ls-remote "$IMPLEMENTATION_URL" refs/heads/dev | cut -f1)"
           COMMUNITY_REPOSITORY="$(jq -r .community.repository contracts/protected-source-parity.json)"
           COMMUNITY_TAG="$(gh api "repos/$COMMUNITY_REPOSITORY/releases/latest" --jq .tag_name)"
           COMMUNITY_URL="https://github.com/$COMMUNITY_REPOSITORY.git"
@@ -50,24 +52,36 @@ jobs:
             COMMUNITY_COMMIT="$(git ls-remote "$COMMUNITY_URL" "refs/tags/$COMMUNITY_TAG" | cut -f1)"
           fi
           [[ "$IMPLEMENTATION_REPOSITORY" == squazaryu/tumoflip ]]
-          [[ "$IMPLEMENTATION_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$IMPLEMENTATION_BASELINE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$IMPLEMENTATION_CURRENT_COMMIT" =~ ^[0-9a-f]{40}$ ]]
           [[ "$COMMUNITY_COMMIT" =~ ^[0-9a-f]{40}$ ]]
           {
             echo "implementation_repository=$IMPLEMENTATION_REPOSITORY"
-            echo "implementation_commit=$IMPLEMENTATION_COMMIT"
+            echo "implementation_baseline_commit=$IMPLEMENTATION_BASELINE_COMMIT"
+            echo "implementation_current_commit=$IMPLEMENTATION_CURRENT_COMMIT"
             echo "community_repository=$COMMUNITY_REPOSITORY"
             echo "community_tag=$COMMUNITY_TAG"
             echo "community_commit=$COMMUNITY_COMMIT"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Check out exact Tumoflip implementation
+      - name: Check out current Tumoflip implementation
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: ${{ steps.refs.outputs.implementation_repository }}
-          ref: ${{ steps.refs.outputs.implementation_commit }}
+          ref: ${{ steps.refs.outputs.implementation_current_commit }}
           path: firmware
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Prove current implementation and baseline ancestry
+        working-directory: firmware
+        env:
+          IMPLEMENTATION_BASELINE_COMMIT: ${{ steps.refs.outputs.implementation_baseline_commit }}
+          IMPLEMENTATION_CURRENT_COMMIT: ${{ steps.refs.outputs.implementation_current_commit }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$IMPLEMENTATION_CURRENT_COMMIT"
+          git merge-base --is-ancestor "$IMPLEMENTATION_BASELINE_COMMIT" "$IMPLEMENTATION_CURRENT_COMMIT"
 
       - name: Check out exact Community Pack source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -82,7 +96,7 @@ jobs:
         id: parity
         working-directory: control
         env:
-          IMPLEMENTATION_COMMIT: ${{ steps.refs.outputs.implementation_commit }}
+          IMPLEMENTATION_CURRENT_COMMIT: ${{ steps.refs.outputs.implementation_current_commit }}
           COMMUNITY_COMMIT: ${{ steps.refs.outputs.community_commit }}
         run: |
           set +e
@@ -90,6 +104,7 @@ jobs:
             --registry tools/tumoflip/protected_apps_registry.json \
             --imports ../firmware/tools/tumoflip/protected_app_imports.json \
             --implementation-repo ../firmware \
+            --implementation-checkout-commit "$IMPLEMENTATION_CURRENT_COMMIT" \
             --community-commit "$COMMUNITY_COMMIT" \
             --community-repo ../community \
             --output "$RUNNER_TEMP/protected-source-parity.json" \

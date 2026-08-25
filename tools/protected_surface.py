@@ -216,8 +216,69 @@ def branch_report(
     }
 
 
+def audit_pin_entry(
+    *,
+    repo: Path,
+    source: str,
+    branch: str,
+    pin: str,
+    current: str,
+    known_roots: set[str],
+    review_prefixes: list[str],
+) -> dict[str, Any]:
+    relation = commit_relation(repo, pin, current)
+    entry: dict[str, Any] = {
+        "source": source,
+        "branch": branch,
+        "commit": pin,
+        "currentCommit": current,
+        "relation": relation,
+        "status": relation,
+        "stale": relation != "current",
+        "requiresReview": relation != "current",
+        "changedPaths": [],
+        "protectedChanges": [],
+        "reviewChanges": [],
+        "addedRoots": [],
+        "removedRoots": [],
+    }
+    if relation != "behind":
+        return entry
+
+    paths = changed_paths(repo, pin, current)
+    roots_at_pin = set(discover_roots(repo, pin))
+    roots_at_current = set(discover_roots(repo, current))
+    protected_changes = sorted(
+        path for path in paths if any(is_under(path, root) for root in known_roots)
+    )
+    review_changes = sorted(
+        path for path in paths if any(is_under(path, prefix) for prefix in review_prefixes)
+    )
+    added_roots = sorted(roots_at_current - roots_at_pin)
+    removed_roots = sorted(roots_at_pin - roots_at_current)
+    relevant = bool(protected_changes or review_changes or added_roots or removed_roots)
+    entry.update(
+        {
+            "status": "behindRelevant" if relevant else "behindUnrelated",
+            "requiresReview": relevant,
+            "changedPaths": paths,
+            "protectedChanges": protected_changes,
+            "reviewChanges": review_changes,
+            "addedRoots": added_roots,
+            "removedRoots": removed_roots,
+        }
+    )
+    return entry
+
+
 def audit_pin_report(
-    *, repo: Path, ref_by_name: dict[str, str], targets_path: Path | None, parity_path: Path | None
+    *,
+    repo: Path,
+    ref_by_name: dict[str, str],
+    targets_path: Path | None,
+    parity_path: Path | None,
+    known_roots: set[str],
+    review_prefixes: list[str],
 ) -> list[dict[str, Any]]:
     pins: list[dict[str, Any]] = []
     if targets_path is not None and targets_path.exists():
@@ -229,30 +290,34 @@ def audit_pin_report(
                 continue
             pin = require_commit(item.get("commit"), f"audit targets {channel}.commit")
             current = require_commit(git(repo, "rev-parse", ref_by_name[branch]), f"{channel}.current")
-            relation = commit_relation(repo, pin, current)
-            pins.append({
-                "source": f"protected-audit-targets.{channel}",
-                "branch": branch,
-                "commit": pin,
-                "currentCommit": current,
-                "relation": relation,
-                "stale": relation != "current",
-            })
+            pins.append(
+                audit_pin_entry(
+                    repo=repo,
+                    source=f"protected-audit-targets.{channel}",
+                    branch=branch,
+                    pin=pin,
+                    current=current,
+                    known_roots=known_roots,
+                    review_prefixes=review_prefixes,
+                )
+            )
     if parity_path is not None and parity_path.exists() and "dev" in ref_by_name:
         parity = read_json(parity_path)
         item = parity.get("implementation")
         if isinstance(item, dict):
             pin = require_commit(item.get("commit"), "protected-source-parity.commit")
             current = require_commit(git(repo, "rev-parse", ref_by_name["dev"]), "dev.current")
-            relation = commit_relation(repo, pin, current)
-            pins.append({
-                "source": "protected-source-parity",
-                "branch": "dev",
-                "commit": pin,
-                "currentCommit": current,
-                "relation": relation,
-                "stale": relation != "current",
-            })
+            pins.append(
+                audit_pin_entry(
+                    repo=repo,
+                    source="protected-source-parity",
+                    branch="dev",
+                    pin=pin,
+                    current=current,
+                    known_roots=known_roots,
+                    review_prefixes=review_prefixes,
+                )
+            )
     return pins
 
 
@@ -288,9 +353,18 @@ def scan(
                 review_prefixes=contract["reviewPrefixes"],
             )
         )
-    pins = audit_pin_report(repo=repo, ref_by_name=refs, targets_path=targets_path, parity_path=parity_path)
+    pins = audit_pin_report(
+        repo=repo,
+        ref_by_name=refs,
+        targets_path=targets_path,
+        parity_path=parity_path,
+        known_roots=known_roots,
+        review_prefixes=contract["reviewPrefixes"],
+    )
     status = "verified"
-    if any(item["status"] == "needsReview" for item in reports) or any(item["stale"] for item in pins):
+    if any(item["status"] == "needsReview" for item in reports) or any(
+        item["requiresReview"] for item in pins
+    ):
         status = "needsReview"
     elif any(item["status"] == "baselineStale" for item in reports):
         status = "baselineStale"
@@ -346,11 +420,21 @@ def render_markdown(report: dict[str, Any]) -> str:
     if report["auditPins"]:
         lines.extend(["", "## Audit pins", ""])
         for item in report["auditPins"]:
-            state = item["relation"]
+            state = item["status"]
             lines.append(
                 f"- `{item['source']}` on `{item['branch']}`: **{state}**, "
                 f"pin `{item['commit']}`, current `{item['currentCommit']}`."
             )
+            for label, values in (
+                ("Changed paths", item.get("changedPaths", [])),
+                ("Protected application paths", item.get("protectedChanges", [])),
+                ("Review paths", item.get("reviewChanges", [])),
+                ("Added application roots", item.get("addedRoots", [])),
+                ("Removed application roots", item.get("removedRoots", [])),
+            ):
+                if values:
+                    lines.append(f"  - {label}:")
+                    lines.extend(f"    - `{value}`" for value in values)
     lines.extend(
         [
             "",

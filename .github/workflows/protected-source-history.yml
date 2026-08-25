@@ -1,0 +1,154 @@
+name: Audit protected Community Pack source history
+
+on:
+  schedule:
+    - cron: "47 6 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: protected-source-history
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    if: github.ref == 'refs/heads/main' && github.event.repository.default_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Check out exact control commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Resolve every published Community Pack release
+        id: refs
+        working-directory: control
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          repository="$(jq -r .community.repository contracts/protected-source-parity.json)"
+          [[ "$repository" == xMasterX/all-the-plugins ]]
+          tag="$(gh api "repos/$repository/releases/latest" --jq .tag_name)"
+          url="https://github.com/$repository.git"
+          commit="$(git ls-remote "$url" "refs/tags/$tag^{}" | cut -f1)"
+          if [[ -z "$commit" ]]; then
+            commit="$(git ls-remote "$url" "refs/tags/$tag" | cut -f1)"
+          fi
+          [[ "$tag" =~ ^[0-9]{1,2}[a-z]{3}[0-9]{4}(p[0-9]+)?$ ]]
+          [[ "$commit" =~ ^[0-9a-f]{40}$ ]]
+          gh api "repos/$repository/releases?per_page=100" --paginate \
+            --jq '.[] | select((.draft == false) and (.tag_name | test("^[0-9]{1,2}[a-z]{3}[0-9]{4}(p[0-9]+)?$"))) | {tag:.tag_name,publishedAt:.published_at}' \
+            | jq -s 'if length == 0 then error("no published Community Pack releases") else . end' \
+            > "$RUNNER_TEMP/community-releases.json"
+          jq -e 'all(.[]; (.tag | type == "string") and (.publishedAt | type == "string"))' \
+            "$RUNNER_TEMP/community-releases.json" >/dev/null
+          {
+            echo "repository=$repository"
+            echo "tag=$tag"
+            echo "commit=$commit"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Check out latest Community Pack history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: ${{ steps.refs.outputs.repository }}
+          ref: ${{ steps.refs.outputs.commit }}
+          path: community
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prove exact history checkout
+        working-directory: community
+        env:
+          EXPECTED_COMMIT: ${{ steps.refs.outputs.commit }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_COMMIT"
+
+      - name: Run fail-closed historical source scan
+        id: scan
+        working-directory: control
+        env:
+          COMMUNITY_HEAD: ${{ steps.refs.outputs.commit }}
+        run: |
+          set +e
+          python3 tools/protected_source_history.py \
+            --registry tools/tumoflip/protected_apps_registry.json \
+            --releases "$RUNNER_TEMP/community-releases.json" \
+            --community-repo ../community \
+            --community-head "$COMMUNITY_HEAD" \
+            --output "$RUNNER_TEMP/protected-source-history.json" \
+            --markdown "$RUNNER_TEMP/protected-source-history.md"
+          status=$?
+          set -e
+          [[ "$status" == 0 || "$status" == 1 ]]
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Upload historical source report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: protected-source-history
+          path: |
+            ${{ runner.temp }}/community-releases.json
+            ${{ runner.temp }}/protected-source-history.json
+            ${{ runner.temp }}/protected-source-history.md
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Reconcile one canonical history review issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATUS: ${{ steps.scan.outputs.status }}
+        run: |
+          set -euo pipefail
+          REPORT="$RUNNER_TEMP/protected-source-history.md"
+          MARKER='<!-- protected-source-history -->'
+          TITLE='Review protected Community Pack source history'
+          gh api "repos/$GITHUB_REPOSITORY/issues?state=all&per_page=100" \
+            --paginate --slurp > "$RUNNER_TEMP/issue-pages.json"
+          ISSUE_NUMBER="$(jq -r --arg marker "$MARKER" --arg title "$TITLE" \
+            '[.[][] | select(.pull_request == null) | select(.user.login == "github-actions[bot]") | select(.title == $title and ((.body // "") | startswith($marker)))][0].number // empty' \
+            "$RUNNER_TEMP/issue-pages.json")"
+          verify_issue() {
+            gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/issue.json"
+            jq -e --arg marker "$MARKER" --arg title "$TITLE" \
+              '.pull_request == null and .user.login == "github-actions[bot]" and .title == $title and ((.body // "") | startswith($marker))' \
+              "$RUNNER_TEMP/issue.json" >/dev/null
+          }
+          if [[ "$STATUS" == 1 ]]; then
+            if [[ -z "$ISSUE_NUMBER" ]]; then
+              ISSUE_URL="$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body-file "$REPORT")"
+              ISSUE_NUMBER="${ISSUE_URL##*/}"
+              verify_issue
+            else
+              verify_issue
+              gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$REPORT"
+              verify_issue
+            fi
+          elif [[ -n "$ISSUE_NUMBER" ]]; then
+            verify_issue
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$REPORT"
+            verify_issue
+            gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+              --comment "Protected Community Pack source history is covered through the latest release."
+          fi
+
+      - name: Fail closed when historical source review is required
+        if: steps.scan.outputs.status == '1'
+        run: |
+          echo "Protected Community Pack source history requires review; see the canonical issue and report." >&2
+          exit 1

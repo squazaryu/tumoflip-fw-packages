@@ -52,13 +52,22 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Resolve pinned implementation checkout
+      - name: Resolve current implementation checkout
         working-directory: control
         run: |
           set -euo pipefail
-          implementation="$(jq -r .implementation.commit contracts/protected-source-parity.json)"
-          git clone --quiet https://github.com/squazaryu/tumoflip.git ../firmware
-          git -C ../firmware checkout --quiet "$implementation"
+          repository="$(jq -r .implementation.repository contracts/protected-source-parity.json)"
+          baseline="$(jq -r .implementation.commit contracts/protected-source-parity.json)"
+          url="https://github.com/$repository.git"
+          current="$(git ls-remote "$url" refs/heads/dev | cut -f1)"
+          [[ "$repository" == squazaryu/tumoflip ]]
+          [[ "$baseline" =~ ^[0-9a-f]{40}$ && "$current" =~ ^[0-9a-f]{40}$ ]]
+          git clone --quiet "$url" ../firmware
+          git -C ../firmware checkout --quiet "$current"
+          git -C ../firmware merge-base --is-ancestor "$baseline" "$current"
+          jq -n --arg repository "$repository" --arg baseline "$baseline" --arg current "$current" \
+            '{repository:$repository,baselineCommit:$baseline,currentCommit:$current}' \
+            > implementation-identity.json
 
       - name: Download latest immutable audit ledger
         run: |
@@ -74,10 +83,12 @@ jobs:
           COMMUNITY_COMMIT: ${{ steps.source.outputs.commit }}
         run: |
           set +e
+          IMPLEMENTATION_CURRENT_COMMIT="$(jq -r .currentCommit implementation-identity.json)"
           python3 tools/protected_source_parity.py \
             --registry tools/tumoflip/protected_apps_registry.json \
             --imports ../firmware/tools/tumoflip/protected_app_imports.json \
             --implementation-repo ../firmware \
+            --implementation-checkout-commit "$IMPLEMENTATION_CURRENT_COMMIT" \
             --community-commit "$COMMUNITY_COMMIT" \
             --community-repo ../community \
             --output "$RUNNER_TEMP/parity.json" \
@@ -113,6 +124,7 @@ jobs:
             ${{ runner.temp }}/parity.md
             ${{ runner.temp }}/catalog-reconciliation.json
             ${{ runner.temp }}/catalog-reconciliation.md
+            control/implementation-identity.json
             ledger.json
           if-no-files-found: error
           retention-days: 14

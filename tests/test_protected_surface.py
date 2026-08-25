@@ -149,6 +149,49 @@ class ProtectedSurfaceTests(unittest.TestCase):
         self.assertEqual(report["status"], "needsReview")
         self.assertEqual(report["auditPins"][0]["relation"], "unavailable")
 
+    def test_relevant_stale_pin_lists_changed_application_paths(self) -> None:
+        (self.repo / "applications_user/owned/app.c").write_text("changed", encoding="utf-8")
+        self.git("add", ".")
+        self.git("commit", "-qm", "protected app change")
+        targets = self.root / "targets.json"
+        targets.write_text(
+            json.dumps({"implementations": {"dev": {"commit": self.baseline}}}),
+            encoding="utf-8",
+        )
+        report = scan(
+            repo=self.repo,
+            contract_path=self.contract,
+            registry_path=self.registry,
+            refs={"dev": "HEAD"},
+            targets_path=targets,
+        )
+        pin = report["auditPins"][0]
+        self.assertEqual(pin["status"], "behindRelevant")
+        self.assertTrue(pin["requiresReview"])
+        self.assertIn("applications_user/owned/app.c", pin["changedPaths"])
+        self.assertIn("applications_user/owned/app.c", pin["protectedChanges"])
+
+    def test_unrelated_stale_pin_is_visible_without_redundant_review(self) -> None:
+        (self.repo / "README.md").write_text("documentation", encoding="utf-8")
+        self.git("add", ".")
+        self.git("commit", "-qm", "documentation change")
+        targets = self.root / "targets.json"
+        targets.write_text(
+            json.dumps({"implementations": {"dev": {"commit": self.baseline}}}),
+            encoding="utf-8",
+        )
+        report = scan(
+            repo=self.repo,
+            contract_path=self.contract,
+            registry_path=self.registry,
+            refs={"dev": "HEAD"},
+            targets_path=targets,
+        )
+        pin = report["auditPins"][0]
+        self.assertEqual(pin["status"], "behindUnrelated")
+        self.assertFalse(pin["requiresReview"])
+        self.assertEqual(report["status"], "baselineStale")
+
     def test_ahead_audit_pin_fails_closed(self) -> None:
         (self.repo / "applications_user/upstream/new.c").write_text("future", encoding="utf-8")
         self.git("add", ".")

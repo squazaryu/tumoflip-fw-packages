@@ -121,6 +121,19 @@ class ProtectedSourceParityTests(unittest.TestCase):
         )
         self.assertEqual(report["overallStatus"], "verified")
         self.assertEqual(report["unresolved"], [])
+        self.assertEqual(report["implementation"]["checkoutCommit"], self.implementation_commit)
+
+    def test_resolved_checkout_identity_is_fail_closed(self) -> None:
+        with self.assertRaisesRegex(ParityError, "does not match resolved current commit"):
+            scan(
+                registry_path=self.registry,
+                imports_path=self.imports,
+                implementation_repo=self.repo,
+                community_commit=None,
+                author_heads=self.fixtures,
+                generated_at="2026-08-23T00:00:00+00:00",
+                implementation_checkout_commit="b" * 40,
+            )
 
     def test_upstream_change_cannot_be_hidden_by_unchanged_package_bytes(self) -> None:
         fixture = json.loads(self.fixtures.read_text(encoding="utf-8"))
