@@ -10,8 +10,8 @@
     },
     "main": {
       "ref": "refs/heads/main",
-      "commit": "148a2618b57016ce053519b74cc0aba689f24e26",
-      "label": "main-2026-08-24"
+      "commit": "d34ecaf1714ec5b5516eb6619d00d9e0d5462e15",
+      "label": "main-audit-sync-2026-08-25"
     }
   },
   "ownedSourcePaths": [
