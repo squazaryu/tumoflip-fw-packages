@@ -4,17 +4,17 @@
   "sourceRepository": "squazaryu/tumoflip",
   "channels": {
     "stable": {
-      "currentTag": "fw-packages-stable-004",
-      "currentRevision": 4,
-      "nextNativeRevision": 5,
-      "nextNativeTag": "fw-packages-stable-005",
+      "currentTag": "fw-packages-stable-005",
+      "currentRevision": 5,
+      "nextNativeRevision": 6,
+      "nextNativeTag": "fw-packages-stable-006",
       "seededFromLegacy": false
     },
     "dev": {
-      "currentTag": "fw-packages-dev-010",
-      "currentRevision": 10,
-      "nextNativeRevision": 11,
-      "nextNativeTag": "fw-packages-dev-011",
+      "currentTag": "fw-packages-dev-011",
+      "currentRevision": 11,
+      "nextNativeRevision": 12,
+      "nextNativeTag": "fw-packages-dev-012",
       "seededFromLegacy": false
     }
   }
