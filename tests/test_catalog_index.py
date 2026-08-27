@@ -19,7 +19,7 @@ class CatalogIndexTests(unittest.TestCase):
     def test_index_is_derived_from_current_contract(self) -> None:
         index = build_from_current(self.root / "contracts/current-releases.json", generated_at="test")
         self.assertEqual(index["channels"]["stable"]["current_revision"], 5)
-        self.assertEqual(index["channels"]["dev"]["current_revision"], 11)
+        self.assertEqual(index["channels"]["dev"]["current_revision"], 12)
         self.assertEqual(index["channels"]["stable"]["releases"][0]["tag"], "fw-packages-stable-005")
 
     def test_build_preserves_historical_revisions(self) -> None:
@@ -34,7 +34,7 @@ class CatalogIndexTests(unittest.TestCase):
         )
         self.assertEqual(
             [item["revision"] for item in index["channels"]["dev"]["releases"]],
-            [1, 2, 3, 4, 5, 7, 8, 9, 10, 11],
+            [1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12],
         )
 
     def test_unchanged_index_preserves_existing_bytes(self) -> None:
