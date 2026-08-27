@@ -208,15 +208,22 @@ class NativeReleaseTests(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, "exactly 2"):
             load_native_plan(control, "dev", 9, self.source_commit, self.publisher_commit)
 
-    def test_repository_has_no_unpublished_release_plan(self) -> None:
-        with self.assertRaisesRegex(ContractError, "no exact non-empty overlay plan"):
-            load_native_plan(
-                self.repository,
-                "dev",
-                9,
-                self.source_commit,
-                self.publisher_commit,
-            )
+    def test_repository_has_authorized_morse_release_plan(self) -> None:
+        policy = json.loads(
+            (self.repository / "contracts/native-build-policy.json").read_text()
+        )
+        source_commit = policy["releasePlans"]["fw-packages-dev-009"]["sourceCommit"]
+        plan = load_native_plan(
+            self.repository,
+            "dev",
+            9,
+            source_commit,
+            self.publisher_commit,
+        )
+        self.assertEqual(plan["overlayTargets"], ["apps/Tools/morse_player.fap"])
+        self.assertEqual(
+            plan["overlayGroups"], {"apps/Tools/morse_player.fap": "base"}
+        )
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
                 self.repository,
@@ -277,6 +284,7 @@ def package_extapp_exports():
         plan["baseRelease"] = base_contract
         plan["selectedOverlays"] = {"fixture": "apps/Module One/fixture.fap"}
         plan["overlayTargets"] = ["apps/Module One/fixture.fap"]
+        plan["overlayGroups"] = {"apps/Module One/fixture.fap": "module_one"}
         plan["maxChangedTargets"] = 1
         commands: list[tuple[str, ...]] = []
 
@@ -328,6 +336,53 @@ def package_extapp_exports():
         )
         self.assertFalse(any(path.name.startswith(".native.") for path in self.root.iterdir()))
 
+    def test_build_adds_a_new_allowlisted_overlay_entry(self) -> None:
+        source = self.root / "source-addition"
+        source.mkdir()
+        source_contract = source / "tools/tumoflip/validate_release.py"
+        source_contract.parent.mkdir(parents=True)
+        source_contract.write_text(
+            '''
+PACKAGE_RELEASE_OVERLAY_FILES = {"apps/Tools/morse_player.fap"}
+def package_extapp_exports():
+    return {"morse_player.fap": "apps/Tools/morse_player.fap"}
+'''
+        )
+        artifact = source / "build/f7-firmware-C/.extapps/morse_player.fap"
+        artifact.parent.mkdir(parents=True)
+        artifact.write_bytes(b"new Morse Player payload")
+        base, base_contract = self._base_output()
+        plan = copy.deepcopy(self.plan)
+        plan["selectedOverlays"] = {"morse_player": "apps/Tools/morse_player.fap"}
+        plan["overlayTargets"] = ["apps/Tools/morse_player.fap"]
+        plan["overlayGroups"] = {"apps/Tools/morse_player.fap": "base"}
+        plan["maxChangedTargets"] = 1
+        plan["baseRelease"] = base_contract
+
+        def runner(command, *, cwd):
+            command = tuple(command)
+            if command[:3] == ("git", "rev-parse", "HEAD"):
+                return subprocess.CompletedProcess(command, 0, self.source_commit + "\n", "")
+            if command[:3] == ("git", "status", "--porcelain"):
+                return subprocess.CompletedProcess(command, 0, "", "")
+            if command[:3] == ("git", "submodule", "status"):
+                return subprocess.CompletedProcess(command, 0, "", "")
+            raise AssertionError(command)
+
+        output = self.root / "addition"
+        build_native_release(source, base, output, plan, runner=runner)
+        manifest = json.loads((output / "tumoflip-packages.json").read_text())
+        entries = {
+            entry["source"]: entry
+            for group in manifest["packages"].values()
+            for entry in group
+        }
+        self.assertIn("apps/Tools/morse_player.fap", entries)
+        self.assertEqual(entries["apps/Tools/morse_player.fap"]["target"], "/ext/apps/Tools/morse_player.fap")
+        with zipfile.ZipFile(output / "tumoflip-packages.zip") as archive:
+            self.assertEqual(archive.read("apps/Tools/morse_player.fap"), b"new Morse Player payload")
+        verify_native_release(output, plan, base)
+
     def test_build_failure_never_exposes_partial_output(self) -> None:
         source = self.root / "source"
         source.mkdir()
@@ -346,6 +401,7 @@ def package_extapp_exports():
         plan["baseRelease"] = base_contract
         plan["selectedOverlays"] = {"fixture": "apps/Module One/fixture.fap"}
         plan["overlayTargets"] = ["apps/Module One/fixture.fap"]
+        plan["overlayGroups"] = {"apps/Module One/fixture.fap": "module_one"}
         plan["maxChangedTargets"] = 1
 
         def runner(command: tuple[str, ...] | list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -383,6 +439,7 @@ def package_extapp_exports():
         plan["baseRelease"] = base_contract
         plan["selectedOverlays"] = {"fixture": "apps/Module One/fixture.fap"}
         plan["overlayTargets"] = ["apps/Module One/fixture.fap"]
+        plan["overlayGroups"] = {"apps/Module One/fixture.fap": "module_one"}
         plan["maxChangedTargets"] = 1
 
         def runner(command, *, cwd):
@@ -462,6 +519,7 @@ def package_extapp_exports():
         plan["baseRelease"] = base_contract
         plan["selectedOverlays"] = {"fixture": entry["source"]}
         plan["overlayTargets"] = [entry["source"]]
+        plan["overlayGroups"] = {entry["source"]: "module_one"}
         plan["maxChangedTargets"] = 1
 
         def runner(command, *, cwd):

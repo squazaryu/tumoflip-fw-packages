@@ -75,8 +75,11 @@ create false mass updates.
 1. proves the full source SHA and a clean tracked checkout;
 2. requires the channel's pinned firmware tag, commit, release ID, version, API,
    and target, independently from the predecessor catalog release ID;
-3. preserves package topology, cleanup entries, firmware artifact evidence,
-   and every non-overlay ZIP member payload byte from the immutable predecessor;
+3. preserves cleanup entries, firmware artifact evidence, and every non-overlay
+   ZIP member payload byte from the immutable predecessor. A reviewed overlay
+   may replace an existing package or add one new package path; additions must
+   be assigned to an explicit package group and use the canonical `/ext/...`
+   target derived from that source path;
 4. adds `catalog_channel`, `catalog_revision`, and the immutable release tag;
 5. recomputes the content-addressed manifest ID;
 6. emits a two-asset checksum file and `catalog-provenance.json`;
