@@ -29,6 +29,23 @@ class NativeReleaseTests(unittest.TestCase):
         self.fixture = self.repository / "tests/fixtures/native"
         self.control = self.root / "control"
         shutil.copytree(self.repository / "contracts", self.control / "contracts")
+        current_path = self.control / "contracts/current-releases.json"
+        current = json.loads(current_path.read_text())
+        current["channels"]["dev"]["tag"] = "fw-packages-dev-008"
+        current["channels"]["dev"]["revision"] = 8
+        current_path.write_text(json.dumps(current))
+        lineage_path = self.control / "contracts/catalog-lineage.json"
+        lineage = json.loads(lineage_path.read_text())
+        lineage["channels"]["dev"].update(
+            {
+                "currentTag": "fw-packages-dev-008",
+                "currentRevision": 8,
+                "nextNativeRevision": 9,
+                "nextNativeTag": "fw-packages-dev-009",
+                "seededFromLegacy": True,
+            }
+        )
+        lineage_path.write_text(json.dumps(lineage))
         policy_path = self.control / "contracts/native-build-policy.json"
         policy = json.loads(policy_path.read_text())
         policy["releasePlans"]["fw-packages-dev-009"] = {
@@ -196,11 +213,11 @@ class NativeReleaseTests(unittest.TestCase):
     def test_plan_rejects_wrong_next_revision_and_parallelism_drift(self) -> None:
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
-                self.repository, "dev", 10, self.source_commit, self.publisher_commit
+                self.repository, "dev", 11, self.source_commit, self.publisher_commit
             )
 
         control = self.root / "parallelism-control"
-        shutil.copytree(self.repository / "contracts", control / "contracts")
+        shutil.copytree(self.control / "contracts", control / "contracts")
         path = control / "contracts/source-checkouts.json"
         value = json.loads(path.read_text())
         value["buildParallelism"] = 3
@@ -208,22 +225,16 @@ class NativeReleaseTests(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, "exactly 2"):
             load_native_plan(control, "dev", 9, self.source_commit, self.publisher_commit)
 
-    def test_repository_has_authorized_morse_release_plan(self) -> None:
+    def test_repository_retains_morse_overlay_allowlist_after_publication(self) -> None:
         policy = json.loads(
             (self.repository / "contracts/native-build-policy.json").read_text()
         )
-        source_commit = policy["releasePlans"]["fw-packages-dev-009"]["sourceCommit"]
-        plan = load_native_plan(
-            self.repository,
-            "dev",
-            9,
-            source_commit,
-            self.publisher_commit,
-        )
-        self.assertEqual(plan["overlayTargets"], ["apps/Tools/morse_player.fap"])
+        self.assertNotIn("fw-packages-dev-009", policy["releasePlans"])
         self.assertEqual(
-            plan["overlayGroups"], {"apps/Tools/morse_player.fap": "base"}
+            policy["allowedOverlays"]["morse_player"],
+            "apps/Tools/morse_player.fap",
         )
+        self.assertEqual(policy["overlayGroups"]["morse_player"], "base")
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
                 self.repository,

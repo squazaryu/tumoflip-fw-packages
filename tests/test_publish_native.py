@@ -152,6 +152,23 @@ class NativePublicationTests(unittest.TestCase):
         self.repository = Path(__file__).resolve().parents[1]
         self.control = self.root / "control"
         shutil.copytree(self.repository / "contracts", self.control / "contracts")
+        current_path = self.control / "contracts/current-releases.json"
+        current = json.loads(current_path.read_text())
+        current["channels"]["dev"]["tag"] = "fw-packages-dev-008"
+        current["channels"]["dev"]["revision"] = 8
+        current_path.write_text(json.dumps(current))
+        lineage_path = self.control / "contracts/catalog-lineage.json"
+        lineage = json.loads(lineage_path.read_text())
+        lineage["channels"]["dev"].update(
+            {
+                "currentTag": "fw-packages-dev-008",
+                "currentRevision": 8,
+                "nextNativeRevision": 9,
+                "nextNativeTag": "fw-packages-dev-009",
+                "seededFromLegacy": True,
+            }
+        )
+        lineage_path.write_text(json.dumps(lineage))
         policy_path = self.control / "contracts/native-build-policy.json"
         policy = json.loads(policy_path.read_text())
         policy["releasePlans"]["fw-packages-dev-009"] = {
