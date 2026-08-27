@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "repository": "squazaryu/tumoflip-fw-packages",
-  "generated_at": "2026-08-27T09:04:00+00:00",
+  "generated_at": "2026-08-27T10:45:21+00:00",
   "selection_policy": {
     "auto": "highest compatible active revision",
     "manual": "any compatible active or legacy revision",
@@ -19,7 +19,14 @@
           "manifest_sha256": "62fc425cfb89417fbfc3b0c5ecc83bd3daeaf3dc8ed2b80a6a850137edc214a2",
           "archive_sha256": "efb1d259115fcd938eb16b7548231052d75a739870a9fb66af075116aca9b552",
           "state": "legacy",
-          "compatibility": {"targets": [7], "api_majors": [88]}
+          "compatibility": {
+            "targets": [
+              7
+            ],
+            "api_majors": [
+              88
+            ]
+          }
         },
         {
           "revision": 4,
@@ -41,7 +48,7 @@
       ]
     },
     "dev": {
-      "current_revision": 9,
+      "current_revision": 10,
       "releases": [
         {
           "revision": 1,
@@ -51,7 +58,14 @@
           "manifest_sha256": "2592b4146bf12a98047f5ff74849052b9af87a7173cea5242b2c593f5c3f697f",
           "archive_sha256": "3069ee96d734397bc38789cc228f7ae7464efc6841008bdba99bec498b186287",
           "state": "legacy",
-          "compatibility": {"targets": [7], "api_majors": [88]}
+          "compatibility": {
+            "targets": [
+              7
+            ],
+            "api_majors": [
+              88
+            ]
+          }
         },
         {
           "revision": 2,
@@ -61,7 +75,14 @@
           "manifest_sha256": "d04f73b8db9c0a1a4f2534bd6acdeea8309f5feada153617bec00abf8d99f5d0",
           "archive_sha256": "444cea297b12e8f9e117a8c6913b312c8c051f358dad1372802aeea48a0f71ee",
           "state": "legacy",
-          "compatibility": {"targets": [7], "api_majors": [88]}
+          "compatibility": {
+            "targets": [
+              7
+            ],
+            "api_majors": [
+              88
+            ]
+          }
         },
         {
           "revision": 3,
@@ -71,7 +92,14 @@
           "manifest_sha256": "404ac4f3ed9055bd9094cd74e95c13559041700eeee38123f7f8c9170036798a",
           "archive_sha256": "5368f3094f32c0d1c7ca16ea321c95009ab38aafd95bcd61f8204661f0582312",
           "state": "legacy",
-          "compatibility": {"targets": [7], "api_majors": [88]}
+          "compatibility": {
+            "targets": [
+              7
+            ],
+            "api_majors": [
+              88
+            ]
+          }
         },
         {
           "revision": 4,
@@ -81,7 +109,14 @@
           "manifest_sha256": "b7ec500ffb58c620c253327d950d6dece1ef3e9c4be0da2b7bb433e210d5c425",
           "archive_sha256": "56282f83e274298a34c08ff1046dee4c6d906562d54c1e870527440df0213fe7",
           "state": "legacy",
-          "compatibility": {"targets": [7], "api_majors": [88]}
+          "compatibility": {
+            "targets": [
+              7
+            ],
+            "api_majors": [
+              88
+            ]
+          }
         },
         {
           "revision": 5,
@@ -91,7 +126,14 @@
           "manifest_sha256": "f469e91db78f77449f1d6ff2853a8b70479a6cb635f5f6205818cef421b759be",
           "archive_sha256": "4ed1b743291a06c5fb45ce95a5843fcadf3de96a75811fb50a9ddad808bfc19c",
           "state": "legacy",
-          "compatibility": {"targets": [7], "api_majors": [88]}
+          "compatibility": {
+            "targets": [
+              7
+            ],
+            "api_majors": [
+              88
+            ]
+          }
         },
         {
           "revision": 7,
@@ -101,7 +143,14 @@
           "manifest_sha256": "f2ab7b5b164780c313a268043a3115bac6e7b41d9b746fee47def242ad3cd6c1",
           "archive_sha256": "8d0d08d4728d9ace2b3fae62c7e5b903d8e1296cc176fb924025cb0148c0aed0",
           "state": "legacy",
-          "compatibility": {"targets": [7], "api_majors": [88]}
+          "compatibility": {
+            "targets": [
+              7
+            ],
+            "api_majors": [
+              88
+            ]
+          }
         },
         {
           "revision": 8,
@@ -127,6 +176,23 @@
           "release_id": "8fa9d4297019ec3f5d828f7f53e297fd2bb276753303a3c1e61f46af809f7d86",
           "manifest_sha256": "1721ac9736bcbbcb17c596ec299d0cb593db631a5ce48f7353982a2ad80e28d1",
           "archive_sha256": "16ecd0914e126ce4a5162dc301dfb456682909475a4ab3afcb7c2cbdf548d584",
+          "state": "active",
+          "compatibility": {
+            "targets": [
+              7
+            ],
+            "api_majors": [
+              88
+            ]
+          }
+        },
+        {
+          "revision": 10,
+          "tag": "fw-packages-dev-010",
+          "repository": "squazaryu/tumoflip-fw-packages",
+          "release_id": "32054ae98476b33d41ff0c261a73fd10f89bf3b15fe7d96a3bd44cca19e3684e",
+          "manifest_sha256": "0455900bdde3e8551520ca8d2b9a98e41120585576842d45e29490537ecb4e8b",
+          "archive_sha256": "b45ecd14b0d2baffc6aef680b0a0676de6e006a7b9147cbe78dce4f369d8bd92",
           "state": "active",
           "compatibility": {
             "targets": [
