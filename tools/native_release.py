@@ -129,6 +129,7 @@ def load_native_plan(
     if build_runner != "ubuntu-24.04" or toolchain_version != "39":
         raise ContractError("native build environment contract differs")
     allowed_overlays = policy.get("allowedOverlays")
+    overlay_groups = policy.get("overlayGroups")
     release_plans = policy.get("releasePlans")
     if (
         policy.get("schema") != 1
@@ -142,6 +143,9 @@ def load_native_plan(
             for name, target in allowed_overlays.items()
         )
         or len(set(allowed_overlays.values())) != len(allowed_overlays)
+        or not isinstance(overlay_groups, dict)
+        or set(overlay_groups) != set(allowed_overlays)
+        or any(group not in PACKAGE_GROUPS for group in overlay_groups.values())
         or not isinstance(release_plans, dict)
         or set(release_plans) - {
             str(value.get("nextNativeTag"))
@@ -191,6 +195,9 @@ def load_native_plan(
         )
     selected_overlays = {
         name: allowed_overlays[name] for name in sorted(selected_names)
+    }
+    selected_overlay_groups = {
+        selected_overlays[name]: overlay_groups[name] for name in selected_overlays
     }
     if (
         base_release.get("tag") != channel_lineage.get("currentTag")
@@ -243,6 +250,7 @@ def load_native_plan(
         "baseRelease": base_release,
         "selectedOverlays": selected_overlays,
         "overlayTargets": sorted(selected_overlays.values()),
+        "overlayGroups": selected_overlay_groups,
         "maxChangedTargets": len(selected_overlays),
         "buildEnvironment": {
             "runner": build_runner,
@@ -543,16 +551,25 @@ def _compose_selected_release(
     if not isinstance(packages, dict):
         raise ContractError("immutable base package topology is invalid")
     base_entries = _entries_by_source(base)
-    missing = selected_paths - set(base_entries)
-    if missing:
-        raise ContractError(
-            f"selected overlay is absent from immutable base: {sorted(missing)[0]}"
-        )
+    selected_groups = plan.get("overlayGroups")
+    if selected_groups is None:
+        selected_groups = {
+            source: base_entries[source][0]
+            for source in selected_paths
+            if source in base_entries
+        }
+    if (
+        not isinstance(selected_groups, dict)
+        or set(selected_groups) != selected_paths
+        or any(group not in PACKAGE_GROUPS for group in selected_groups.values())
+    ):
+        raise ContractError("selected overlay groups are invalid")
+    existing_paths = selected_paths & set(base_entries)
     with zipfile.ZipFile(base_directory / "tumoflip-packages.zip") as base_zip:
-        base_payloads = {source: base_zip.read(source) for source in selected_paths}
+        base_payloads = {source: base_zip.read(source) for source in existing_paths}
     synced: list[dict[str, Any]] = []
     for source in sorted(selected_paths):
-        group, old_entry = base_entries[source]
+        expected_group = selected_groups[source]
         filename = exports[source]
         artifact = build_directory / ".extapps" / filename
         if not artifact.is_file():
@@ -560,11 +577,25 @@ def _compose_selected_release(
         data = artifact.read_bytes()
         if not data:
             raise ContractError(f"selected source build artifact is empty: {filename}")
-        if _runtime_equivalent_fap(base_payloads[source], data):
-            raise ContractError(f"selected overlay has no runtime change: {source}")
+        if source in base_entries:
+            group, old_entry = base_entries[source]
+            if group != expected_group:
+                raise ContractError(f"selected overlay group differs: {source}")
+            if _runtime_equivalent_fap(base_payloads[source], data):
+                raise ContractError(f"selected overlay has no runtime change: {source}")
+            target = old_entry["target"]
+        else:
+            group = expected_group
+            target = f"/ext/{source}"
+            if any(
+                isinstance(entry, dict) and entry.get("target") == target
+                for entries in packages.values()
+                for entry in entries
+            ):
+                raise ContractError(f"selected overlay target collides with base: {source}")
         replacement = {
             "source": source,
-            "target": old_entry["target"],
+            "target": target,
             "bytes": len(data),
             "sha256": hashlib.sha256(data).hexdigest(),
             "md5": hashlib.md5(data).hexdigest(),
@@ -574,9 +605,14 @@ def _compose_selected_release(
             for index, entry in enumerate(packages[group])
             if isinstance(entry, dict) and entry.get("source") == source
         ]
-        if len(matches) != 1:
+        if source in base_entries and len(matches) != 1:
             raise ContractError(f"selected overlay route is ambiguous: {source}")
-        packages[group][matches[0]] = replacement
+        if source in base_entries:
+            packages[group][matches[0]] = replacement
+        else:
+            if group not in packages:
+                raise ContractError(f"selected overlay group is missing: {group}")
+            packages[group].append(replacement)
         synced.append(
             {
                 "source": f".extapps/{filename}",
@@ -663,11 +699,27 @@ def verify_bounded_delta(
     _validate_final_manifest_identity(candidate, plan)
     base_entries = _entries_by_source(base)
     candidate_entries = _entries_by_source(candidate)
-    if set(base_entries) != set(candidate_entries):
-        raise ContractError("native package topology differs from immutable base")
     allowed = set(plan["overlayTargets"])
-    changed: set[str] = set()
-    for source in sorted(base_entries):
+    base_sources = set(base_entries)
+    candidate_sources = set(candidate_entries)
+    removed = base_sources - candidate_sources
+    added = candidate_sources - base_sources
+    if removed:
+        raise ContractError("native package topology removed an immutable base entry")
+    if added - allowed:
+        raise ContractError("native package topology added an unapproved entry")
+    selected_groups = plan.get("overlayGroups", {})
+    if not isinstance(selected_groups, dict):
+        raise ContractError("native overlay groups are missing")
+    for source in sorted(added):
+        group, entry = candidate_entries[source]
+        if selected_groups.get(source) != group:
+            raise ContractError(f"native package group differs: {source}")
+        if entry.get("target") != f"/ext/{source}":
+            raise ContractError(f"native package target differs: {source}")
+
+    changed: set[str] = set(added)
+    for source in sorted(base_sources):
         old_group, old_entry = base_entries[source]
         new_group, new_entry = candidate_entries[source]
         if old_group != new_group or old_entry.get("target") != new_entry.get("target"):
@@ -699,9 +751,13 @@ def verify_bounded_delta(
         raise ContractError("native target firmware release lineage differs")
     with zipfile.ZipFile(base_directory / "tumoflip-packages.zip") as old_zip:
         with zipfile.ZipFile(directory / "tumoflip-packages.zip") as new_zip:
-            if set(old_zip.namelist()) != set(new_zip.namelist()):
-                raise ContractError("native ZIP topology differs from immutable base")
-            for source in sorted(set(base_entries) - allowed):
+            old_names = set(old_zip.namelist())
+            new_names = set(new_zip.namelist())
+            if old_names - new_names:
+                raise ContractError("native ZIP removed an immutable base member")
+            if new_names - old_names - allowed:
+                raise ContractError("native ZIP added an unapproved member")
+            for source in sorted(base_sources - allowed):
                 if old_zip.read(source) != new_zip.read(source):
                     raise ContractError(f"native ZIP changed non-overlay payload: {source}")
     return sorted(changed)
