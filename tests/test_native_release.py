@@ -48,6 +48,10 @@ class NativeReleaseTests(unittest.TestCase):
         lineage_path.write_text(json.dumps(lineage))
         policy_path = self.control / "contracts/native-build-policy.json"
         policy = json.loads(policy_path.read_text())
+        # The production policy may contain a plan for a later revision. Tests
+        # replace the channel lineage with a dev-009 fixture, so isolate the
+        # fixture from that live plan before adding its own exact plan.
+        policy["releasePlans"] = {}
         policy["releasePlans"]["fw-packages-dev-009"] = {
             "sourceCommit": self.source_commit,
             "selectedOverlays": ["esp_flasher"],
