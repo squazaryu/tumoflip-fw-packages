@@ -38,5 +38,12 @@
     "totp_cli_update_plugin": "base",
     "totp_cli_version_plugin": "base"
   },
-  "releasePlans": {}
+  "releasePlans": {
+    "fw-packages-dev-010": {
+      "sourceCommit": "74fa15cbbad96db1d1e40cbeaa83810b6013f96d",
+      "selectedOverlays": [
+        "morse_player"
+      ]
+    }
+  }
 }
