@@ -46,18 +46,5 @@
     "totp_cli_update_plugin": "base",
     "totp_cli_version_plugin": "base"
   },
-  "releasePlans": {
-    "fw-packages-stable-005": {
-      "mode": "data",
-      "sourceCommit": "eba1cfd8cfb022d788433bd540a82cc2e4e25245",
-      "selectedOverlays": [],
-      "selectedDataOverlays": ["utergrooll_em4100", "utergrooll_ds1990"]
-    },
-    "fw-packages-dev-011": {
-      "mode": "data",
-      "sourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
-      "selectedOverlays": [],
-      "selectedDataOverlays": ["utergrooll_em4100", "utergrooll_ds1990"]
-    }
-  }
+  "releasePlans": {}
 }

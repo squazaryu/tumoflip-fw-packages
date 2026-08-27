@@ -273,7 +273,7 @@ class NativeReleaseTests(unittest.TestCase):
     def test_plan_rejects_wrong_next_revision_and_parallelism_drift(self) -> None:
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
-                self.repository, "dev", 12, self.source_commit, self.publisher_commit
+                self.repository, "dev", 13, self.source_commit, self.publisher_commit
             )
 
         control = self.root / "parallelism-control"

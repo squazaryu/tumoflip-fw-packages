@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "repository": "squazaryu/tumoflip-fw-packages",
-  "generated_at": "2026-08-27T10:45:21+00:00",
+  "generated_at": "2026-08-27T18:42:53+00:00",
   "selection_policy": {
     "auto": "highest compatible active revision",
     "manual": "any compatible active or legacy revision",
@@ -9,7 +9,7 @@
   },
   "channels": {
     "stable": {
-      "current_revision": 4,
+      "current_revision": 5,
       "releases": [
         {
           "revision": 1,
@@ -44,11 +44,28 @@
               88
             ]
           }
+        },
+        {
+          "revision": 5,
+          "tag": "fw-packages-stable-005",
+          "repository": "squazaryu/tumoflip-fw-packages",
+          "release_id": "20eea6c8c246fe6758693ebfef570939c3da6c897f3e7bf8e8b4eabad629da57",
+          "manifest_sha256": "f4debe08df5c7664ba172d437e1bb549d2d6f54753775cf7b7f328c3ee00e8a6",
+          "archive_sha256": "55bb2c3ca3050e7b6471c6df3e373bd7c3695918d8fd7d275a5bf06111d30246",
+          "state": "active",
+          "compatibility": {
+            "targets": [
+              7
+            ],
+            "api_majors": [
+              88
+            ]
+          }
         }
       ]
     },
     "dev": {
-      "current_revision": 10,
+      "current_revision": 11,
       "releases": [
         {
           "revision": 1,
@@ -193,6 +210,23 @@
           "release_id": "32054ae98476b33d41ff0c261a73fd10f89bf3b15fe7d96a3bd44cca19e3684e",
           "manifest_sha256": "0455900bdde3e8551520ca8d2b9a98e41120585576842d45e29490537ecb4e8b",
           "archive_sha256": "b45ecd14b0d2baffc6aef680b0a0676de6e006a7b9147cbe78dce4f369d8bd92",
+          "state": "active",
+          "compatibility": {
+            "targets": [
+              7
+            ],
+            "api_majors": [
+              88
+            ]
+          }
+        },
+        {
+          "revision": 11,
+          "tag": "fw-packages-dev-011",
+          "repository": "squazaryu/tumoflip-fw-packages",
+          "release_id": "ffcc600438df52d38d6be89b27c87fc15d891bf7c7bc5141ab6322eebd45e643",
+          "manifest_sha256": "88b03541cf3a82f53dff30e4bd817831edbac3c4faceb751886d8bb4c3d28628",
+          "archive_sha256": "f223ba92c5b03bd04c4fbc7d9c6f1c192d5044e87f1e6d70fca23f06960778bb",
           "state": "active",
           "compatibility": {
             "targets": [
