@@ -176,6 +176,62 @@ class NativeReleaseTests(unittest.TestCase):
         )
         verify_native_release(output, self.plan)
 
+    def test_data_release_is_namespaced_and_additive(self) -> None:
+        base, base_contract = self._base_output()
+        plan = copy.deepcopy(self.plan)
+        plan["mode"] = "data"
+        plan["baseRelease"] = base_contract
+        plan["selectedOverlays"] = {}
+        plan["selectedDataOverlays"] = {
+            "utergrooll_em4100": "rfidfuzzer/tumoflip_utergrooll_em4100_v1.txt",
+            "utergrooll_ds1990": "ibtnfuzzer/tumoflip_utergrooll_ds1990_v1.txt",
+        }
+        plan["dataOverlayTargets"] = sorted(plan["selectedDataOverlays"].values())
+        plan["dataOverlayGroups"] = {
+            "rfidfuzzer/tumoflip_utergrooll_em4100_v1.txt": "base",
+            "ibtnfuzzer/tumoflip_utergrooll_ds1990_v1.txt": "base",
+        }
+        plan["overlayTargets"] = plan["dataOverlayTargets"]
+        plan["overlayGroups"] = plan["dataOverlayGroups"]
+        plan["maxChangedTargets"] = 2
+
+        output = self.root / "data-release"
+        build_native_release(
+            Path("/nonexistent"),
+            base,
+            output,
+            plan,
+            control_root=self.repository,
+        )
+        verify_native_release(output, plan, base)
+
+        manifest = json.loads((output / "tumoflip-packages.json").read_text())
+        entries = {
+            entry["source"]: entry
+            for group in manifest["packages"].values()
+            for entry in group
+        }
+        for source in plan["dataOverlayTargets"]:
+            entry = entries[source]
+            self.assertEqual(entry["target"], f"/ext/{source}")
+            self.assertEqual(entry["kind"], "dictionary")
+            self.assertTrue(entry["preserve_existing"])
+            with zipfile.ZipFile(output / "tumoflip-packages.zip") as archive:
+                self.assertEqual(archive.read(source), (self.repository / source).read_bytes())
+
+        release = manifest["package_release"]
+        self.assertEqual(release["synced_extapps"], [])
+        self.assertEqual(
+            sorted(item["target"] for item in release["synced_data"]),
+            plan["dataOverlayTargets"],
+        )
+        provenance = json.loads((output / "catalog-provenance.json").read_text())
+        self.assertEqual(provenance["kind"], "nativeDataPackageRelease")
+        self.assertEqual(
+            sorted(item["target"] for item in provenance["dataOverlays"]),
+            plan["dataOverlayTargets"],
+        )
+
     def test_zip_is_reproducible_across_source_order_and_timestamp(self) -> None:
         first = self._source_output()
         second = self.root / "second"

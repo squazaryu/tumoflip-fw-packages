@@ -32,6 +32,20 @@ reversible cleanup entry. The installer moves the old target into its rollback
 area only after the replacement snapshot has been staged and verified; a failed
 transaction restores both versions.
 
+## Additive data overlays
+
+Line-oriented dictionaries are published as `data` releases, not as firmware
+or FAP rebuilds. The publisher accepts only the checked-in `rfidfuzzer/` and
+`ibtnfuzzer/` roots, validates the encoding, record width, hexadecimal values,
+and duplicates, and records the exact bytes in `synced_data`.
+
+Each data entry has a namespaced `tumoflip_*_vN.txt` filename and
+`preserve_existing: true`. TumoCompanion stages and verifies the download, but
+never backs up, removes, or replaces a different file already at that target.
+An identical existing file is treated as an idempotent success; a different
+existing file aborts before activation and leaves it untouched. This makes the
+dictionary package additive and safe for user-maintained files on the SD card.
+
 ## Automatic Community Pack reconciliation
 
 The scheduled reconciliation workflow resolves one exact Community Pack release,

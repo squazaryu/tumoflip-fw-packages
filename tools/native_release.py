@@ -22,6 +22,7 @@ import sys
 import tempfile
 import zipfile
 from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Any, Callable, Sequence
 
 try:
@@ -53,6 +54,8 @@ CANONICAL_ASSETS = (
 )
 PROVENANCE_NAME = "catalog-provenance.json"
 PACKAGE_GROUPS = {"base", "arf", "module_one", "protocol_packs"}
+DATA_SOURCE_PREFIXES = ("rfidfuzzer/", "ibtnfuzzer/")
+DATA_FILENAME = re.compile(r"^tumoflip_[a-z0-9_]+_v[0-9]+\.txt$")
 
 
 def default_runner(
@@ -77,6 +80,54 @@ def _repository(value: Any, label: str) -> str:
     if not isinstance(value, str) or REPOSITORY.fullmatch(value) is None:
         raise ContractError(f"{label} is invalid")
     return value
+
+
+def _data_source(value: Any, label: str) -> str:
+    """Validate a publisher-owned SD dictionary source path.
+
+    Data overlays are deliberately limited to the two Multi Fuzzer dictionary
+    roots.  This keeps a data-only release from becoming an arbitrary SD write
+    primitive and makes the target path deterministic (/ext/<source>).
+    """
+
+    if not isinstance(value, str) or not value:
+        raise ContractError(f"{label} is invalid")
+    path = PurePosixPath(value)
+    if (
+        value.startswith("/")
+        or "\\" in value
+        or any(part in {"", ".", ".."} for part in path.parts)
+        or not value.startswith(DATA_SOURCE_PREFIXES)
+        or path.suffix != ".txt"
+        or DATA_FILENAME.fullmatch(path.name) is None
+    ):
+        raise ContractError(f"{label} is invalid")
+    return value
+
+
+def _validate_dictionary_payload(source: str, data: bytes) -> None:
+    """Validate line-oriented Multi Fuzzer dictionaries before publication."""
+
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise ContractError(f"data overlay is not UTF-8: {source}") from error
+    width = 10 if source.startswith("rfidfuzzer/") else 16
+    values: set[str] = set()
+    for number, raw in enumerate(text.splitlines(), 1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if re.fullmatch(rf"[0-9A-Fa-f]{{{width}}}", line) is None:
+            raise ContractError(
+                f"data overlay {source} has invalid {width}-hex line {number}"
+            )
+        normalized = line.upper()
+        if normalized in values:
+            raise ContractError(f"data overlay {source} contains duplicate line {number}")
+        values.add(normalized)
+    if not values:
+        raise ContractError(f"data overlay is empty: {source}")
 
 
 def _run(runner: Runner, command: Sequence[str], *, cwd: Path) -> str:
@@ -130,6 +181,8 @@ def load_native_plan(
         raise ContractError("native build environment contract differs")
     allowed_overlays = policy.get("allowedOverlays")
     overlay_groups = policy.get("overlayGroups")
+    allowed_data_overlays = policy.get("allowedDataOverlays", {})
+    data_overlay_groups = policy.get("dataOverlayGroups", {})
     release_plans = policy.get("releasePlans")
     if (
         policy.get("schema") != 1
@@ -146,6 +199,17 @@ def load_native_plan(
         or not isinstance(overlay_groups, dict)
         or set(overlay_groups) != set(allowed_overlays)
         or any(group not in PACKAGE_GROUPS for group in overlay_groups.values())
+        or not isinstance(allowed_data_overlays, dict)
+        or any(
+            not isinstance(name, str)
+            or not name
+            or _data_source(source, f"data overlay {name}") != source
+            for name, source in allowed_data_overlays.items()
+        )
+        or len(set(allowed_data_overlays.values())) != len(allowed_data_overlays)
+        or not isinstance(data_overlay_groups, dict)
+        or set(data_overlay_groups) != set(allowed_data_overlays)
+        or any(group not in PACKAGE_GROUPS for group in data_overlay_groups.values())
         or not isinstance(release_plans, dict)
         or set(release_plans) - {
             str(value.get("nextNativeTag"))
@@ -172,17 +236,25 @@ def load_native_plan(
     if not isinstance(release_policy, dict):
         raise ContractError(f"native release {tag} has no exact non-empty overlay plan")
     mode = release_policy.get("mode", "overlay")
-    selected_names = release_policy.get("selectedOverlays")
-    if mode not in {"overlay", "baseline", "firmwareSnapshot"}:
+    selected_names = release_policy.get("selectedOverlays", [])
+    selected_data_names = release_policy.get("selectedDataOverlays", [])
+    if mode not in {"overlay", "data", "baseline", "firmwareSnapshot"}:
         raise ContractError(f"native release {tag} mode is invalid")
     if not isinstance(selected_names, list) or any(
         not isinstance(name, str) or name not in allowed_overlays
         for name in selected_names
     ) or len(set(selected_names)) != len(selected_names):
         raise ContractError(f"native release {tag} overlay plan is invalid")
-    if mode == "overlay" and not selected_names:
+    if not isinstance(selected_data_names, list) or any(
+        not isinstance(name, str) or name not in allowed_data_overlays
+        for name in selected_data_names
+    ) or len(set(selected_data_names)) != len(selected_data_names):
+        raise ContractError(f"native release {tag} data overlay plan is invalid")
+    if mode == "overlay" and (not selected_names or selected_data_names):
         raise ContractError(f"native release {tag} has no exact non-empty overlay plan")
-    if mode in {"baseline", "firmwareSnapshot"} and selected_names:
+    if mode == "data" and (selected_names or not selected_data_names):
+        raise ContractError(f"native release {tag} has no exact non-empty data plan")
+    if mode in {"baseline", "firmwareSnapshot"} and (selected_names or selected_data_names):
         raise ContractError(f"{mode} release must not contain overlays")
     if mode == "firmwareSnapshot" and channel != "stable":
         raise ContractError("firmware snapshot must be a stable release")
@@ -199,6 +271,17 @@ def load_native_plan(
     selected_overlay_groups = {
         selected_overlays[name]: overlay_groups[name] for name in selected_overlays
     }
+    selected_data_overlays = {
+        name: allowed_data_overlays[name] for name in sorted(selected_data_names)
+    }
+    selected_data_groups = {
+        selected_data_overlays[name]: data_overlay_groups[name]
+        for name in selected_data_overlays
+    }
+    overlay_targets = sorted(
+        set(selected_overlays.values()) | set(selected_data_overlays.values())
+    )
+    overlay_groups_by_target = {**selected_overlay_groups, **selected_data_groups}
     if (
         base_release.get("tag") != channel_lineage.get("currentTag")
         or base_release.get("revision") != channel_lineage.get("currentRevision")
@@ -249,9 +332,12 @@ def load_native_plan(
         "publisherCommit": publisher_commit,
         "baseRelease": base_release,
         "selectedOverlays": selected_overlays,
-        "overlayTargets": sorted(selected_overlays.values()),
-        "overlayGroups": selected_overlay_groups,
-        "maxChangedTargets": len(selected_overlays),
+        "selectedDataOverlays": selected_data_overlays,
+        "overlayTargets": overlay_targets,
+        "dataOverlayTargets": sorted(selected_data_overlays.values()),
+        "overlayGroups": overlay_groups_by_target,
+        "dataOverlayGroups": selected_data_groups,
+        "maxChangedTargets": len(overlay_targets),
         "buildEnvironment": {
             "runner": build_runner,
             "toolchainVersion": toolchain_version,
@@ -338,8 +424,33 @@ def _validate_source_manifest(manifest: dict[str, Any], plan: dict[str, Any]) ->
     overlay_targets = package_release.get("overlay_targets")
     if not isinstance(overlay_targets, list) or sorted(overlay_targets) != plan["overlayTargets"]:
         raise ContractError("source manifest overlay target policy differs")
-    synced = package_release.get("synced_extapps")
-    if (
+    if plan.get("mode") == "data":
+        if package_release.get("synced_extapps") not in (None, []):
+            raise ContractError("data manifest unexpectedly contains FAP overlays")
+        synced = package_release.get("synced_data")
+        expected_data_targets = plan.get("dataOverlayTargets", [])
+        if (
+            not isinstance(synced, list)
+            or len(synced) != len(expected_data_targets)
+            or any(
+                not isinstance(entry, dict)
+                or entry.get("target") not in expected_data_targets
+                or entry.get("source") != entry.get("target")
+                or entry.get("preserve_existing") is not True
+                or not isinstance(entry.get("bytes"), int)
+                or isinstance(entry.get("bytes"), bool)
+                or entry.get("bytes", 0) < 1
+                or re.fullmatch(r"[0-9a-f]{64}", str(entry.get("sha256"))) is None
+                or re.fullmatch(r"[0-9a-f]{32}", str(entry.get("md5"))) is None
+                for entry in synced
+            )
+            or sorted(entry.get("target") for entry in synced) != sorted(expected_data_targets)
+        ):
+            raise ContractError("source manifest synced data overlay set differs")
+        synced = []
+    else:
+        synced = package_release.get("synced_extapps")
+    if plan.get("mode") != "data" and (
         not isinstance(synced, list)
         or len(synced) != len(plan["overlayTargets"])
         or any(not isinstance(entry, dict) for entry in synced)
@@ -378,6 +489,7 @@ def _validate_final_manifest_identity(
             "baseline": "baseline",
             "firmwareSnapshot": "firmwareSnapshot",
             "overlay": "delta",
+            "data": "delta",
         }[plan["mode"]],
         "catalog_channel": plan["channel"],
         "catalog_revision": plan["revision"],
@@ -526,6 +638,135 @@ def _source_exports(source_root: Path) -> dict[str, str]:
     except ImportError:
         from source_build_targets import source_overlay_exports
     return source_overlay_exports(source_root)
+
+
+def _compose_data_release(
+    control_root: Path,
+    base_directory: Path,
+    output_directory: Path,
+    plan: dict[str, Any],
+) -> None:
+    """Compose a data-only catalog delta from publisher-owned dictionaries.
+
+    The data files are kept under their eventual Flipper roots in the archive
+    (`rfidfuzzer/` or `ibtnfuzzer/`).  This makes the target deterministic while
+    avoiding any firmware build or RAM/flash change.  Each target is namespaced
+    with a Tumoflip filename and the manifest marks it `preserve_existing`; the
+    iOS installer refuses to replace a pre-existing file with different bytes.
+    """
+
+    if plan.get("mode") != "data":
+        raise ContractError("release plan is not data-only")
+    base = load_json(base_directory / "tumoflip-packages.json")
+    base_release = base.get("package_release")
+    if not isinstance(base_release, dict):
+        raise ContractError("immutable base package release is missing")
+    packages = copy.deepcopy(base.get("packages"))
+    if not isinstance(packages, dict) or set(packages) != PACKAGE_GROUPS:
+        raise ContractError("immutable base package topology is invalid")
+    base_entries = _entries_by_source(base)
+    with zipfile.ZipFile(base_directory / "tumoflip-packages.zip") as base_zip:
+        payloads = {name: base_zip.read(name) for name in base_zip.namelist()}
+
+    synced: list[dict[str, Any]] = []
+    for source in plan.get("dataOverlayTargets", []):
+        source = _data_source(source, "selected data overlay")
+        group = plan.get("overlayGroups", {}).get(source)
+        if group not in PACKAGE_GROUPS:
+            raise ContractError(f"data overlay group is invalid: {source}")
+        if source in base_entries:
+            raise ContractError(f"data overlay source already exists in base: {source}")
+        target = f"/ext/{source}"
+        if any(
+            isinstance(entry, dict) and entry.get("target") == target
+            for entries in packages.values()
+            for entry in entries
+        ):
+            raise ContractError(f"data overlay target collides with base: {source}")
+        path = (control_root / source).resolve()
+        root = control_root.resolve()
+        if root not in path.parents:
+            raise ContractError(f"data overlay escapes control root: {source}")
+        if not path.is_file():
+            raise ContractError(f"data overlay source is missing: {source}")
+        data = path.read_bytes()
+        _validate_dictionary_payload(source, data)
+        replacement = {
+            "source": source,
+            "target": target,
+            "bytes": len(data),
+            "sha256": hashlib.sha256(data).hexdigest(),
+            "md5": hashlib.md5(data).hexdigest(),
+            "kind": "dictionary",
+            "preserve_existing": True,
+        }
+        packages[group].append(replacement)
+        payloads[source] = data
+        synced.append(
+            {
+                "source": source,
+                "target": source,
+                "bytes": replacement["bytes"],
+                "sha256": replacement["sha256"],
+                "md5": replacement["md5"],
+                "preserve_existing": True,
+            }
+        )
+
+    modified_targets = set(base_release.get("catalog_modified_targets", []))
+    if not all(isinstance(item, str) for item in modified_targets):
+        raise ContractError("immutable base modified-target evidence is invalid")
+    manifest = copy.deepcopy(base)
+    manifest.pop("release_id", None)
+    manifest["packages"] = packages
+    manifest["package_release"] = {
+        "type": "package-only",
+        "id": plan["tag"],
+        "source_commit": plan["sourceCommit"],
+        "source_dirty": False,
+        "source_firmware_version": plan["targetFirmware"]["version"],
+        "target_release_tag": plan["targetFirmware"]["tag"],
+        "target_release_id": base_release.get("target_release_id"),
+        "target_source_commit": plan["targetFirmware"]["commit"],
+        "firmware_flash_unchanged": True,
+        "overlay_targets": sorted(plan["dataOverlayTargets"]),
+        "catalog_modified_targets": sorted(
+            modified_targets | set(plan["dataOverlayTargets"])
+        ),
+        "synced_extapps": [],
+        "synced_data": synced,
+        "catalog_channel": plan["channel"],
+        "catalog_revision": plan["revision"],
+        "catalog_release_tag": plan["tag"],
+        "catalog_install_scope": "delta",
+        "base_catalog": {
+            "release_tag": plan["baseRelease"]["tag"],
+            "release_id": base["release_id"],
+            "manifest_sha256": sha256(base_directory / "tumoflip-packages.json"),
+            "package_zip_sha256": sha256(base_directory / "tumoflip-packages.zip"),
+            "source_commit": plan["baseRelease"]["sourceCommit"],
+        },
+        "compatible_releases": copy.deepcopy(
+            base_release.get("compatible_releases", [])
+        ),
+    }
+    if manifest["package_release"]["target_release_id"] != plan["targetFirmware"][
+        "releaseId"
+    ]:
+        raise ContractError("immutable base target firmware release ID differs")
+    manifest["release_id"] = manifest_release_id(manifest)
+    _write_json(output_directory / "tumoflip-packages.json", manifest)
+    archive_path = output_directory / "tumoflip-packages.zip"
+    with zipfile.ZipFile(
+        archive_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
+    ) as archive:
+        for name in sorted(payloads):
+            info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.create_system = 3
+            info.external_attr = 0o100644 << 16
+            archive.writestr(info, payloads[name], compresslevel=9)
+    verify_archive(manifest, archive_path)
 
 
 def _compose_selected_release(
@@ -802,9 +1043,14 @@ def finalize_native_release(
         name: _asset_evidence(directory / name)
         for name in (*CANONICAL_ASSETS, checksum_path.name)
     }
+    synced_key = "synced_data" if plan.get("mode") == "data" else "synced_extapps"
     provenance = {
         "schema": 1,
-        "kind": "nativePackageRelease",
+        "kind": (
+            "nativeDataPackageRelease"
+            if plan.get("mode") == "data"
+            else "nativePackageRelease"
+        ),
         "channel": plan["channel"],
         "revision": plan["revision"],
         "tag": plan["tag"],
@@ -827,7 +1073,8 @@ def finalize_native_release(
             "maxChangedTargets": plan["maxChangedTargets"],
         },
         "buildEnvironment": plan["buildEnvironment"],
-        "sourceBuiltOverlays": manifest["package_release"]["synced_extapps"],
+        "sourceBuiltOverlays": manifest["package_release"].get(synced_key, []),
+        "dataOverlays": manifest["package_release"].get("synced_data", []),
         "changedTargets": changed_targets,
         "manifestReleaseId": manifest["release_id"],
         "assets": assets,
@@ -1235,7 +1482,11 @@ def verify_native_release(
     provenance = load_json(directory / PROVENANCE_NAME)
     exact = {
         "schema": 1,
-        "kind": "nativePackageRelease",
+        "kind": (
+            "nativeDataPackageRelease"
+            if plan.get("mode") == "data"
+            else "nativePackageRelease"
+        ),
         "channel": plan["channel"],
         "revision": plan["revision"],
         "tag": plan["tag"],
@@ -1262,10 +1513,15 @@ def verify_native_release(
     for key, value in exact.items():
         if provenance.get(key) != value:
             raise ContractError(f"native provenance {key} differs")
-    if provenance.get("sourceBuiltOverlays") != manifest["package_release"].get(
-        "synced_extapps"
-    ):
+    expected_synced = manifest["package_release"].get(
+        "synced_data" if plan.get("mode") == "data" else "synced_extapps"
+    )
+    if provenance.get("sourceBuiltOverlays") != expected_synced:
         raise ContractError("native provenance source-built overlays differ")
+    if provenance.get("dataOverlays") != manifest["package_release"].get(
+        "synced_data", []
+    ):
+        raise ContractError("native provenance data overlays differ")
     changed_targets = provenance.get("changedTargets")
     if (
         not isinstance(changed_targets, list)
@@ -1304,12 +1560,18 @@ def build_native_release(
     plan: dict[str, Any],
     build_dir: str = "build/f7-firmware-C",
     runner: Runner = default_runner,
+    control_root: Path | None = None,
 ) -> None:
-    """Compose selected source-owned exports, then atomically expose verified assets."""
+    """Compose a source FAP or publisher-owned data release atomically."""
 
-    if plan.get("mode") != "overlay":
-        raise ContractError("source build requires an overlay release plan")
-    prove_source_checkout(source_root, plan["sourceCommit"], runner)
+    mode = plan.get("mode")
+    if mode not in {"overlay", "data"}:
+        raise ContractError("native build requires an overlay or data release plan")
+    # Data-only releases still pin the exact firmware source for compatibility
+    # evidence.  The source checkout is not built, but proving it prevents a
+    # caller from silently mixing a different firmware lineage into the catalog.
+    if source_root.exists():
+        prove_source_checkout(source_root, plan["sourceCommit"], runner)
     verify_release_directory(base_directory, plan["baseRelease"])
     if output.exists():
         raise ContractError(f"output already exists: {output}")
@@ -1318,14 +1580,23 @@ def build_native_release(
         tempfile.mkdtemp(prefix=f".{output.name}.", dir=str(output.parent))
     )
     try:
-        _compose_selected_release(
-            source_root,
-            source_root / build_dir,
-            base_directory,
-            staging,
-            plan,
-        )
-        prove_source_checkout(source_root, plan["sourceCommit"], runner)
+        if mode == "data":
+            _compose_data_release(
+                (control_root or source_root).resolve(),
+                base_directory,
+                staging,
+                plan,
+            )
+        else:
+            _compose_selected_release(
+                source_root,
+                source_root / build_dir,
+                base_directory,
+                staging,
+                plan,
+            )
+        if source_root.exists():
+            prove_source_checkout(source_root, plan["sourceCommit"], runner)
         finalize_native_release(staging, plan, base_directory)
         os.replace(staging, output)
     except BaseException:
@@ -1373,14 +1644,15 @@ def main() -> int:
                 plan,
             )
         else:
-            if args.source_root is None:
+            if plan["mode"] == "overlay" and args.source_root is None:
                 raise ContractError("overlay release requires --source-root")
             build_native_release(
-                args.source_root.resolve(),
+                args.source_root.resolve() if args.source_root is not None else Path("/nonexistent"),
                 args.base_directory.resolve(),
                 args.output.resolve(),
                 plan,
                 args.build_dir,
+                control_root=args.control_root.resolve(),
             )
     except (ContractError, OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)

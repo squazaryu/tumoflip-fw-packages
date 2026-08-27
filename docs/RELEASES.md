@@ -96,6 +96,18 @@ exact source-built bytes are recorded and independently checked.
 Firmware DFU, update, SDK, updater, or radio assets are never downloaded,
 rewritten, checksummed into, or uploaded by this path.
 
+### Data-only package revisions
+
+Small, publisher-owned SD datasets (for example, authorized RFID/iButton test
+dictionaries) use `mode: data`. They are composed from checked-in text files,
+not from an `fbt` build, and are limited to the allowlisted data roots. The
+manifest marks every such entry with `kind: dictionary` and
+`preserve_existing: true`. The client may add the file when the target is
+absent, accepts an identical target as a no-op, and fails closed when a
+different file is already present. It never overwrites user data or performs a
+directory-wide cleanup. A later revision must use a new namespaced filename or
+an explicit reviewed migration; it cannot silently replace a user's file.
+
 For a stable firmware promotion, the publisher consumes only the package
 manifest and package ZIP already published by the exact firmware release. It
 verifies their pinned digests, firmware identity, release ID, and every archive
