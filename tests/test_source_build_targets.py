@@ -99,6 +99,51 @@ def package_extapp_exports():
             self.assertEqual(targets_main(), 0)
         output.assert_called_once_with("fap_esp")
 
+    def test_data_only_plan_emits_no_build_targets(self) -> None:
+        import json
+        import sys
+        from unittest import mock
+
+        control = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: __import__("shutil").rmtree(control))
+        (control / "contracts").mkdir()
+        (control / "contracts/native-build-policy.json").write_text(
+            json.dumps(
+                {
+                    "allowedOverlays": {"esp": "apps/esp.fap"},
+                    "releasePlans": {
+                        "fw-packages-dev-009": {
+                            "mode": "data",
+                            "selectedOverlays": [],
+                            "selectedDataOverlays": ["uids"],
+                        }
+                    },
+                }
+            )
+        )
+        with (
+            mock.patch.object(
+                sys,
+                "argv",
+                [
+                    "source_build_targets.py",
+                    "--source-root",
+                    str(control),
+                    "--control-root",
+                    str(control),
+                    "--channel",
+                    "dev",
+                    "--revision",
+                    "9",
+                    "--format",
+                    "shell",
+                ],
+            ),
+            mock.patch("builtins.print") as output,
+        ):
+            self.assertEqual(targets_main(), 0)
+        output.assert_called_once_with("")
+
 
 if __name__ == "__main__":
     unittest.main()

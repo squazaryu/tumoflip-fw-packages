@@ -71,7 +71,12 @@ def selected_overlay_paths(
             )
         )
         allowed = policy["allowedOverlays"]
-        selected = policy["releasePlans"][tag]["selectedOverlays"]
+        release_plan = policy["releasePlans"][tag]
+        selected = release_plan.get("selectedOverlays", [])
+        if release_plan.get("mode", "overlay") == "data":
+            # Data-only catalog revisions intentionally do not invoke fbt.  The
+            # native publisher reads their checked-in files from the control repo.
+            return {}
     except (OSError, ValueError, KeyError, TypeError) as error:
         raise ContractError(f"cannot load exact overlay plan for {tag}") from error
     if (
@@ -114,6 +119,11 @@ def main() -> int:
         selected = selected_overlay_paths(
             args.control_root.resolve(), args.channel, args.revision
         )
+        if not selected:
+            # Data-only catalog revisions have no source-owned FAP targets. The
+            # publisher composes their checked-in SD files without invoking fbt.
+            print("")
+            return 0
         targets = source_build_targets(args.source_root, selected)
     except ContractError as error:
         print(f"error: {error}", file=sys.stderr)

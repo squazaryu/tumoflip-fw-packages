@@ -171,6 +171,16 @@ def validate_manifest(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
                 raise ContractError(f"{label}.md5 is invalid")
             if not isinstance(size, int) or isinstance(size, bool) or size < 0:
                 raise ContractError(f"{label}.bytes is invalid")
+            kind = entry.get("kind")
+            preserve_existing = entry.get("preserve_existing")
+            if kind is not None and kind != "dictionary":
+                raise ContractError(f"{label}.kind is invalid")
+            if preserve_existing is not None and not isinstance(preserve_existing, bool):
+                raise ContractError(f"{label}.preserve_existing is invalid")
+            if preserve_existing is True and kind != "dictionary":
+                raise ContractError(
+                    f"{label}.preserve_existing requires kind=dictionary"
+                )
             if source in by_source:
                 raise ContractError(f"duplicate package source: {source}")
             if canonical_target in targets:

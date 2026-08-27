@@ -70,6 +70,11 @@ from a complete immutable catalog snapshot and may replace only reviewed paths,
 so a Community Pack category move cannot become a false duplicate. Firmware
 promotions and package catalog revisions are separate operations.
 
+Small SD datasets are additive `data` revisions. They use namespaced filenames,
+are validated before publication, and carry `preserve_existing` metadata so an
+existing user file is never overwritten; the same bytes are simply recognized
+as already present.
+
 The protected-app workflow likewise executes only this repository's audited
 scanner. Firmware and Community Pack checkouts are read-only evidence. Package
 and historical firmware targets are numeric-release-ID contracts; each audit

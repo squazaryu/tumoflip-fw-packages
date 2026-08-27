@@ -58,8 +58,22 @@
         "target": {"type": "string", "pattern": "^/ext/"},
         "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "md5": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
-        "bytes": {"type": "integer", "minimum": 0}
+        "bytes": {"type": "integer", "minimum": 0},
+        "kind": {"type": "string", "enum": ["dictionary"]},
+        "preserve_existing": {"type": "boolean"}
       },
+      "allOf": [
+        {
+          "if": {
+            "required": ["preserve_existing"],
+            "properties": {"preserve_existing": {"const": true}}
+          },
+          "then": {
+            "required": ["kind"],
+            "properties": {"kind": {"const": "dictionary"}}
+          }
+        }
+      ],
       "additionalProperties": true
     }
   },

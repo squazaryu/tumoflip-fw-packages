@@ -123,6 +123,13 @@ jobs:
           REVISION: ${{ inputs.revision }}
         run: |
           set -euo pipefail
+          MODE="$(jq -r --arg tag "fw-packages-${CHANNEL}-${REVISION}" \
+            '.releasePlans[$tag].mode // "overlay"' control/contracts/native-build-policy.json)"
+          echo "NATIVE_MODE=$MODE" >> "$GITHUB_ENV"
+          if [ "$MODE" = "data" ]; then
+            echo "Data-only release: no firmware/FAP build is required."
+            exit 0
+          fi
           SOURCE_BUILD_TARGETS="$(
             python3 control/tools/source_build_targets.py \
               --source-root firmware \
@@ -144,6 +151,7 @@ jobs:
             "$(jq -r '.toolchainVersion' control/contracts/source-checkouts.json)"
       - name: Run source-owned package composition tests
         working-directory: firmware
+        if: ${{ env.NATIVE_MODE != 'data' }}
         run: |
           set -euo pipefail
           python3 -m unittest \

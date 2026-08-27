@@ -128,6 +128,18 @@ class CatalogContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, "duplicate package target"):
             verify_release_directory(directory)
 
+    def test_preserve_existing_requires_dictionary_kind(self) -> None:
+        directory = self._release()
+        manifest_path = directory / "tumoflip-packages.json"
+        manifest = self._manifest(directory)
+        manifest["packages"]["base"][0]["preserve_existing"] = True
+        manifest["release_id"] = manifest_release_id(manifest)
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        with self.assertRaisesRegex(
+            ContractError, "preserve_existing requires kind=dictionary"
+        ):
+            verify_release_directory(directory)
+
     def test_double_slash_target_collision_is_rejected_as_noncanonical(self) -> None:
         directory = self._release()
         self._append_target_collision(directory, "/ext/apps//test.fap")
