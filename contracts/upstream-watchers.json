@@ -1,15 +1,107 @@
 {
   "branch": "dev",
+  "decisionLedger": [
+    {
+      "entries": [
+        {
+          "classification": "covered",
+          "issue": "https://github.com/squazaryu/tumoflip/issues/339",
+          "summary": "Superrollo GW60 was selectively ported; physical rolling-code acceptance remains tracked separately.",
+          "tumoflip": {
+            "commit": "fc7491d51066900d6c01c3173bb5bb515d73e6d8",
+            "hardwareAcceptance": "pending",
+            "releaseTag": "t-dev-004-017"
+          },
+          "upstreamCommit": "104d96f8694e55f4901a82a00e3c9bea97df1747"
+        },
+        {
+          "classification": "covered",
+          "summary": "The BinRAW final upload bounds guard was ported in the post-unlshd-092 hardening set.",
+          "tumoflip": {
+            "commit": "092e920d5b24f246e55cfcd36261ee7b37fef389",
+            "hardwareAcceptance": "accepted",
+            "releaseTag": "t-dev-007-012"
+          },
+          "upstreamCommit": "cc2d852787374fab6f9072f483ccb4602f83da4b"
+        },
+        {
+          "classification": "covered",
+          "summary": "Oversized FeliCa Lite dumps are rejected by the local hardening port and regression fixture.",
+          "tumoflip": {
+            "commit": "092e920d5b24f246e55cfcd36261ee7b37fef389",
+            "hardwareAcceptance": "notRequired",
+            "releaseTag": "t-dev-007-012"
+          },
+          "upstreamCommit": "51a56fc4015299bf071a360633968ca489e455ee"
+        },
+        {
+          "classification": "covered",
+          "summary": "The invalid serial expansion sentinel is rejected by the local hardening port.",
+          "tumoflip": {
+            "commit": "092e920d5b24f246e55cfcd36261ee7b37fef389",
+            "hardwareAcceptance": "notRequired",
+            "releaseTag": "t-dev-007-012"
+          },
+          "upstreamCommit": "4b3c614c8e531145573bc2084eadc85ca5ca2848"
+        },
+        {
+          "classification": "covered",
+          "summary": "Stealth Mouse Jiggler deltas are bounded in Tumoflip and were accepted with Dev 008-001.",
+          "tumoflip": {
+            "commit": "b598dbdc5fbda1b600f0140b207374e381383804",
+            "hardwareAcceptance": "accepted",
+            "releaseTag": "t-dev-008-001"
+          },
+          "upstreamCommit": "c742dfe6c9603e8b3dd2c75a1c8948c0b9c7cb56"
+        },
+        {
+          "classification": "covered",
+          "issue": "https://github.com/squazaryu/tumoflip/issues/420",
+          "summary": "Decoded-air-time duplicate filtering was adapted and accepted with Dev 008-001.",
+          "tumoflip": {
+            "commit": "5e485ef3635170b40a932570f5be3597c4ff7446",
+            "hardwareAcceptance": "accepted",
+            "releaseTag": "t-dev-008-001"
+          },
+          "upstreamCommit": "014eeb2f85dd9a5958aee692ecb08d898d3b0e21"
+        },
+        {
+          "classification": "metadataOnly",
+          "summary": "Changelog-only update; no Tumoflip code or package delta is required.",
+          "upstreamCommit": "ae53fc29d06f9f8d2d32458bf612fbc3b914046a"
+        },
+        {
+          "classification": "metadataOnly",
+          "summary": "Community application tag bump; protected FAP sources are audited by the separate package workflows.",
+          "upstreamCommit": "bcce3fe615b73a87128af6d362e51e789a08ea0e"
+        },
+        {
+          "classification": "issueOnly",
+          "issue": "https://github.com/squazaryu/tumoflip/issues/421",
+          "summary": "Experimental MIFARE Classic CUID cursor changes require isolated review and hardware validation before integration.",
+          "upstreamCommit": "be559b2ee1b2bbae3eaf109a4a1b0d7337b3d8a8"
+        },
+        {
+          "classification": "metadataOnly",
+          "summary": "Community application tag bump; no firmware implementation delta is present.",
+          "upstreamCommit": "469ff492613b7ffec6e4df2835d6dce4df115be4"
+        }
+      ],
+      "fromExclusive": "240ba3db883cb0792b06c3445f9c38476e1dc5ec",
+      "reviewedAt": "2026-08-28T13:59:53Z",
+      "throughInclusive": "469ff492613b7ffec6e4df2835d6dce4df115be4"
+    }
+  ],
   "kind": "upstreamWatch",
   "repository": "DarkFlippers/unleashed-firmware",
   "reviewed": {
-    "commit": "240ba3db883cb0792b06c3445f9c38476e1dc5ec",
+    "commit": "469ff492613b7ffec6e4df2835d6dce4df115be4",
     "release": {
       "commit": "3c9be0fdd9d301a9436765099a2d1780b36a1795",
       "publishedAt": "2026-08-21T23:00:27Z",
       "tag": "unlshd-092"
     },
-    "reviewedAt": "2026-08-25T10:53:04Z"
+    "reviewedAt": "2026-08-28T13:59:53Z"
   },
-  "schema": 1
+  "schema": 2
 }

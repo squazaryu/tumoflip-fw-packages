@@ -14,6 +14,7 @@ from tools import watch_unleashed as watcher
 
 
 BASELINE = "240ba3db883cb0792b06c3445f9c38476e1dc5ec"
+CHECKED_IN_BASELINE = "469ff492613b7ffec6e4df2835d6dce4df115be4"
 RELEASE = "3c9be0fdd9d301a9436765099a2d1780b36a1795"
 CONTROL = "c" * 40
 REPOSITORY = "DarkFlippers/unleashed-firmware"
@@ -71,8 +72,86 @@ class UnleashedWatcherTests(unittest.TestCase):
 
         self.assertEqual(checked_in["repository"], REPOSITORY)
         self.assertEqual(checked_in["branch"], "dev")
-        self.assertEqual(checked_in["reviewed"]["commit"], BASELINE)
+        self.assertEqual(checked_in["schema"], 2)
+        self.assertEqual(checked_in["reviewed"]["commit"], CHECKED_IN_BASELINE)
         self.assertEqual(checked_in["reviewed"]["release"]["tag"], "unlshd-092")
+        ledger = checked_in["decisionLedger"]
+        self.assertEqual(len(ledger), 1)
+        self.assertEqual(ledger[0]["fromExclusive"], BASELINE)
+        self.assertEqual(ledger[0]["throughInclusive"], CHECKED_IN_BASELINE)
+        self.assertEqual(len(ledger[0]["entries"]), 10)
+        self.assertEqual(
+            {entry["classification"] for entry in ledger[0]["entries"]},
+            {"covered", "issueOnly", "metadataOnly"},
+        )
+        self.assertEqual(
+            [
+                entry["upstreamCommit"]
+                for entry in ledger[0]["entries"]
+                if entry["classification"] == "issueOnly"
+            ],
+            ["be559b2ee1b2bbae3eaf109a4a1b0d7337b3d8a8"],
+        )
+
+    def test_schema_two_rejects_a_ledger_that_skips_the_reviewed_commit(self) -> None:
+        value = contract()
+        value["schema"] = 2
+        value["decisionLedger"] = [
+            {
+                "fromExclusive": "1" * 40,
+                "throughInclusive": "2" * 40,
+                "reviewedAt": "2026-08-28T13:59:53Z",
+                "entries": [
+                    {
+                        "upstreamCommit": "2" * 40,
+                        "classification": "metadataOnly",
+                        "summary": "Metadata only.",
+                    }
+                ],
+            }
+        ]
+        with self.assertRaisesRegex(watcher.WatchError, "does not end at the reviewed commit"):
+            watcher.validate_contract(value)
+
+    def test_decision_ledger_live_range_requires_every_exact_commit(self) -> None:
+        ledger = [
+            {
+                "fromExclusive": "1" * 40,
+                "throughInclusive": "3" * 40,
+                "reviewedAt": "2026-08-28T13:59:53Z",
+                "entries": [
+                    {
+                        "upstreamCommit": "2" * 40,
+                        "classification": "metadataOnly",
+                        "summary": "Metadata only.",
+                    },
+                    {
+                        "upstreamCommit": "3" * 40,
+                        "classification": "issueOnly",
+                        "issue": "https://github.com/squazaryu/tumoflip/issues/421",
+                        "summary": "Needs isolated review.",
+                    },
+                ],
+            }
+        ]
+        response = {
+            "status": "ahead",
+            "ahead_by": 2,
+            "behind_by": 0,
+            "total_commits": 2,
+            "base_commit": {"sha": "1" * 40},
+            "head_commit": None,
+            "commits": [{"sha": "2" * 40}, {"sha": "3" * 40}],
+        }
+        with mock.patch.object(watcher, "_gh_json", return_value=response):
+            summary = watcher._verify_decision_ledger_ranges(REPOSITORY, ledger)
+        self.assertEqual(summary[0]["entryCount"], 2)
+        self.assertEqual(summary[0]["classifications"]["issueOnly"], 1)
+
+        response["commits"] = [{"sha": "3" * 40}, {"sha": "2" * 40}]
+        with mock.patch.object(watcher, "_gh_json", return_value=response):
+            with self.assertRaisesRegex(watcher.WatchError, "does not cover the exact range"):
+                watcher._verify_decision_ledger_ranges(REPOSITORY, ledger)
 
     def _responses(
         self,

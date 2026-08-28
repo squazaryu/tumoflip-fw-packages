@@ -24,12 +24,17 @@ HEX_40 = re.compile(r"^[0-9a-f]{40}$")
 RELEASE_TAG = re.compile(r"^unlshd-[0-9]{3}$")
 RELEASE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 TIMESTAMP = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")
+TUMOFLIP_ISSUE_URL = re.compile(
+    r"^https://github\.com/squazaryu/tumoflip/issues/[1-9][0-9]*$"
+)
 ISSUE_MARKER = "<!-- upstream-watch:DarkFlippers/unleashed-firmware -->"
 ISSUE_TITLE = "Watch DarkFlippers/unleashed-firmware upstream changes"
 ISSUE_AUTHOR = "github-actions[bot]"
 MARKDOWN_SPECIAL = re.compile(r"([\\`*_{}\[\]<>()#+.!|~\-])")
 BARE_HTTP_SCHEME = re.compile(r"\b(https?):(?=//)", re.IGNORECASE)
 URL_BREAK = "\u200b"
+DECISION_CLASSIFICATIONS = {"covered", "issueOnly", "metadataOnly"}
+HARDWARE_ACCEPTANCE = {"accepted", "pending", "notRequired"}
 
 
 class WatchError(RuntimeError):
@@ -75,6 +80,83 @@ def _normalise_text(value: Any, label: str) -> str:
     return " ".join(value.replace("\r", " ").replace("\n", " ").split())
 
 
+def _require_tumoflip_issue(value: Any, label: str) -> str:
+    value = _require_string(value, label)
+    if TUMOFLIP_ISSUE_URL.fullmatch(value) is None:
+        raise WatchError(f"{label} must be a canonical Tumoflip issue URL")
+    return value
+
+
+def _validate_decision_ledger(value: Any, reviewed_commit: str) -> list[dict[str, Any]]:
+    if not isinstance(value, list) or not value:
+        raise WatchError("schema 2 upstream watch requires a non-empty decision ledger")
+
+    seen_commits: set[str] = set()
+    previous_through: str | None = None
+    for batch_index, batch in enumerate(value):
+        label = f"decisionLedger[{batch_index}]"
+        if not isinstance(batch, dict):
+            raise WatchError(f"{label} must be an object")
+        from_commit = _require_sha(batch.get("fromExclusive"), f"{label}.fromExclusive")
+        through_commit = _require_sha(
+            batch.get("throughInclusive"), f"{label}.throughInclusive"
+        )
+        if from_commit == through_commit:
+            raise WatchError(f"{label} cannot cover an empty commit range")
+        if previous_through is not None and from_commit != previous_through:
+            raise WatchError("decision ledger batches must form one contiguous chain")
+        _parse_timestamp(batch.get("reviewedAt"), f"{label}.reviewedAt")
+
+        entries = batch.get("entries")
+        if not isinstance(entries, list) or not entries:
+            raise WatchError(f"{label}.entries must be a non-empty array")
+        for entry_index, entry in enumerate(entries):
+            entry_label = f"{label}.entries[{entry_index}]"
+            if not isinstance(entry, dict):
+                raise WatchError(f"{entry_label} must be an object")
+            upstream_commit = _require_sha(
+                entry.get("upstreamCommit"), f"{entry_label}.upstreamCommit"
+            )
+            if upstream_commit in seen_commits:
+                raise WatchError("decision ledger contains a duplicate upstream commit")
+            seen_commits.add(upstream_commit)
+            classification = _require_string(
+                entry.get("classification"), f"{entry_label}.classification"
+            )
+            if classification not in DECISION_CLASSIFICATIONS:
+                raise WatchError(f"{entry_label}.classification is invalid")
+            _normalise_text(entry.get("summary"), f"{entry_label}.summary")
+
+            issue = entry.get("issue")
+            if issue is not None:
+                _require_tumoflip_issue(issue, f"{entry_label}.issue")
+            if classification == "issueOnly" and issue is None:
+                raise WatchError(f"{entry_label} issueOnly decision requires an issue")
+
+            implementation = entry.get("tumoflip")
+            if classification == "covered":
+                if not isinstance(implementation, dict):
+                    raise WatchError(f"{entry_label} covered decision requires Tumoflip evidence")
+                _require_sha(implementation.get("commit"), f"{entry_label}.tumoflip.commit")
+                _require_release_name(
+                    implementation.get("releaseTag"), f"{entry_label}.tumoflip.releaseTag"
+                )
+                acceptance = _require_string(
+                    implementation.get("hardwareAcceptance"),
+                    f"{entry_label}.tumoflip.hardwareAcceptance",
+                )
+                if acceptance not in HARDWARE_ACCEPTANCE:
+                    raise WatchError(f"{entry_label}.tumoflip.hardwareAcceptance is invalid")
+            elif implementation is not None:
+                raise WatchError(f"{entry_label} non-covered decision cannot carry Tumoflip evidence")
+
+        previous_through = through_commit
+
+    if previous_through != reviewed_commit:
+        raise WatchError("decision ledger does not end at the reviewed commit")
+    return value
+
+
 def _escape_markdown_text(value: Any, label: str) -> str:
     """Render upstream-controlled text as inert, non-mentioning Markdown."""
 
@@ -106,7 +188,8 @@ def _read_object(path: Path) -> dict[str, Any]:
 def validate_contract(value: dict[str, Any]) -> dict[str, Any]:
     """Validate the immutable, human-reviewed upstream boundary."""
 
-    if value.get("schema") != 1 or value.get("kind") != "upstreamWatch":
+    schema = value.get("schema")
+    if schema not in {1, 2} or value.get("kind") != "upstreamWatch":
         raise WatchError("upstream watch contract schema is invalid")
     if value.get("repository") != "DarkFlippers/unleashed-firmware":
         raise WatchError("upstream watch repository is not allow-listed")
@@ -127,6 +210,10 @@ def validate_contract(value: dict[str, Any]) -> dict[str, Any]:
         raise WatchError("reviewed release tag is invalid")
     _require_sha(release.get("commit"), "reviewed.release.commit")
     _parse_timestamp(release.get("publishedAt"), "reviewed.release.publishedAt")
+    if schema == 2:
+        _validate_decision_ledger(value.get("decisionLedger"), reviewed["commit"])
+    elif "decisionLedger" in value:
+        raise WatchError("schema 1 upstream watch cannot contain a decision ledger")
     return value
 
 
@@ -376,6 +463,72 @@ def _comparison(repository: str, baseline: str, branch: str, head: str) -> dict[
     }
 
 
+def _decision_ledger_summary(ledger: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for batch in ledger:
+        counts = {classification: 0 for classification in sorted(DECISION_CLASSIFICATIONS)}
+        commits: list[str] = []
+        for entry in batch["entries"]:
+            counts[entry["classification"]] += 1
+            commits.append(entry["upstreamCommit"])
+        result.append(
+            {
+                "fromExclusive": batch["fromExclusive"],
+                "throughInclusive": batch["throughInclusive"],
+                "reviewedAt": batch["reviewedAt"],
+                "entryCount": len(batch["entries"]),
+                "classifications": counts,
+                "commits": commits,
+            }
+        )
+    return result
+
+
+def _verify_decision_ledger_ranges(
+    repository: str, ledger: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Prove that every advanced boundary has one explicit decision per commit."""
+
+    for batch_index, batch in enumerate(ledger):
+        base = batch["fromExclusive"]
+        head = batch["throughInclusive"]
+        response = _gh_json(f"repos/{repository}/compare/{base}...{head}")
+        if not isinstance(response, dict):
+            raise WatchError(f"decision ledger batch {batch_index} comparison is invalid")
+        if response.get("status") != "ahead" or response.get("behind_by") != 0:
+            raise WatchError(f"decision ledger batch {batch_index} is not a forward range")
+        base_item = response.get("base_commit")
+        head_item = response.get("head_commit")
+        if not isinstance(base_item, dict) or _require_sha(
+            base_item.get("sha"), "decision ledger comparison base"
+        ) != base:
+            raise WatchError(f"decision ledger batch {batch_index} range identity differs")
+        if head_item is not None and (
+            not isinstance(head_item, dict)
+            or _require_sha(head_item.get("sha"), "decision ledger comparison head") != head
+        ):
+            raise WatchError(f"decision ledger batch {batch_index} range identity differs")
+        raw_commits = response.get("commits")
+        total = response.get("total_commits")
+        if (
+            not isinstance(raw_commits, list)
+            or not isinstance(total, int)
+            or isinstance(total, bool)
+            or total != len(raw_commits)
+        ):
+            raise WatchError(f"decision ledger batch {batch_index} commit range is incomplete")
+        exact_commits = [
+            _require_sha(item.get("sha"), "decision ledger comparison commit")
+            if isinstance(item, dict)
+            else ""
+            for item in raw_commits
+        ]
+        expected_commits = [entry["upstreamCommit"] for entry in batch["entries"]]
+        if exact_commits != expected_commits or exact_commits[-1] != head:
+            raise WatchError(f"decision ledger batch {batch_index} does not cover the exact range")
+    return _decision_ledger_summary(ledger)
+
+
 def _merged_pull_candidates(
     repository: str,
     branch: str,
@@ -461,9 +614,11 @@ def watch(
     baseline = reviewed["commit"]
     reviewed_release = reviewed["release"]
     reviewed_at = _parse_timestamp(reviewed["reviewedAt"], "reviewed.reviewedAt")
+    decision_ledger = contract.get("decisionLedger", [])
 
     head = _branch_evidence(repository, branch)
     comparison = _comparison(repository, baseline, branch, head)
+    decision_ledger_evidence = _verify_decision_ledger_ranges(repository, decision_ledger)
     releases, unexpected_release_records = _published_releases(
         repository,
         _parse_timestamp(reviewed_release["publishedAt"], "reviewed.release.publishedAt"),
@@ -517,6 +672,7 @@ def watch(
             "canonicalIssueTitle": ISSUE_TITLE,
         },
         "reviewed": reviewed,
+        "decisionLedger": decision_ledger_evidence,
         "current": {
             "branch": {
                 "commit": head,
@@ -559,15 +715,34 @@ def render_report(report: dict[str, Any]) -> str:
         f"- release: [`{reviewed['release']['tag']}`](https://github.com/{watch_data['repository']}/releases/tag/{reviewed['release']['tag']}) "
         f"at `{reviewed['release']['commit']}` (`{reviewed['release']['publishedAt']}`)",
         "",
-        "## Current exact upstream evidence",
-        "",
-        f"- branch head: [`{current['branch']['commit']}`]({current['branch']['url']})",
-        f"- comparison: [`{comparison['status']}`]({comparison['url']}) "
-        f"(`ahead={comparison['aheadBy']}`, `behind={comparison['behindBy']}`, `commits={comparison['totalCommits']}`)",
-        f"- latest published release: [`{release['tag']}`]({release['url']}) "
-        f"at `{release['commit']}` (`{release['publishedAt']}`)",
-        "",
     ]
+    ledger = report.get("decisionLedger", [])
+    if ledger:
+        latest_batch = ledger[-1]
+        counts = latest_batch["classifications"]
+        lines.extend(
+            (
+                "## Recorded decision ledger",
+                "",
+                f"- exact range: `{latest_batch['fromExclusive']}` through `{latest_batch['throughInclusive']}`",
+                f"- reviewed at: `{latest_batch['reviewedAt']}`",
+                f"- decisions: `{latest_batch['entryCount']}` "
+                f"(covered `{counts['covered']}`, issue-only `{counts['issueOnly']}`, metadata-only `{counts['metadataOnly']}`)",
+                "",
+            )
+        )
+    lines.extend(
+        (
+            "## Current exact upstream evidence",
+            "",
+            f"- branch head: [`{current['branch']['commit']}`]({current['branch']['url']})",
+            f"- comparison: [`{comparison['status']}`]({comparison['url']}) "
+            f"(`ahead={comparison['aheadBy']}`, `behind={comparison['behindBy']}`, `commits={comparison['totalCommits']}`)",
+            f"- latest published release: [`{release['tag']}`]({release['url']}) "
+            f"at `{release['commit']}` (`{release['publishedAt']}`)",
+            "",
+        )
+    )
     commits = comparison["commitSample"]
     if commits:
         lines.extend(("## Unreviewed commit sample", ""))
@@ -657,6 +832,10 @@ def verify_report(
         raise WatchError("watch report identity differs from contract")
     if report.get("reviewed") != contract["reviewed"]:
         raise WatchError("watch report reviewed baseline differs from contract")
+    if report.get("decisionLedger") != _decision_ledger_summary(
+        contract.get("decisionLedger", [])
+    ):
+        raise WatchError("watch report decision ledger differs from contract")
     _parse_timestamp(report.get("generatedAt"), "watch report generatedAt")
     if not isinstance(report.get("changesDetected"), bool) or not isinstance(
         report.get("humanReviewRequired"), bool

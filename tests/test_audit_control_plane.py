@@ -98,11 +98,11 @@ class AuditControlPlaneTests(unittest.TestCase):
                 self.assertIn("migrationProvenance", item["assets"])
         self.assertEqual(
             contract["implementations"]["stable"]["commit"],
-            "eba1cfd8cfb022d788433bd540a82cc2e4e25245",
+            "d34ecaf1714ec5b5516eb6619d00d9e0d5462e15",
         )
         self.assertEqual(
             contract["implementations"]["dev"]["commit"],
-            "b63b68390c43ef99205830f44a3e31cc605cf32a",
+            "833efd8e474afd1ba75c9fc57da7096bad107495",
         )
         self.assertEqual(contract["implementation"], contract["implementations"]["dev"])
         firmware = {item["releaseTag"]: item for item in contract["firmware"]}

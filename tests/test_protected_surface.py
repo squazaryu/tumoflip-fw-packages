@@ -81,6 +81,55 @@ class ProtectedSurfaceTests(unittest.TestCase):
         self.assertEqual(report["status"], "verified")
         self.assertEqual(report["branches"][0]["status"], "verified")
 
+    def test_checked_in_surface_classifies_morse_player_as_owned(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        surface = json.loads((root / "contracts/protected-surface.json").read_text())
+        targets = json.loads((root / "contracts/protected-audit-targets.json").read_text())
+        parity = json.loads((root / "contracts/protected-source-parity.json").read_text())
+        expected_dev = "833efd8e474afd1ba75c9fc57da7096bad107495"
+        self.assertEqual(surface["schema"], 2)
+        self.assertIn(
+            "applications_user/morse_player",
+            surface["ownedSourcePathsByImplementation"]["dev"],
+        )
+        self.assertNotIn(
+            "applications_user/morse_player",
+            surface["ownedSourcePathsByImplementation"]["main"],
+        )
+        self.assertEqual(surface["reviewedImplementations"]["dev"]["commit"], expected_dev)
+        self.assertEqual(targets["implementation"]["commit"], expected_dev)
+        self.assertEqual(targets["implementations"]["dev"]["commit"], expected_dev)
+        self.assertEqual(parity["implementation"]["commit"], expected_dev)
+
+    def test_branch_specific_owned_app_is_not_required_on_other_branch(self) -> None:
+        target = self.repo / "applications_user/dev_only"
+        target.mkdir(parents=True)
+        (target / "application.fam").write_text('App(appid="dev_only")\n', encoding="utf-8")
+        self.git("add", ".")
+        self.git("commit", "-qm", "dev-only app")
+        dev_commit = self.git("rev-parse", "HEAD")
+
+        document = json.loads(self.contract.read_text(encoding="utf-8"))
+        document["schema"] = 2
+        document["reviewedImplementations"] = {
+            "dev": {"ref": "refs/heads/dev", "commit": dev_commit},
+            "main": {"ref": "refs/heads/main", "commit": self.baseline},
+        }
+        document["ownedSourcePathsByImplementation"] = {
+            "dev": ["applications_user/dev_only"],
+            "main": [],
+        }
+        self.contract.write_text(json.dumps(document), encoding="utf-8")
+
+        report = scan(
+            repo=self.repo,
+            contract_path=self.contract,
+            registry_path=self.registry,
+            refs={"dev": dev_commit, "main": self.baseline},
+        )
+        self.assertEqual(report["status"], "verified")
+        self.assertTrue(all(branch["status"] == "verified" for branch in report["branches"]))
+
     def test_changed_owned_source_requires_review(self) -> None:
         (self.repo / "applications_user/owned/app.c").write_text("change", encoding="utf-8")
         self.git("add", ".")
