@@ -24,6 +24,8 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
+    outputs:
+      status: ${{ steps.scan.outputs.status }}
     steps:
       - name: Check out exact control commit
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -75,8 +77,106 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Fail closed when review is required
-        if: steps.scan.outputs.status != '0'
+  report:
+    if: github.ref == 'refs/heads/main' && github.event.repository.default_branch == 'main'
+    needs: audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Check out exact control commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          persist-credentials: false
+
+      - name: Prove exact default-branch control commit
+        working-directory: control
         run: |
-          echo "ESP installer manifest evidence is not authorized for Flash Package publication; inspect the uploaded report." >&2
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+
+      - name: Download immutable audit report
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: esp-installer-audit
+          path: report
+
+      - name: Verify report before issue-write boundary
+        working-directory: control
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from tools.esp_installer_audit import render_markdown, validate_contract
+
+          contract = validate_contract(json.loads(Path("contracts/esp-installer-audit.json").read_text()))
+          report = json.loads(Path("../report/esp-installer-audit.json").read_text())
+          markdown = Path("../report/esp-installer-audit.md").read_text()
+          if report.get("schema") != 1 or report.get("kind") != "espInstallerAuditReport":
+              raise SystemExit("ESP installer report identity is invalid")
+          if report.get("status") not in {"verified", "needsReview", "rejected"}:
+              raise SystemExit("ESP installer report status is invalid")
+          if report.get("automaticFlashPackageAuthorization") is not (report["status"] == "verified"):
+              raise SystemExit("ESP installer authorization differs from status")
+          if render_markdown(report) != markdown:
+              raise SystemExit("ESP installer Markdown differs from the verified JSON report")
+          if contract["trackingIssue"]["repository"] != "squazaryu/tumoflip-fw-packages":
+              raise SystemExit("ESP installer tracking repository differs")
+          PY
+
+      - name: Reconcile hardware-acceptance issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          CONTRACT=control/contracts/esp-installer-audit.json
+          STATE=report/esp-installer-audit.json
+          REPORT=report/esp-installer-audit.md
+          ISSUE_REPOSITORY="$(jq -r .trackingIssue.repository "$CONTRACT")"
+          ISSUE_NUMBER="$(jq -r .trackingIssue.number "$CONTRACT")"
+          [[ "$ISSUE_REPOSITORY" == "$GITHUB_REPOSITORY" ]]
+          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          STATUS="$(jq -r .status "$STATE")"
+          [[ "$STATUS" == verified || "$STATUS" == needsReview || "$STATUS" == rejected ]]
+
+          gh api "repos/$ISSUE_REPOSITORY/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/issue.json"
+          [[ "$(jq -r .number "$RUNNER_TEMP/issue.json")" == "$ISSUE_NUMBER" ]]
+          ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
+          [[ "$ISSUE_STATE" == open || "$ISSUE_STATE" == closed ]]
+
+          gh api "repos/$ISSUE_REPOSITORY/issues/$ISSUE_NUMBER/comments?per_page=100" \
+            --paginate --slurp > "$RUNNER_TEMP/comment-pages.json"
+          jq '[.[][] | select(.user.login == "github-actions[bot]") | select(.body | startswith("<!-- esp-installer-audit -->"))]' \
+            "$RUNNER_TEMP/comment-pages.json" > "$RUNNER_TEMP/comments.json"
+          COMMENT_COUNT="$(jq length "$RUNNER_TEMP/comments.json")"
+          [[ "$COMMENT_COUNT" == 0 || "$COMMENT_COUNT" == 1 ]]
+          if [[ "$COMMENT_COUNT" == 0 ]]; then
+            gh api "repos/$ISSUE_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
+              --method POST --field body=@"$REPORT" > "$RUNNER_TEMP/comment.json"
+          else
+            COMMENT_ID="$(jq -r '.[0].id' "$RUNNER_TEMP/comments.json")"
+            [[ "$COMMENT_ID" =~ ^[1-9][0-9]*$ ]]
+            gh api "repos/$ISSUE_REPOSITORY/issues/comments/$COMMENT_ID" \
+              --method PATCH --field body=@"$REPORT" > "$RUNNER_TEMP/comment.json"
+          fi
+          [[ "$(jq -r '.user.login' "$RUNNER_TEMP/comment.json")" == "github-actions[bot]" ]]
+          jq -e '.body | startswith("<!-- esp-installer-audit -->")' "$RUNNER_TEMP/comment.json" > /dev/null
+
+          if [[ "$STATUS" == verified && "$ISSUE_STATE" == open ]]; then
+            gh issue close "$ISSUE_NUMBER" --repo "$ISSUE_REPOSITORY" \
+              --comment "All reviewed ESP installer profiles now carry complete hardware evidence."
+          elif [[ "$STATUS" != verified && "$ISSUE_STATE" == closed ]]; then
+            gh issue reopen "$ISSUE_NUMBER" --repo "$ISSUE_REPOSITORY"
+          fi
+
+      - name: Fail closed when review is required
+        if: needs.audit.outputs.status != '0'
+        run: |
+          echo "ESP installer manifest evidence is not authorized for Flash Package publication; issue state and evidence were synchronized first." >&2
           exit 1

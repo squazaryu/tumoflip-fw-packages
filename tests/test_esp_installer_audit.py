@@ -67,6 +67,50 @@ class EspInstallerAuditTests(unittest.TestCase):
         self.contract = audit.validate_contract(json.loads((root / "contracts/esp-installer-audit.json").read_text()))
         self.baseline = audit.validate_baseline(json.loads((root / "contracts/esp-installer-baseline.json").read_text()))
 
+    def test_checked_in_contract_pins_the_hardware_acceptance_issue(self) -> None:
+        self.assertEqual(self.contract["schema"], 2)
+        self.assertEqual(
+            self.contract["trackingIssue"],
+            {"repository": "squazaryu/tumoflip-fw-packages", "number": 29},
+        )
+
+    def test_manifest_rejects_an_unsafe_board_identifier(self) -> None:
+        manifest, members = _manifest()
+        document = json.loads(manifest)
+        document["targets"][0]["id"] = "marauder-v6-1`\n@everyone"
+        unsafe_manifest = json.dumps(document, sort_keys=True).encode()
+        with self.assertRaisesRegex(audit.AuditError, "safe board identifier"):
+            audit.build_report(
+                self.contract,
+                upstream={
+                    "repository": audit.UPSTREAM_REPOSITORY,
+                    "releaseId": 1,
+                    "tag": "v1.15.1",
+                    "sourceCommit": SOURCE,
+                },
+                carrier={
+                    "kind": audit.ZIP_NAME,
+                    "assetName": audit.ZIP_NAME,
+                    "sha256": "b" * 64,
+                    "bytes": 1,
+                },
+                manifest_bytes=unsafe_manifest,
+                members={audit.MANIFEST_NAME: unsafe_manifest, **members},
+            )
+
+    def test_rejected_report_has_stable_markdown(self) -> None:
+        report = {
+            "schema": 1,
+            "kind": "espInstallerAuditReport",
+            "status": "rejected",
+            "automaticFlashPackageAuthorization": False,
+            "error": "unsafe `manifest`\nvalue",
+        }
+        markdown = audit.render_markdown(report)
+        self.assertTrue(markdown.startswith(audit.ISSUE_MARKER))
+        self.assertIn("Status: **rejected**", markdown)
+        self.assertIn("Error: `unsafe manifest value`", markdown)
+
     def _carrier(self, manifest_bytes: bytes, members: dict[str, bytes]) -> Path:
         directory = Path(tempfile.mkdtemp(prefix="esp-audit-test-"))
         path = directory / audit.ZIP_NAME

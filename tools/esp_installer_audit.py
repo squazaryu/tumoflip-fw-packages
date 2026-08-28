@@ -28,6 +28,7 @@ HEX40 = re.compile(r"^[0-9a-f]{40}$")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 SAFE_TAG = re.compile(r"^v[0-9]+\.[0-9]+\.[0-9]+$")
 SAFE_FILE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$")
+SAFE_BOARD = re.compile(r"^[a-z0-9][a-z0-9-]{0,95}$")
 TIMESTAMP = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")
 ROLES = {"bootloader", "partition-table", "ota-data", "application"}
 UPSTREAM_REPOSITORY = "justcallmekoko/ESP32Marauder"
@@ -87,6 +88,13 @@ def _safe_file(value: Any, label: str) -> str:
     return value
 
 
+def _safe_board(value: Any, label: str) -> str:
+    value = _string(value, label)
+    if SAFE_BOARD.fullmatch(value) is None:
+        raise AuditError(f"{label} is not a safe board identifier")
+    return value
+
+
 def _timestamp(value: Any, label: str) -> str:
     value = _string(value, label)
     if TIMESTAMP.fullmatch(value) is None:
@@ -113,7 +121,8 @@ def _object(value: Any, label: str) -> dict[str, Any]:
 
 def validate_contract(value: Any) -> dict[str, Any]:
     contract = _object(value, "ESP installer audit contract")
-    if contract.get("schema") != 1 or contract.get("kind") != "espInstallerAudit":
+    schema = contract.get("schema")
+    if schema not in {1, 2} or contract.get("kind") != "espInstallerAudit":
         raise AuditError("ESP installer audit contract schema is invalid")
     if contract.get("repository") != UPSTREAM_REPOSITORY:
         raise AuditError("ESP installer audit repository is not allow-listed")
@@ -128,7 +137,7 @@ def validate_contract(value: Any) -> dict[str, Any]:
     seen: set[tuple[str, str]] = set()
     for index, raw in enumerate(profiles):
         profile = _object(raw, f"profiles[{index}]")
-        board = _string(profile.get("board"), f"profiles[{index}].board")
+        board = _safe_board(profile.get("board"), f"profiles[{index}].board")
         recipe = _string(profile.get("recipe"), f"profiles[{index}].recipe")
         key = (board, recipe)
         if key in seen:
@@ -156,6 +165,14 @@ def validate_contract(value: Any) -> dict[str, Any]:
         raise AuditError("hardwareEvidence.requiredChecks is invalid")
     if evidence.get("minimumPerBoard") is not True:
         raise AuditError("hardware evidence must be required per board")
+    tracking_issue = contract.get("trackingIssue")
+    if schema == 2:
+        tracking_issue = _object(tracking_issue, "trackingIssue")
+        if tracking_issue.get("repository") != "squazaryu/tumoflip-fw-packages":
+            raise AuditError("trackingIssue.repository is not allow-listed")
+        _positive_int(tracking_issue.get("number"), "trackingIssue.number")
+    elif tracking_issue is not None:
+        raise AuditError("schema 1 cannot contain trackingIssue")
     return contract
 
 
@@ -360,7 +377,7 @@ def build_report(contract: dict[str, Any], *, upstream: dict[str, Any], carrier:
     candidates: list[dict[str, Any]] = []
     for index, raw in enumerate(targets):
         target = _object(raw, f"targets[{index}]")
-        board = _string(target.get("id"), f"targets[{index}].id")
+        board = _safe_board(target.get("id"), f"targets[{index}].id")
         recipe = "factory"
         segments, missing_artifacts = _segments(target, recipe, members, f"targets[{index}]")
         decision, reasons = _decision(contract, board, recipe, segments, evidence, missing_artifacts)
@@ -396,7 +413,28 @@ def build_report(contract: dict[str, Any], *, upstream: dict[str, Any], carrier:
 
 
 def render_markdown(report: dict[str, Any]) -> str:
-    lines = [ISSUE_MARKER, "# ESP installer manifest audit", "", f"- Status: **{report['status']}**", f"- Automatic Flash Package authorization: **{'yes' if report['automaticFlashPackageAuthorization'] else 'no'}**", f"- Release: `{report['upstream']['tag']}` (id `{report['upstream']['releaseId']}`)", f"- Source commit: `{report['upstream']['sourceCommit']}`", f"- Carrier: `{report['carrier']['assetName']}` (`{report['carrier']['sha256']}`)", f"- Manifest: `{report['manifest']['sha256']}` ({report['manifest']['bytes']} bytes)", "", "## Board candidates", ""]
+    lines = [
+        ISSUE_MARKER,
+        "# ESP installer manifest audit",
+        "",
+        f"- Status: **{report['status']}**",
+        f"- Automatic Flash Package authorization: **{'yes' if report['automaticFlashPackageAuthorization'] else 'no'}**",
+    ]
+    if report["status"] == "rejected":
+        error = " ".join(_string(report.get("error"), "report.error").split())
+        lines.extend([f"- Error: `{error.replace('`', '')}`", ""])
+        return "\n".join(lines)
+    lines.extend(
+        [
+            f"- Release: `{report['upstream']['tag']}` (id `{report['upstream']['releaseId']}`)",
+            f"- Source commit: `{report['upstream']['sourceCommit']}`",
+            f"- Carrier: `{report['carrier']['assetName']}` (`{report['carrier']['sha256']}`)",
+            f"- Manifest: `{report['manifest']['sha256']}` ({report['manifest']['bytes']} bytes)",
+            "",
+            "## Board candidates",
+            "",
+        ]
+    )
     if report.get("identityChange"):
         lines.extend([f"- **Identity change:** {report['identityChange']}", ""])
     for candidate in report["candidates"]:

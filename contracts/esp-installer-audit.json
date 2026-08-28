@@ -1,7 +1,11 @@
 {
-  "schema": 1,
+  "schema": 2,
   "kind": "espInstallerAudit",
   "repository": "justcallmekoko/ESP32Marauder",
+  "trackingIssue": {
+    "repository": "squazaryu/tumoflip-fw-packages",
+    "number": 29
+  },
   "selection": {
     "releasePattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "includePrereleases": false

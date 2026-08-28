@@ -78,7 +78,7 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertNotIn("git push", text)
         self.assertNotIn("gh release", text)
 
-    def test_esp_installer_audit_is_read_only_and_fail_closed(self) -> None:
+    def test_esp_installer_audit_is_fail_closed_after_issue_reconciliation(self) -> None:
         text = (self.root / ".github/workflows/esp-installer-audit.yml").read_text(
             encoding="utf-8"
         )
@@ -86,9 +86,18 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("tools/esp_installer_audit.py", text)
         self.assertIn("scan-github", text)
         self.assertIn("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", text)
+        self.assertIn("actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c", text)
+        self.assertIn("Reconcile hardware-acceptance issue", text)
+        self.assertIn("trackingIssue.repository", text)
+        self.assertIn("issues: write", text)
+        self.assertIn('.user.login == "github-actions[bot]"', text)
+        self.assertIn("startswith", text)
+        self.assertLess(
+            text.index("Reconcile hardware-acceptance issue"),
+            text.index("Fail closed when review is required"),
+        )
         self.assertIn("Fail closed when review is required", text)
         self.assertNotIn("contents: write", text)
-        self.assertNotIn("issues: write", text)
         self.assertNotIn("gh release", text)
         self.assertNotIn("git push", text)
 
@@ -187,6 +196,8 @@ class WorkflowSecurityTests(unittest.TestCase):
 
         self.assertIn('[[ "$ISSUE_STATE" == open || "$ISSUE_STATE" == closed ]]', text)
         self.assertIn('if [[ "$ISSUE_STATE" == closed && "$CHANGES" == true ]]; then', text)
+        self.assertIn('if [[ "$ISSUE_STATE" == open && "$CHANGES" == false ]]; then', text)
+        self.assertIn('gh issue close "$ISSUE_NUMBER"', text)
         self.assertNotIn('"$ISSUE_STATE" == OPEN', text)
         self.assertNotIn('"$ISSUE_STATE" == CLOSED', text)
         self.assertIn(
