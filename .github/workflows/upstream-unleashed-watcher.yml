@@ -157,3 +157,10 @@ jobs:
             compare_canonical_issue_body
             [[ "$BODY_MATCHES" == true ]]
           fi
+          if [[ "$ISSUE_STATE" == open && "$CHANGES" == false ]]; then
+            gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+              --comment "No unreviewed upstream changes remain; the exact decision ledger is current. This issue will reopen automatically when the watcher detects a new commit, release, or merged pull request."
+            load_canonical_issue
+            ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
+            [[ "$ISSUE_STATE" == closed ]]
+          fi

@@ -101,6 +101,15 @@ GitHub comparison range and fails closed if a commit is missing, duplicated, or
 reordered. Covered entries pin the corresponding Tumoflip commit, release, and
 hardware-acceptance state, while issue-only entries keep unfinished engineering
 work in the firmware repository instead of repeatedly rediscovering it.
+When the reviewed boundary catches up, the canonical watcher issue closes and
+will reopen automatically on the next exact upstream delta.
+
+`esp-installer-audit.yml` keeps ESP installer review separate from package
+publication. It writes immutable evidence first, then updates one bot-owned
+comment on the pinned hardware-acceptance issue, and only afterwards fails
+closed when a board recipe or its hardware evidence is still unapproved. A red
+run therefore remains actionable instead of leaving the result hidden only in
+an expiring workflow artifact.
 
 See [Migration](docs/MIGRATION.md), [Release contract](docs/RELEASES.md), and
 [Security](SECURITY.md).
