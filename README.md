@@ -94,7 +94,13 @@ advance that file, modify Tumoflip, merge an upstream change, or publish a
 firmware/package release. It only maintains one canonical human-review issue
 with exact branch/release refs and merged-PR candidates. A reviewer records the
 decision first, then advances the boundary only through a separate reviewed
-control-plane pull request.
+control-plane pull request. Schema 2 contracts also retain a contiguous decision
+ledger. Every commit between the former and new boundary must appear exactly
+once as `covered`, `issueOnly`, or `metadataOnly`; the watcher replays the exact
+GitHub comparison range and fails closed if a commit is missing, duplicated, or
+reordered. Covered entries pin the corresponding Tumoflip commit, release, and
+hardware-acceptance state, while issue-only entries keep unfinished engineering
+work in the firmware repository instead of repeatedly rediscovering it.
 
 See [Migration](docs/MIGRATION.md), [Release contract](docs/RELEASES.md), and
 [Security](SECURITY.md).

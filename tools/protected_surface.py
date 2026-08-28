@@ -58,7 +58,8 @@ def require_repo_path(value: Any, label: str) -> str:
 
 
 def validate_contract(document: dict[str, Any]) -> dict[str, Any]:
-    if document.get("schema") != SCHEMA or document.get("kind") != "protectedSurface":
+    schema = document.get("schema")
+    if schema not in {1, 2} or document.get("kind") != "protectedSurface":
         raise SurfaceError("protected surface contract has an unsupported schema or kind")
     require_string(document.get("firmwareRepository"), "firmwareRepository")
     implementations = document.get("reviewedImplementations")
@@ -77,6 +78,41 @@ def validate_contract(document: dict[str, Any]) -> dict[str, Any]:
         raise SurfaceError("ownedSourcePaths entries must be under applications_user/")
     if len(set(owned)) != len(owned):
         raise SurfaceError("ownedSourcePaths contains duplicates")
+    owned_by_implementation = document.get("ownedSourcePathsByImplementation", {})
+    if schema == 2:
+        if not isinstance(owned_by_implementation, dict):
+            raise SurfaceError("ownedSourcePathsByImplementation must be an object")
+        if set(owned_by_implementation) != set(implementations):
+            raise SurfaceError(
+                "ownedSourcePathsByImplementation must match reviewed implementations"
+            )
+    elif "ownedSourcePathsByImplementation" in document:
+        raise SurfaceError("schema 1 cannot contain ownedSourcePathsByImplementation")
+    branch_owned: list[str] = []
+    for name, values in owned_by_implementation.items():
+        if not isinstance(values, list) or not all(
+            isinstance(item, str) and item for item in values
+        ):
+            raise SurfaceError(
+                f"ownedSourcePathsByImplementation.{name} must be a string array"
+            )
+        normalized = [
+            require_repo_path(item, f"ownedSourcePathsByImplementation.{name} entry")
+            for item in values
+        ]
+        if not all(item.startswith("applications_user/") for item in normalized):
+            raise SurfaceError(
+                f"ownedSourcePathsByImplementation.{name} entries must be under applications_user/"
+            )
+        if len(set(normalized)) != len(normalized):
+            raise SurfaceError(
+                f"ownedSourcePathsByImplementation.{name} contains duplicates"
+            )
+        branch_owned.extend(normalized)
+    if len(set(branch_owned)) != len(branch_owned):
+        raise SurfaceError("branch-specific owned source paths must be unique")
+    if set(owned) & set(branch_owned):
+        raise SurfaceError("common and branch-specific owned source paths overlap")
     prefixes = document.get("reviewPrefixes")
     if not isinstance(prefixes, list) or not all(isinstance(item, str) and item for item in prefixes):
         raise SurfaceError("reviewPrefixes must be a list of non-empty strings")
@@ -277,7 +313,7 @@ def audit_pin_report(
     ref_by_name: dict[str, str],
     targets_path: Path | None,
     parity_path: Path | None,
-    known_roots: set[str],
+    known_roots_by_branch: dict[str, set[str]],
     review_prefixes: list[str],
 ) -> list[dict[str, Any]]:
     pins: list[dict[str, Any]] = []
@@ -297,7 +333,7 @@ def audit_pin_report(
                     branch=branch,
                     pin=pin,
                     current=current,
-                    known_roots=known_roots,
+                    known_roots=known_roots_by_branch[branch],
                     review_prefixes=review_prefixes,
                 )
             )
@@ -314,7 +350,7 @@ def audit_pin_report(
                     branch="dev",
                     pin=pin,
                     current=current,
-                    known_roots=known_roots,
+                    known_roots=known_roots_by_branch["dev"],
                     review_prefixes=review_prefixes,
                 )
             )
@@ -334,11 +370,20 @@ def scan(
     contract = validate_contract(read_json(contract_path))
     registry = validate_registry(read_json(registry_path))
     upstream_roots = {item["localSourcePath"] for item in registry}
-    owned_roots = set(contract["ownedSourcePaths"])
+    common_owned_roots = set(contract["ownedSourcePaths"])
+    branch_owned_roots = {
+        name: set(contract.get("ownedSourcePathsByImplementation", {}).get(name, []))
+        for name in contract["reviewedImplementations"]
+    }
+    owned_roots = common_owned_roots | set().union(*branch_owned_roots.values())
     overlap = upstream_roots & owned_roots
     if overlap:
         raise SurfaceError(f"owned and upstream source paths overlap: {sorted(overlap)}")
-    known_roots = upstream_roots | owned_roots
+    known_roots_by_branch = {
+        name: upstream_roots | common_owned_roots | branch_owned_roots[name]
+        for name in contract["reviewedImplementations"]
+    }
+    known_roots = set().union(*known_roots_by_branch.values())
     reports: list[dict[str, Any]] = []
     for name, item in contract["reviewedImplementations"].items():
         if name not in refs:
@@ -349,7 +394,7 @@ def scan(
                 name=name,
                 ref=refs[name],
                 baseline=require_commit(item.get("commit"), f"{name}.commit"),
-                known_roots=known_roots,
+                known_roots=known_roots_by_branch[name],
                 review_prefixes=contract["reviewPrefixes"],
             )
         )
@@ -358,7 +403,7 @@ def scan(
         ref_by_name=refs,
         targets_path=targets_path,
         parity_path=parity_path,
-        known_roots=known_roots,
+        known_roots_by_branch=known_roots_by_branch,
         review_prefixes=contract["reviewPrefixes"],
     )
     status = "verified"
@@ -376,6 +421,9 @@ def scan(
         "knownRoots": sorted(known_roots),
         "upstreamRoots": sorted(upstream_roots),
         "ownedRoots": sorted(owned_roots),
+        "ownedRootsByImplementation": {
+            name: sorted(values) for name, values in branch_owned_roots.items()
+        },
         "branches": reports,
         "auditPins": pins,
     }

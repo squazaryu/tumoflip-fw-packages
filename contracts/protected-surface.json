@@ -1,12 +1,12 @@
 {
-  "schema": 1,
+  "schema": 2,
   "kind": "protectedSurface",
   "firmwareRepository": "squazaryu/tumoflip",
   "reviewedImplementations": {
     "dev": {
       "ref": "refs/heads/dev",
-      "commit": "b63b68390c43ef99205830f44a3e31cc605cf32a",
-      "label": "dev-aligned-main-2026-08-25"
+      "commit": "833efd8e474afd1ba75c9fc57da7096bad107495",
+      "label": "dev-morse-player-0.3-2026-08-28"
     },
     "main": {
       "ref": "refs/heads/main",
@@ -53,6 +53,12 @@
     "applications_user/tumovm_poc",
     "applications_user/usb_sd_mode"
   ],
+  "ownedSourcePathsByImplementation": {
+    "dev": [
+      "applications_user/morse_player"
+    ],
+    "main": []
+  },
   "reviewPrefixes": [
     "applications_user/",
     "applications/main/nfc/",
