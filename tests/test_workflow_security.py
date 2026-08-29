@@ -74,6 +74,7 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("Fail closed when source review is required", text)
         self.assertIn('.user.login == "github-actions[bot]"', text)
         self.assertIn("verify_issue()", text)
+        self.assertIn("GH_TOKEN: ${{ github.token }}", text)
         self.assertNotIn("contents: write", text)
         self.assertNotIn("git push", text)
         self.assertNotIn("gh release", text)
@@ -195,13 +196,15 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn('author.get("login") != ISSUE_AUTHOR', watcher)
 
         self.assertIn('[[ "$ISSUE_STATE" == open || "$ISSUE_STATE" == closed ]]', text)
-        self.assertIn('if [[ "$ISSUE_STATE" == closed && "$CHANGES" == true ]]; then', text)
-        self.assertIn('if [[ "$ISSUE_STATE" == open && "$CHANGES" == false ]]; then', text)
+        self.assertIn('if [[ "$ISSUE_STATE" == closed && "$REVIEW" == true ]]; then', text)
+        self.assertIn('if [[ "$ISSUE_STATE" == open && "$REVIEW" == false ]]; then', text)
+        self.assertIn('if [[ "$REVIEW" == false ]]; then', text)
+        self.assertIn("No eligible or blocked upstream candidate requires a control issue.", text)
         self.assertIn('gh issue close "$ISSUE_NUMBER"', text)
         self.assertNotIn('"$ISSUE_STATE" == OPEN', text)
         self.assertNotIn('"$ISSUE_STATE" == CLOSED', text)
         self.assertIn(
-            "if [[ \"$ISSUE_STATE\" == closed && \"$CHANGES\" == true ]]; then\n"
+            "if [[ \"$ISSUE_STATE\" == closed && \"$REVIEW\" == true ]]; then\n"
             "            gh issue reopen \"$ISSUE_NUMBER\" --repo \"$GITHUB_REPOSITORY\"\n"
             "            load_canonical_issue\n"
             "            ISSUE_STATE=\"$(jq -r .state \"$RUNNER_TEMP/issue.json\")\"\n"

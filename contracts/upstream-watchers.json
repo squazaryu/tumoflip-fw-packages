@@ -76,9 +76,14 @@
           "upstreamCommit": "bcce3fe615b73a87128af6d362e51e789a08ea0e"
         },
         {
-          "classification": "issueOnly",
+          "classification": "covered",
           "issue": "https://github.com/squazaryu/tumoflip/issues/421",
-          "summary": "Experimental MIFARE Classic CUID cursor changes require isolated review and hardware validation before integration.",
+          "summary": "The CUID key cursor was adapted with deterministic final-Key-B coverage; physical card acceptance remains pending.",
+          "tumoflip": {
+            "commit": "987d8c27ab54f43d85b382a353972278f08b822d",
+            "hardwareAcceptance": "pending",
+            "releaseTag": "t-dev-008-003"
+          },
           "upstreamCommit": "be559b2ee1b2bbae3eaf109a4a1b0d7337b3d8a8"
         },
         {
@@ -93,6 +98,23 @@
     }
   ],
   "kind": "upstreamWatch",
+  "lifecycle": {
+    "milestone": {
+      "number": 5,
+      "title": "unlshd-093"
+    },
+    "provider": "github",
+    "requiredChecks": [
+      {
+        "kind": "checkRun",
+        "name": "f7 firmware"
+      }
+    ],
+    "taskPolicy": "accepted-only",
+    "trackIssues": true,
+    "trackPullRequests": true,
+    "trackReleases": true
+  },
   "repository": "DarkFlippers/unleashed-firmware",
   "reviewed": {
     "commit": "469ff492613b7ffec6e4df2835d6dce4df115be4",
@@ -103,5 +125,5 @@
     },
     "reviewedAt": "2026-08-28T13:59:53Z"
   },
-  "schema": 2
+  "schema": 3
 }

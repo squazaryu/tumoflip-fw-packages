@@ -92,9 +92,9 @@ published releases on a separate schedule. Its reviewed boundary is the exact
 commit and release in `contracts/upstream-watchers.json`; the workflow cannot
 advance that file, modify Tumoflip, merge an upstream change, or publish a
 firmware/package release. It only maintains one canonical human-review issue
-with exact branch/release refs and merged-PR candidates. A reviewer records the
+with exact branch/release refs and upstream lifecycle evidence. A reviewer records the
 decision first, then advances the boundary only through a separate reviewed
-control-plane pull request. Schema 2 contracts also retain a contiguous decision
+control-plane pull request. Schema 3 contracts also retain a contiguous decision
 ledger. Every commit between the former and new boundary must appear exactly
 once as `covered`, `issueOnly`, or `metadataOnly`; the watcher replays the exact
 GitHub comparison range and fails closed if a commit is missing, duplicated, or
@@ -103,6 +103,24 @@ hardware-acceptance state, while issue-only entries keep unfinished engineering
 work in the firmware repository instead of repeatedly rediscovering it.
 When the reviewed boundary catches up, the canonical watcher issue closes and
 will reopen automatically on the next exact upstream delta.
+
+The lifecycle policy is `accepted-only`. It records open, draft, merged, and
+closed-without-merge pull requests, issue resolution, required checks on exact
+commits, branch inclusion, and release inclusion. Only a merged pull request
+that remains on the tracked branch and passes every configured required check
+on both the exact PR head and current branch head
+is eligible to authorize creating a Tumoflip implementation task. Open or draft
+work, issues without implementation evidence, `not planned` issues, and pull
+requests closed without merge are retained as evidence but suppressed. Missing,
+failed, or contradictory evidence fails closed. Upstream acceptance never
+replaces Tumoflip build, API/C2, package, or physical-device acceptance.
+For Unleashed the contract also pins the exact `unlshd-093` milestone, so old
+open items remain observable even when their last update predates the reviewed
+commit boundary; removal from that milestone is reported as deferred rather
+than silently creating work.
+
+See [Upstream lifecycle evidence](docs/UPSTREAM_LIFECYCLE.md) for the state and
+task-eligibility matrix.
 
 `esp-installer-audit.yml` keeps ESP installer review separate from package
 publication. It writes immutable evidence first, then updates one bot-owned
@@ -122,7 +140,10 @@ Tumoflip `dev` and `main` commits with the live branches, detects changes in
 protected or NFC/Sub-GHz/loader paths, inventories new or removed
 `applications_user` roots, and fails closed on stale audit pins. The separate
 `source-matrix-watcher.yml` checks the exact ARF and ProtoPirate refs that are
-not reliably covered by a generic GitHub release watcher. Both workflows are
+not reliably covered by a generic GitHub release watcher. ARF additionally uses
+the same accepted-only GitHub lifecycle policy and exact `build` check; a source
+without a reachable provider API remains explicitly `gitOnly` and can authorize
+review only through an exact branch-head change. Both workflows are
 read-only and maintain one canonical review issue; they never update a
 baseline, import code, build FAPs, or publish a release automatically.
 

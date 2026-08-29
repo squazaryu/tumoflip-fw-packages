@@ -1,10 +1,28 @@
 {
-  "schema": 1,
+  "schema": 2,
   "kind": "sourceWatchers",
   "policy": "review-only",
   "watchers": [
     {
       "id": "arf-main",
+      "githubLifecycle": {
+        "branch": "main",
+        "policy": {
+          "provider": "github",
+          "requiredChecks": [
+            {
+              "kind": "checkRun",
+              "name": "build"
+            }
+          ],
+          "taskPolicy": "accepted-only",
+          "trackIssues": true,
+          "trackPullRequests": true,
+          "trackReleases": false
+        },
+        "repository": "D4C1-Labs/Flipper-ARF",
+        "reviewedAt": "2026-08-25T09:15:28Z"
+      },
       "repository": "https://github.com/D4C1-Labs/Flipper-ARF.git",
       "ref": "refs/heads/main",
       "reviewedCommit": "56701a815b54121a4b4d102e361add5468ffa92b",
