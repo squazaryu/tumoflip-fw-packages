@@ -6,10 +6,12 @@ not an identity: the audit key is the tag plus the named SHA-256 of both ZIPs.
 
 ## Lifecycle
 
-1. The scheduled run resolves the newest two packs, or a manual run supplies
-   both exact tags. The workflow downloads current ZIPs by numeric GitHub asset
-   ID, checks their size and SHA-256, resolves both source commits, and creates
-   or reuses one canonical issue in `squazaryu/tumoflip-fw-packages`.
+1. The twice-hourly run resolves the newest two packs and rolling Tumoflip
+   release targets; a `tumoflip_release_published` repository dispatch starts the
+   same reconciliation immediately, and a manual run may supply both exact pack
+   tags. The workflow downloads current ZIPs by numeric GitHub asset ID, checks
+   their size and SHA-256, resolves both source commits, and creates or reuses one
+   canonical issue in `squazaryu/tumoflip-fw-packages`.
 2. The scanner resolves every registered FAP by its declared pack and unique
    `archiveFileName`, then derives the live archive and `/ext/apps` routes. A
    category move therefore needs no registry edit; a missing, ambiguous, or

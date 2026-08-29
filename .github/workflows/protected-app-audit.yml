@@ -2,7 +2,13 @@ name: Protected App Audit
 
 on:
   schedule:
-    - cron: "17 6 * * *"
+    # GitHub may delay an individual scheduled run for hours. Two off-peak checks
+    # per hour keep rolling firmware evidence current without creating ledger churn:
+    # semantic no-ops reuse the existing immutable audit head.
+    - cron: "17,47 * * * *"
+  repository_dispatch:
+    types:
+      - tumoflip_release_published
   workflow_dispatch:
     inputs:
       source_tag:
