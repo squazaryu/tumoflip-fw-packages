@@ -34,6 +34,10 @@ class WorkflowSecurityTests(unittest.TestCase):
             )
             self.assertIn(expected, text)
             self.assertNotIn(deprecated, text)
+            self.assertIn(
+                "client-id: ${{ secrets.PROTECTED_AUDIT_APP_ID }}", text
+            )
+            self.assertNotIn("app-id:", text)
 
     def test_pull_request_workflows_never_receive_write_permissions(self) -> None:
         for path in self.workflows:
