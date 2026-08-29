@@ -48,6 +48,17 @@ class WorkflowSecurityTests(unittest.TestCase):
             ],
         )
 
+    def test_protected_audit_reconciles_target_releases_promptly(self) -> None:
+        text = (self.root / ".github/workflows/protected-app-audit.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('- cron: "17,47 * * * *"', text)
+        self.assertNotIn('- cron: "17 6 * * *"', text)
+        self.assertIn("repository_dispatch:", text)
+        self.assertIn("- tumoflip_release_published", text)
+        self.assertIn("group: protected-app-audit-publication", text)
+        self.assertIn("cancel-in-progress: false", text)
+
     def test_implementation_drift_is_review_only_and_fail_closed(self) -> None:
         text = (self.root / ".github/workflows/implementation-drift.yml").read_text(
             encoding="utf-8"
