@@ -21,6 +21,20 @@ class WorkflowSecurityTests(unittest.TestCase):
                 reference = match.group(1)
                 self.assertRegex(reference, r"^[^@]+@[0-9a-f]{40}$", path.name)
 
+    def test_privileged_publishers_use_node24_app_token_action(self) -> None:
+        expected = (
+            "actions/create-github-app-token@"
+            "bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0"
+        )
+        deprecated = "fee1f7d63c2ff003460e3d139729b119787bc349"
+
+        for workflow_name in ("catalog-index.yml", "protected-app-audit.yml"):
+            text = (self.root / ".github/workflows" / workflow_name).read_text(
+                encoding="utf-8"
+            )
+            self.assertIn(expected, text)
+            self.assertNotIn(deprecated, text)
+
     def test_pull_request_workflows_never_receive_write_permissions(self) -> None:
         for path in self.workflows:
             text = path.read_text(encoding="utf-8")
@@ -259,7 +273,7 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("environment: production", text)
         self.assertIn("vars.IMMUTABLE_RELEASES_ENABLED == 'true'", text)
         self.assertIn(
-            "actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349",
+            "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1",
             text,
         )
         self.assertIn("permission-administration: read", text)
