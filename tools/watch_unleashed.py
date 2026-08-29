@@ -19,6 +19,11 @@ from pathlib import Path
 from typing import Any, Iterable
 from urllib.parse import urlencode
 
+if __package__:
+    from . import github_lifecycle
+else:
+    import github_lifecycle
+
 
 HEX_40 = re.compile(r"^[0-9a-f]{40}$")
 RELEASE_TAG = re.compile(r"^unlshd-[0-9]{3}$")
@@ -89,7 +94,7 @@ def _require_tumoflip_issue(value: Any, label: str) -> str:
 
 def _validate_decision_ledger(value: Any, reviewed_commit: str) -> list[dict[str, Any]]:
     if not isinstance(value, list) or not value:
-        raise WatchError("schema 2 upstream watch requires a non-empty decision ledger")
+        raise WatchError("schema 2/3 upstream watch requires a non-empty decision ledger")
 
     seen_commits: set[str] = set()
     previous_through: str | None = None
@@ -189,7 +194,7 @@ def validate_contract(value: dict[str, Any]) -> dict[str, Any]:
     """Validate the immutable, human-reviewed upstream boundary."""
 
     schema = value.get("schema")
-    if schema not in {1, 2} or value.get("kind") != "upstreamWatch":
+    if schema not in {1, 2, 3} or value.get("kind") != "upstreamWatch":
         raise WatchError("upstream watch contract schema is invalid")
     if value.get("repository") != "DarkFlippers/unleashed-firmware":
         raise WatchError("upstream watch repository is not allow-listed")
@@ -210,10 +215,19 @@ def validate_contract(value: dict[str, Any]) -> dict[str, Any]:
         raise WatchError("reviewed release tag is invalid")
     _require_sha(release.get("commit"), "reviewed.release.commit")
     _parse_timestamp(release.get("publishedAt"), "reviewed.release.publishedAt")
-    if schema == 2:
+    if schema in {2, 3}:
         _validate_decision_ledger(value.get("decisionLedger"), reviewed["commit"])
     elif "decisionLedger" in value:
         raise WatchError("schema 1 upstream watch cannot contain a decision ledger")
+    if schema == 3:
+        try:
+            lifecycle = github_lifecycle.validate_policy(value.get("lifecycle"))
+        except github_lifecycle.LifecycleError as error:
+            raise WatchError(str(error)) from error
+        if value.get("lifecycle") != lifecycle:
+            raise WatchError("schema 3 lifecycle policy is not canonical")
+    elif "lifecycle" in value:
+        raise WatchError("only schema 3 upstream watch can contain lifecycle policy")
     return value
 
 
@@ -596,6 +610,52 @@ def _merged_pull_candidates(
     return result
 
 
+def _merged_pulls_from_lifecycle(
+    lifecycle: dict[str, Any], reviewed_at: datetime
+) -> list[dict[str, str | int]]:
+    """Preserve the existing merged-PR report while lifecycle adds all states."""
+
+    result: list[dict[str, str | int]] = []
+    for item in lifecycle["pullRequests"]:
+        merged_at_value = item.get("mergedAt")
+        if merged_at_value is None:
+            continue
+        merged_at = _parse_timestamp(
+            merged_at_value, f"pull request {item.get('number')} mergedAt"
+        )
+        if merged_at <= reviewed_at:
+            continue
+        result.append(
+            {
+                "number": item["number"],
+                "title": item["title"],
+                "mergedAt": merged_at_value,
+                "mergeCommit": item["mergeCommit"],
+                "url": item["url"],
+            }
+        )
+    result.sort(key=lambda item: (str(item["mergedAt"]), int(item["number"])))
+    return result
+
+
+def _lifecycle_unresolved(lifecycle: dict[str, Any] | None) -> list[str]:
+    if lifecycle is None:
+        return []
+    unresolved: list[str] = []
+    branch_status = lifecycle["branchChecks"]["status"]
+    if branch_status not in {"passed", "notRequired"}:
+        unresolved.append(
+            f"Required checks for the exact upstream branch head are {branch_status}."
+        )
+    for item in lifecycle["pullRequests"]:
+        if item["taskDisposition"] == "blocked":
+            unresolved.append(
+                f"Upstream pull request #{item['number']} is merged but blocked: "
+                f"{item['taskReason']}."
+            )
+    return unresolved
+
+
 def watch(
     *,
     contract: dict[str, Any],
@@ -636,7 +696,24 @@ def watch(
     unexpected_releases = [
         _release_evidence(repository, release) for release in unexpected_release_records
     ]
-    pull_requests = _merged_pull_candidates(repository, branch, reviewed_at)
+    lifecycle: dict[str, Any] | None = None
+    if contract["schema"] == 3:
+        try:
+            lifecycle = github_lifecycle.collect(
+                repository=repository,
+                branch=branch,
+                since=reviewed_at,
+                reviewed_commit=baseline,
+                branch_head=head,
+                release_commit=latest_release["commit"],
+                policy=contract["lifecycle"],
+                fetch=_gh_json,
+            )
+        except github_lifecycle.LifecycleError as error:
+            raise WatchError(str(error)) from error
+        pull_requests = _merged_pulls_from_lifecycle(lifecycle, reviewed_at)
+    else:
+        pull_requests = _merged_pull_candidates(repository, branch, reviewed_at)
 
     unresolved: list[str] = []
     if comparison["status"] in {"behind", "diverged"}:
@@ -647,6 +724,7 @@ def watch(
         unresolved.append(
             "A nonstandard published release appeared after the reviewed release boundary."
         )
+    unresolved.extend(_lifecycle_unresolved(lifecycle))
     release_changed = (
         latest_release["tag"] != reviewed_release["tag"]
         or latest_release["commit"] != reviewed_release["commit"]
@@ -660,8 +738,8 @@ def watch(
     timestamp = now or datetime.now(timezone.utc)
     if timestamp.tzinfo is None:
         raise WatchError("watch timestamp must have a timezone")
-    return {
-        "schema": 1,
+    report = {
+        "schema": 2 if lifecycle is not None else 1,
         "kind": "unleashedWatchReport",
         "generatedAt": _timestamp(timestamp),
         "control": {"repository": control_repository, "commit": control_commit},
@@ -684,9 +762,13 @@ def watch(
             "mergedPullRequests": pull_requests,
         },
         "changesDetected": changes_detected,
-        "humanReviewRequired": changes_detected,
+        "humanReviewRequired": changes_detected
+        or (lifecycle is not None and lifecycle["reviewRequired"]),
         "unresolved": unresolved,
     }
+    if lifecycle is not None:
+        report["upstreamLifecycle"] = lifecycle
+    return report
 
 
 def render_report(report: dict[str, Any]) -> str:
@@ -759,16 +841,65 @@ def render_report(report: dict[str, Any]) -> str:
 
     pull_requests = current["mergedPullRequests"]
     unexpected_releases = current["unrecognizedPublishedReleases"]
-    lines.extend(("## Merged PR candidates after the reviewed boundary", ""))
-    if pull_requests:
-        for item in pull_requests:
+    lifecycle = report.get("upstreamLifecycle")
+    if lifecycle is not None:
+        summary = lifecycle["summary"]
+        lines.extend(("## Upstream lifecycle and task eligibility", ""))
+        milestone = lifecycle.get("milestone")
+        if milestone is not None:
             lines.append(
-                f"- [#{item['number']}]({item['url']}) `{item['mergeCommit']}` "
-                f"({item['mergedAt']}) — {_escape_markdown_text(item['title'], 'rendered pull request title')}"
+                f"- tracked milestone: [#{milestone['number']}]({milestone['url']}) "
+                f"**{milestone['state']}**, open `{milestone['openItems']}`, "
+                f"closed `{milestone['closedItems']}` — "
+                f"{_escape_markdown_text(milestone['title'], 'rendered milestone title')}"
             )
+        lines.extend(
+            (
+                f"- exact branch checks: **{lifecycle['branchChecks']['status']}** "
+                f"at `{lifecycle['branchChecks']['commit']}`",
+                f"- pull requests: `{summary['pullRequests']}` "
+                f"(eligible `{summary['eligible']}`, blocked `{summary['blocked']}`, "
+                f"pending `{summary['pending']}`, deferred `{summary['deferred']}`, "
+                f"declined `{summary['declined']}`)",
+                f"- issues observed: `{summary['issues']}`; suppressed records: `{summary['suppressed']}`",
+                "- only `eligible` pull requests may authorize creating a Tumoflip implementation task; "
+                "open, draft, deferred, closed-without-merge, and issue-only records remain suppressed.",
+                "",
+            )
+        )
+        if lifecycle["pullRequests"]:
+            lines.extend(("### Pull requests", ""))
+            for item in lifecycle["pullRequests"]:
+                lines.append(
+                    f"- [#{item['number']}]({item['url']}) — "
+                    f"**{item['outcome']}**, checks `{item['checks']['status']}`, "
+                    f"mergeability `{item['mergeability']}`, milestone `{item['milestone']}`, "
+                    f"release `{item['release']}`, task `{item['taskDisposition']}` "
+                    f"(`{item['taskReason']}`) — "
+                    f"{_escape_markdown_text(item['title'], 'rendered lifecycle pull request title')}"
+                )
+            lines.append("")
+        if lifecycle["issues"]:
+            lines.extend(("### Issues", ""))
+            for item in lifecycle["issues"]:
+                lines.append(
+                    f"- [#{item['number']}]({item['url']}) — resolution "
+                    f"`{item['resolution']}`, milestone `{item['milestone']}`, "
+                    f"task `suppressed` — "
+                    f"{_escape_markdown_text(item['title'], 'rendered lifecycle issue title')}"
+                )
+            lines.append("")
     else:
-        lines.append("- None detected.")
-    lines.append("")
+        lines.extend(("## Merged PR candidates after the reviewed boundary", ""))
+        if pull_requests:
+            for item in pull_requests:
+                lines.append(
+                    f"- [#{item['number']}]({item['url']}) `{item['mergeCommit']}` "
+                    f"({item['mergedAt']}) — {_escape_markdown_text(item['title'], 'rendered pull request title')}"
+                )
+        else:
+            lines.append("- None detected.")
+        lines.append("")
 
     if unexpected_releases:
         lines.extend(("## Unrecognized published releases", ""))
@@ -787,14 +918,25 @@ def render_report(report: dict[str, Any]) -> str:
 
     lines.extend(("## Required human action", ""))
     if report["humanReviewRequired"]:
-        lines.extend(
-            (
-                "- [ ] Review every commit and PR candidate against the Tumoflip `main` and `dev` baselines.",
-                "- [ ] Classify each candidate as covered, issue-only, deferred, or approved for a separate implementation task.",
-                "- [ ] Keep NFC/RF/API/protected-app work out of automatic integration and require its normal device-acceptance gate.",
-                "- [ ] Advance `contracts/upstream-watchers.json` only in a separately reviewed control-plane PR after the ledger decision is recorded.",
+        if lifecycle is not None:
+            lines.extend(
+                (
+                    "- [ ] Review exact branch commits and only pull requests marked `eligible` against the Tumoflip `main` and `dev` baselines.",
+                    "- [ ] Do not create a Tumoflip implementation task for `suppressed` records; upstream-declined work remains evidence only.",
+                    "- [ ] Resolve `blocked` evidence before implementation; a merge with failed, missing, or contradictory checks is not accepted evidence.",
+                    "- [ ] Keep upstream acceptance separate from Tumoflip build, API/C2, package, and physical-device acceptance.",
+                    "- [ ] Advance `contracts/upstream-watchers.json` only in a separately reviewed control-plane PR after the ledger decision is recorded.",
+                )
             )
-        )
+        else:
+            lines.extend(
+                (
+                    "- [ ] Review every commit and PR candidate against the Tumoflip `main` and `dev` baselines.",
+                    "- [ ] Classify each candidate as covered, issue-only, deferred, or approved for a separate implementation task.",
+                    "- [ ] Keep NFC/RF/API/protected-app work out of automatic integration and require its normal device-acceptance gate.",
+                    "- [ ] Advance `contracts/upstream-watchers.json` only in a separately reviewed control-plane PR after the ledger decision is recorded.",
+                )
+            )
     else:
         lines.extend(
             (
@@ -802,6 +944,10 @@ def render_report(report: dict[str, Any]) -> str:
                 "- The reviewed baseline remains unchanged; the watcher never advances it by itself.",
             )
         )
+        if lifecycle is not None:
+            lines.append(
+                "- No upstream lifecycle record currently authorizes a new Tumoflip implementation task."
+            )
     return "\n".join(lines) + "\n"
 
 
@@ -816,7 +962,8 @@ def verify_report(
     """Verify an artifact before the separate issue-write privilege boundary."""
 
     contract = validate_contract(contract)
-    if report.get("schema") != 1 or report.get("kind") != "unleashedWatchReport":
+    expected_schema = 2 if contract["schema"] == 3 else 1
+    if report.get("schema") != expected_schema or report.get("kind") != "unleashedWatchReport":
         raise WatchError("watch report schema is invalid")
     if report.get("control") != {
         "repository": _require_string(control_repository, "control repository"),
@@ -841,7 +988,7 @@ def verify_report(
         report.get("humanReviewRequired"), bool
     ):
         raise WatchError("watch report review state is invalid")
-    if report["changesDetected"] != report["humanReviewRequired"]:
+    if report["changesDetected"] and not report["humanReviewRequired"]:
         raise WatchError("watch report cannot auto-clear a review requirement")
     if not isinstance(report.get("unresolved"), list) or not all(
         isinstance(item, str) and item for item in report["unresolved"]
@@ -924,6 +1071,29 @@ def verify_report(
         _normalise_text(item.get("title"), "watch report pull candidate title")
         if item.get("url") != f"https://github.com/{contract['repository']}/pull/{number}":
             raise WatchError("watch report pull candidate URL is invalid")
+    lifecycle = report.get("upstreamLifecycle")
+    if contract["schema"] == 3:
+        try:
+            github_lifecycle.validate_evidence(
+                lifecycle,
+                repository=contract["repository"],
+                branch_head=branch_commit,
+                policy=contract["lifecycle"],
+            )
+        except github_lifecycle.LifecycleError as error:
+            raise WatchError(str(error)) from error
+        if lifecycle.get("since") != contract["reviewed"]["reviewedAt"]:
+            raise WatchError("lifecycle evidence boundary differs from contract")
+        expected_pulls = _merged_pulls_from_lifecycle(
+            lifecycle,
+            _parse_timestamp(
+                contract["reviewed"]["reviewedAt"], "reviewed.reviewedAt"
+            ),
+        )
+        if pulls != expected_pulls:
+            raise WatchError("merged pull candidates differ from lifecycle evidence")
+    elif lifecycle is not None:
+        raise WatchError("legacy watch report cannot contain lifecycle evidence")
     expected_unresolved: list[str] = []
     if status in {"behind", "diverged"}:
         expected_unresolved.append(
@@ -933,6 +1103,7 @@ def verify_report(
         expected_unresolved.append(
             "A nonstandard published release appeared after the reviewed release boundary."
         )
+    expected_unresolved.extend(_lifecycle_unresolved(lifecycle))
     if report["unresolved"] != expected_unresolved:
         raise WatchError("watch report fail-closed state differs from evidence")
     reviewed_release = contract["reviewed"]["release"]
@@ -945,6 +1116,11 @@ def verify_report(
     )
     if report["changesDetected"] != expected_changes:
         raise WatchError("watch report change state differs from evidence")
+    expected_review = expected_changes or (
+        lifecycle is not None and lifecycle["reviewRequired"]
+    )
+    if report["humanReviewRequired"] != expected_review:
+        raise WatchError("watch report review state differs from evidence")
     if markdown != render_report(report):
         raise WatchError("watch report Markdown differs from verified evidence")
 

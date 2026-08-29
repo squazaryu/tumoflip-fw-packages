@@ -38,6 +38,34 @@ def contract() -> dict[str, object]:
     }
 
 
+def schema_three_contract() -> dict[str, object]:
+    value = contract()
+    value["schema"] = 3
+    value["decisionLedger"] = [
+        {
+            "fromExclusive": "1" * 40,
+            "throughInclusive": BASELINE,
+            "reviewedAt": value["reviewed"]["reviewedAt"],
+            "entries": [
+                {
+                    "upstreamCommit": BASELINE,
+                    "classification": "metadataOnly",
+                    "summary": "Reviewed boundary fixture.",
+                }
+            ],
+        }
+    ]
+    value["lifecycle"] = {
+        "provider": "github",
+        "taskPolicy": "accepted-only",
+        "trackPullRequests": True,
+        "trackIssues": True,
+        "trackReleases": False,
+        "requiredChecks": [],
+    }
+    return value
+
+
 def release(tag: str, commit: str, published_at: str) -> dict[str, object]:
     return {
         "tag_name": tag,
@@ -72,7 +100,16 @@ class UnleashedWatcherTests(unittest.TestCase):
 
         self.assertEqual(checked_in["repository"], REPOSITORY)
         self.assertEqual(checked_in["branch"], "dev")
-        self.assertEqual(checked_in["schema"], 2)
+        self.assertEqual(checked_in["schema"], 3)
+        self.assertEqual(checked_in["lifecycle"]["taskPolicy"], "accepted-only")
+        self.assertEqual(
+            checked_in["lifecycle"]["milestone"],
+            {"number": 5, "title": "unlshd-093"},
+        )
+        self.assertEqual(
+            checked_in["lifecycle"]["requiredChecks"],
+            [{"kind": "checkRun", "name": "f7 firmware"}],
+        )
         self.assertEqual(checked_in["reviewed"]["commit"], CHECKED_IN_BASELINE)
         self.assertEqual(checked_in["reviewed"]["release"]["tag"], "unlshd-092")
         ledger = checked_in["decisionLedger"]
@@ -82,16 +119,16 @@ class UnleashedWatcherTests(unittest.TestCase):
         self.assertEqual(len(ledger[0]["entries"]), 10)
         self.assertEqual(
             {entry["classification"] for entry in ledger[0]["entries"]},
-            {"covered", "issueOnly", "metadataOnly"},
+            {"covered", "metadataOnly"},
         )
-        self.assertEqual(
-            [
-                entry["upstreamCommit"]
-                for entry in ledger[0]["entries"]
-                if entry["classification"] == "issueOnly"
-            ],
-            ["be559b2ee1b2bbae3eaf109a4a1b0d7337b3d8a8"],
+        cuid = next(
+            entry
+            for entry in ledger[0]["entries"]
+            if entry["upstreamCommit"]
+            == "be559b2ee1b2bbae3eaf109a4a1b0d7337b3d8a8"
         )
+        self.assertEqual(cuid["tumoflip"]["releaseTag"], "t-dev-008-003")
+        self.assertEqual(cuid["tumoflip"]["hardwareAcceptance"], "pending")
 
     def test_schema_two_rejects_a_ledger_that_skips_the_reviewed_commit(self) -> None:
         value = contract()
@@ -112,6 +149,99 @@ class UnleashedWatcherTests(unittest.TestCase):
         ]
         with self.assertRaisesRegex(watcher.WatchError, "does not end at the reviewed commit"):
             watcher.validate_contract(value)
+
+    def test_schema_three_suppresses_declined_upstream_task(self) -> None:
+        value = schema_three_contract()
+        responses = self._responses()
+        responses[f"repos/{REPOSITORY}/compare/{'1' * 40}...{BASELINE}"] = {
+            "status": "ahead",
+            "ahead_by": 1,
+            "behind_by": 0,
+            "total_commits": 1,
+            "base_commit": {"sha": "1" * 40},
+            "head_commit": {"sha": BASELINE},
+            "commits": [{"sha": BASELINE}],
+        }
+        lifecycle_evidence = {
+            "schema": 1,
+            "provider": "github",
+            "policy": value["lifecycle"],
+            "since": value["reviewed"]["reviewedAt"],
+            "branchChecks": {
+                "commit": BASELINE,
+                "status": "notRequired",
+                "required": [],
+            },
+            "pullRequests": [
+                {
+                    "number": 99,
+                    "title": "Declined upstream proposal",
+                    "url": f"https://github.com/{REPOSITORY}/pull/99",
+                    "updatedAt": "2026-08-21T10:00:00Z",
+                    "closedAt": "2026-08-21T10:00:00Z",
+                    "mergedAt": None,
+                    "headCommit": "9" * 40,
+                    "mergeCommit": None,
+                    "lifecycle": "closedUnmerged",
+                    "mergeable": None,
+                    "mergeableState": None,
+                    "mergeability": "notApplicable",
+                    "milestone": "notTracked",
+                    "review": "none",
+                    "checks": {
+                        "commit": "9" * 40,
+                        "status": "notRequired",
+                        "required": [],
+                    },
+                    "reviewedBoundary": "notIncluded",
+                    "branch": "notIncluded",
+                    "release": "notReleased",
+                    "outcome": "declined",
+                    "taskDisposition": "suppressed",
+                    "taskReason": "upstreamDeclined",
+                }
+            ],
+            "issues": [],
+            "summary": {
+                "accepted": 0,
+                "blocked": 0,
+                "declined": 1,
+                "deferred": 0,
+                "eligible": 0,
+                "pending": 0,
+                "suppressed": 1,
+                "issues": 0,
+                "pullRequests": 1,
+            },
+            "reviewRequired": False,
+        }
+
+        def fake(endpoint: str, *, paginate: bool = False) -> object:
+            self.assertIn(endpoint, responses)
+            return responses[endpoint]
+
+        with mock.patch.object(watcher, "_gh_json", side_effect=fake), mock.patch.object(
+            watcher.github_lifecycle, "collect", return_value=lifecycle_evidence
+        ):
+            report = watcher.watch(
+                contract=value,
+                control_repository="squazaryu/tumoflip-fw-packages",
+                control_commit=CONTROL,
+                now=datetime(2026, 8, 21, 11, tzinfo=timezone.utc),
+            )
+
+        self.assertEqual(report["schema"], 2)
+        self.assertFalse(report["changesDetected"])
+        self.assertFalse(report["humanReviewRequired"])
+        self.assertEqual(report["upstreamLifecycle"]["summary"]["declined"], 1)
+        self.assertIn("task `suppressed`", watcher.render_report(report))
+        watcher.verify_report(
+            contract=value,
+            report=report,
+            markdown=watcher.render_report(report),
+            control_repository="squazaryu/tumoflip-fw-packages",
+            control_commit=CONTROL,
+        )
 
     def test_decision_ledger_live_range_requires_every_exact_commit(self) -> None:
         ledger = [

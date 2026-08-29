@@ -41,6 +41,7 @@ jobs:
       - name: Run exact source matrix watcher
         id: scan
         env:
+          GH_TOKEN: ${{ github.token }}
           PYTHONUNBUFFERED: "1"
         run: |
           set +e

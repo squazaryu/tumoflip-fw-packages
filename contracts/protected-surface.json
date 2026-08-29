@@ -5,8 +5,8 @@
   "reviewedImplementations": {
     "dev": {
       "ref": "refs/heads/dev",
-      "commit": "833efd8e474afd1ba75c9fc57da7096bad107495",
-      "label": "dev-morse-player-0.3-2026-08-28"
+      "commit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
+      "label": "dev-008-005-2026-08-29"
     },
     "main": {
       "ref": "refs/heads/main",

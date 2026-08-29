@@ -19,6 +19,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       changes_detected: ${{ steps.result.outputs.changes_detected }}
+      review_required: ${{ steps.result.outputs.review_required }}
     steps:
       - name: Check out exact control commit
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -57,8 +58,11 @@ jobs:
         run: |
           set -euo pipefail
           CHANGES="$(jq -r .changesDetected "$RUNNER_TEMP/unleashed-watch.json")"
+          REVIEW="$(jq -r .humanReviewRequired "$RUNNER_TEMP/unleashed-watch.json")"
           [[ "$CHANGES" == true || "$CHANGES" == false ]]
+          [[ "$REVIEW" == true || "$REVIEW" == false ]]
           echo "changes_detected=$CHANGES" >> "$GITHUB_OUTPUT"
+          echo "review_required=$REVIEW" >> "$GITHUB_OUTPUT"
       - name: Upload read-only upstream report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -113,8 +117,8 @@ jobs:
           REPORT=report/unleashed-watch.md
           STATE=report/unleashed-watch.json
           TITLE='Watch DarkFlippers/unleashed-firmware upstream changes'
-          CHANGES="$(jq -r .changesDetected "$STATE")"
-          [[ "$CHANGES" == true || "$CHANGES" == false ]]
+          REVIEW="$(jq -r .humanReviewRequired "$STATE")"
+          [[ "$REVIEW" == true || "$REVIEW" == false ]]
           gh api "repos/$GITHUB_REPOSITORY/issues?state=all&per_page=100" \
             --paginate --slurp > "$RUNNER_TEMP/issue-pages.json"
           python3 control/tools/watch_unleashed.py resolve-canonical-issue \
@@ -122,6 +126,10 @@ jobs:
             --output "$RUNNER_TEMP/canonical-issue.json"
           ISSUE_NUMBER="$(jq -r '.number // empty' "$RUNNER_TEMP/canonical-issue.json")"
           if [[ -z "$ISSUE_NUMBER" ]]; then
+            if [[ "$REVIEW" == false ]]; then
+              echo "No eligible or blocked upstream candidate requires a control issue."
+              exit 0
+            fi
             ISSUE_URL="$(gh issue create --repo "$GITHUB_REPOSITORY" \
               --title "$TITLE" --body-file "$REPORT")"
             ISSUE_NUMBER="${ISSUE_URL##*/}"
@@ -136,7 +144,7 @@ jobs:
           load_canonical_issue
           ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
           [[ "$ISSUE_STATE" == open || "$ISSUE_STATE" == closed ]]
-          if [[ "$ISSUE_STATE" == closed && "$CHANGES" == true ]]; then
+          if [[ "$ISSUE_STATE" == closed && "$REVIEW" == true ]]; then
             gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
             load_canonical_issue
             ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
@@ -157,9 +165,9 @@ jobs:
             compare_canonical_issue_body
             [[ "$BODY_MATCHES" == true ]]
           fi
-          if [[ "$ISSUE_STATE" == open && "$CHANGES" == false ]]; then
+          if [[ "$ISSUE_STATE" == open && "$REVIEW" == false ]]; then
             gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-              --comment "No unreviewed upstream changes remain; the exact decision ledger is current. This issue will reopen automatically when the watcher detects a new commit, release, or merged pull request."
+              --comment "No eligible or blocked upstream candidate requires review. Pending, issue-only, and upstream-declined records stay suppressed; this issue will reopen on accepted or contradictory evidence."
             load_canonical_issue
             ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
             [[ "$ISSUE_STATE" == closed ]]
