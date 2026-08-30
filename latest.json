@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "sourceRepository": "xMasterX/all-the-plugins",
-  "generatedAt": "2026-08-29T12:43:07+00:00",
+  "generatedAt": "2026-08-30T07:29:47+00:00",
   "audits": [
     {
       "sequence": 20260809193105,
@@ -41958,24 +41958,24 @@
           "disposition": "auditedDifference",
           "note": "Tumoflip keeps its Module One CLI-compatible protected build.",
           "targetMD5s": [
-            "00efca43c586f49c83293dd7f3d2823d",
             "54b2ffcdb88cf3c25eacd99269c0db52",
             "79c91ceb33a6b99dbce73845a6d7f529",
+            "d4f815a5dc2248d7b8ebb2c7df0710d6",
             "d99249b30facf06d3277f0c50d207097",
             "e165b0f4b79f950b0d3e871a92a818f5"
           ],
           "targetProvenance": [
             {
-              "targetMD5": "00efca43c586f49c83293dd7f3d2823d",
+              "targetMD5": "d4f815a5dc2248d7b8ebb2c7df0710d6",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "79c91ceb33a6b99dbce73845a6d7f529",
@@ -42205,22 +42205,22 @@
           "targetMD5s": [
             "0610b44187e3142cd8708242dff4199e",
             "65cf026f84d9be3fa0c2e627b0016afc",
-            "806ecacb89032c5f62f6566ab429dc9f",
             "9173da206a2de38d231d4c6da8ae60d4",
-            "d268dad4a92be3e6ad566eb609436938"
+            "d268dad4a92be3e6ad566eb609436938",
+            "eb70c35062992268d64883c5ced925af"
           ],
           "targetProvenance": [
             {
-              "targetMD5": "806ecacb89032c5f62f6566ab429dc9f",
+              "targetMD5": "eb70c35062992268d64883c5ced925af",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "0610b44187e3142cd8708242dff4199e",
@@ -42361,24 +42361,24 @@
           "note": "Tumoflip keeps the isolated ARF module build and radio broker integration.",
           "targetMD5s": [
             "2fbc9334beed4b893007dfc77900a950",
-            "62c544254f22961762eb79cdedd7ddd2",
             "6cf06ebf6c949ad817aa6978371430fe",
             "9bb93589006137da657d1899d3e6d902",
+            "aec633533253b2f0c477ec96e6e0ecfe",
             "c0450c529684b76e03ba6c8de015f47e",
             "c2ee0aa6e97b3b24b64d32ebbf85e40f"
           ],
           "targetProvenance": [
             {
-              "targetMD5": "62c544254f22961762eb79cdedd7ddd2",
+              "targetMD5": "aec633533253b2f0c477ec96e6e0ecfe",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "6cf06ebf6c949ad817aa6978371430fe",
@@ -42509,7 +42509,7 @@
           "disposition": "auditedDifference",
           "note": "Tumoflip keeps the isolated ARF module and radio broker integration.",
           "targetMD5s": [
-            "1bfca1ef6cc900c4dec028c9c6c5f3be",
+            "815acfcb4dca180c630ac6de90136627",
             "8170a9c2ea8e70e0686b40e33ac338b9",
             "8f72844faf52f1b80539176257bed519",
             "905c7d30fab8ade3ce6c9f8b0a31eda3",
@@ -42517,16 +42517,16 @@
           ],
           "targetProvenance": [
             {
-              "targetMD5": "1bfca1ef6cc900c4dec028c9c6c5f3be",
+              "targetMD5": "815acfcb4dca180c630ac6de90136627",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "8f72844faf52f1b80539176257bed519",
@@ -42657,9 +42657,9 @@
           "disposition": "auditedDifference",
           "note": "Author changes through d60ee2a34fa87b89c99f1ba9056737765f9f921f were ported by issue #281 at implementation commit 485dad9c28ee59595c06023101efd14af8b42f21 and hardware-accepted from fw-packages-dev-004; later author changes require a new exact audit.",
           "targetMD5s": [
-            "0608318f6ea54fdc11c7c1ae2cae73c3",
             "19221ada96599cab415b860c8d5f67d6",
             "2df1dfd0e26398578c6b0aebf583cb6a",
+            "98222547a05ef19ff2cf3cb66f49561a",
             "ac9d4fab62499e8ea35ee20efa52063a",
             "b077a6bbcb9fc00fa094c00decfb3dd8",
             "cf732b7e71733a11e0face98c63f6fbb"
@@ -42677,16 +42677,16 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
-              "targetMD5": "0608318f6ea54fdc11c7c1ae2cae73c3",
+              "targetMD5": "98222547a05ef19ff2cf3cb66f49561a",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "ac9d4fab62499e8ea35ee20efa52063a",
@@ -42817,7 +42817,7 @@
           "disposition": "auditedDifference",
           "note": "Tumoflip keeps its API 88 and iPhone GPS bridge integration.",
           "targetMD5s": [
-            "175748842b2c8db8cc76813c976562a9",
+            "0e374b4ef91f720f2c6ca54dfc107618",
             "40b56f7de3724b1bb295126166297ef5",
             "7cd4e29d162042e48b57c1fb3139db93",
             "af8626c22c7f2581cb72194acf6dc9f6",
@@ -42826,16 +42826,16 @@
           ],
           "targetProvenance": [
             {
-              "targetMD5": "175748842b2c8db8cc76813c976562a9",
+              "targetMD5": "0e374b4ef91f720f2c6ca54dfc107618",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "40b56f7de3724b1bb295126166297ef5",
@@ -42966,8 +42966,8 @@
           "disposition": "auditedDifference",
           "note": "Tumoflip adds system time synchronization and keeps the full CLI plugin family.",
           "targetMD5s": [
+            "7830bd3739b393e43f90314a06f71f8b",
             "90fae273534c401ff7bce1da94dada6c",
-            "b536ca945c8b3b14f792db0c85313ef8",
             "c9761825f7105047741cf6f38f9622bc",
             "e18e7ae0eee268f5ca1cc3429cbc9e77",
             "f17671cce0e6848535f79a7530901d87",
@@ -42975,16 +42975,16 @@
           ],
           "targetProvenance": [
             {
-              "targetMD5": "b536ca945c8b3b14f792db0c85313ef8",
+              "targetMD5": "7830bd3739b393e43f90314a06f71f8b",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "c9761825f7105047741cf6f38f9622bc",
@@ -43115,24 +43115,24 @@
           "disposition": "auditedDifference",
           "note": "No source was imported by this audit; license must be resolved before a future port.",
           "targetMD5s": [
+            "3787ec95f85076c7503a5048359fa534",
             "4150fe27c59bdf9f97cee7b6323189bc",
             "a60dfc973873c6bf010f977f2c90362a",
             "a8bc867fc752fc095a3f68e32f518ed3",
-            "c10c2807d5944f0c0bef7d4275f05618",
-            "fe004e507453638d9188bc506fed0177"
+            "c10c2807d5944f0c0bef7d4275f05618"
           ],
           "targetProvenance": [
             {
-              "targetMD5": "fe004e507453638d9188bc506fed0177",
+              "targetMD5": "3787ec95f85076c7503a5048359fa534",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "a60dfc973873c6bf010f977f2c90362a",
@@ -43265,10 +43265,10 @@
           "targetMD5s": [
             "21f5d592948ed9af6c8013a39055a6cc",
             "3cad570a9bda8519054be976a450bf21",
+            "4d6b9bec4353e571e24bd17f5101ff00",
             "4da0eac0893ddad2e6df4c4f31d23fc9",
             "57ade96d3f84ab04880a6f46ae91e84b",
             "65b3a83b8ed97e847085b7d1c6f0d6aa",
-            "6c1e1d8887e5de8e265ecb28d48b5c06",
             "b5979c345df413e94c396f31f9269f06"
           ],
           "targetProvenance": [
@@ -43284,16 +43284,16 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
-              "targetMD5": "6c1e1d8887e5de8e265ecb28d48b5c06",
+              "targetMD5": "4d6b9bec4353e571e24bd17f5101ff00",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "21f5d592948ed9af6c8013a39055a6cc",
@@ -43418,8 +43418,8 @@
             "4aafe4d9cb200f3ccbffef580727416f",
             "4cbc1fdf3a4740118750d2d144e780cb",
             "517f9b215b8ee195d322d9a240f7130c",
-            "88e8948620e4970ef31483e38417175b",
             "a5ec96d81d3edd83914672953078f733",
+            "c728bd4cbdd9e5083511f38487ad1f98",
             "e5a5a07a81d08dd175196015ef759732"
           ],
           "targetProvenance": [
@@ -43435,16 +43435,16 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
-              "targetMD5": "88e8948620e4970ef31483e38417175b",
+              "targetMD5": "c728bd4cbdd9e5083511f38487ad1f98",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "a5ec96d81d3edd83914672953078f733",
@@ -43567,10 +43567,10 @@
           "targetMD5s": [
             "1af85b9ff308fb682e20673087819987",
             "7938f82283de7c0d9bb56bc5aa9093b5",
+            "e9a0a4352b32aac58672950812366f88",
             "ecccdaf462eef322f41741dc8def0912",
             "ef15c8633e12ba7297cc9a40db6ec253",
-            "f41acac1ef30ae6aa79f4bd9fd0e28bc",
-            "f7d934ec9d179d031177ce84d9cfada2"
+            "f41acac1ef30ae6aa79f4bd9fd0e28bc"
           ],
           "targetProvenance": [
             {
@@ -43585,16 +43585,16 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
-              "targetMD5": "f7d934ec9d179d031177ce84d9cfada2",
+              "targetMD5": "e9a0a4352b32aac58672950812366f88",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "f41acac1ef30ae6aa79f4bd9fd0e28bc",
@@ -43716,12 +43716,12 @@
           "note": "Tumoflip adds system time synchronization and keeps the full CLI plugin family.",
           "targetMD5s": [
             "0c8dd44eb563dc8bb8578239271091da",
+            "40e10b2cf567e78907dbdecacfadda3e",
             "4d6fa13bc5f9da591b25c1111d84c194",
             "603ad8fed9a5f092a2f7945f6b7d34ab",
             "6b122a8eaf04fa63dfc35ad1f1acd1eb",
             "6c5eebdbb27265d401313bb2721630d3",
-            "700a254606cac3f36d9ad4737fc1836e",
-            "7147ce6fceab8ff289d46790355efd12"
+            "700a254606cac3f36d9ad4737fc1836e"
           ],
           "targetProvenance": [
             {
@@ -43736,16 +43736,16 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
-              "targetMD5": "7147ce6fceab8ff289d46790355efd12",
+              "targetMD5": "40e10b2cf567e78907dbdecacfadda3e",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "6c5eebdbb27265d401313bb2721630d3",
@@ -43868,10 +43868,10 @@
           "targetMD5s": [
             "720188bc7c3f54b2d63396a63f3b1128",
             "87e42248f3149b4ce89dec3373b89611",
+            "94e56a599b2d6c5d47fd26ffa9e6fd0a",
             "99290fa59525e25eae820d903b40bd24",
             "b27d5d81c9b6df2837a4c9f9ae998e2c",
-            "dff3c643192d16608f853f4dc408cb77",
-            "feb486c67a460dd54ee96f06b4d531d5"
+            "dff3c643192d16608f853f4dc408cb77"
           ],
           "targetProvenance": [
             {
@@ -43886,16 +43886,16 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
-              "targetMD5": "feb486c67a460dd54ee96f06b4d531d5",
+              "targetMD5": "94e56a599b2d6c5d47fd26ffa9e6fd0a",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "dff3c643192d16608f853f4dc408cb77",
@@ -44016,8 +44016,8 @@
           "disposition": "auditedDifference",
           "note": "Tumoflip adds system time synchronization and keeps the full CLI plugin family.",
           "targetMD5s": [
+            "022b40da837058bef0196f0af1b5d9dd",
             "0a9a45120a03c65707491d31039fb654",
-            "3cad9dadf5b3ad902674f6e9d9cdd433",
             "733684ca50dadff15e2dc36da35ac85b",
             "8fd3ee1bdab9b4816234824627dcd8e5",
             "ad8ab97f2903f6ada5b2074889e3aa7a",
@@ -44036,16 +44036,16 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
-              "targetMD5": "3cad9dadf5b3ad902674f6e9d9cdd433",
+              "targetMD5": "022b40da837058bef0196f0af1b5d9dd",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "0a9a45120a03c65707491d31039fb654",
@@ -44169,9 +44169,9 @@
             "0235714b6ce77836f0c5e2a5eb4b5bc5",
             "33eb30a6def82caebf1252e4beae4e35",
             "7413ba6bbb9db0f9ad87faa5c968ea8e",
-            "80cdec7a9755246514ed55e5d0f22f3a",
             "8c4a66bf1f1de0a9b134b42d35c2d386",
             "ce8b99d6a692c29fa8afed31c3ae3aeb",
+            "dc9f350cec7fd86badfd00e7f6829e35",
             "ea1c90e469781b018f6d109229b69791"
           ],
           "targetProvenance": [
@@ -44187,16 +44187,16 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
-              "targetMD5": "80cdec7a9755246514ed55e5d0f22f3a",
+              "targetMD5": "dc9f350cec7fd86badfd00e7f6829e35",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "ea1c90e469781b018f6d109229b69791",
@@ -44321,8 +44321,8 @@
             "5385e81d62d4d8262269be726c43e9fa",
             "b068dc9d0c9251d5b3fa6d0f9bb97398",
             "b555fb9f890f2338bbd0650c0f4f97f4",
-            "b71a6476c8dbc665bf165874f7ed625b",
             "e530e48007793e0e84eb73e1dc745b26",
+            "ef78df9065eb055fa219401a9610c193",
             "f6d7ac834fa43b56bcaf88b876fe8346"
           ],
           "targetProvenance": [
@@ -44338,16 +44338,16 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
-              "targetMD5": "b71a6476c8dbc665bf165874f7ed625b",
+              "targetMD5": "ef78df9065eb055fa219401a9610c193",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "5385e81d62d4d8262269be726c43e9fa",
@@ -44472,8 +44472,8 @@
             "263163a44f9149dc6760a38b95f9ed6e",
             "2a7fbd57dccae2731bba462c63fc7062",
             "486cb5f61afcbc0e13a755c866cd7119",
+            "7191d10f3e45f5a7869b2311632f9394",
             "8b4df257436d5c2094d7dc9925c5a570",
-            "9605b271fba8e93f49ae6712716ac1c1",
             "fea52acf03cf4feb61690417ceeee2c7"
           ],
           "targetProvenance": [
@@ -44489,16 +44489,16 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
-              "targetMD5": "9605b271fba8e93f49ae6712716ac1c1",
+              "targetMD5": "7191d10f3e45f5a7869b2311632f9394",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "2a7fbd57dccae2731bba462c63fc7062",
@@ -44622,8 +44622,8 @@
             "0acfe5054c06d0f5428c2463c6f88f2c",
             "39710343494a4d2921bc3d7269d77949",
             "6dd64227514f5c1a8acd1891a5d14921",
-            "7c389d917eb34362285a1e9e84733752",
             "96f9c2343bcb41e30884319476cee41b",
+            "bd017155f41a8001c1aba4ca81771478",
             "fae23e5f22d103385e7223a46d4f5beb"
           ],
           "targetProvenance": [
@@ -44639,16 +44639,16 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
-              "targetMD5": "7c389d917eb34362285a1e9e84733752",
+              "targetMD5": "bd017155f41a8001c1aba4ca81771478",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "96f9c2343bcb41e30884319476cee41b",
@@ -44770,10 +44770,10 @@
           "note": "Tumoflip adds system time synchronization and keeps the full CLI plugin family.",
           "targetMD5s": [
             "6c595c2b03b89bc7eb6a61ec64c89353",
-            "85217d97602aa2c96b4c2310e2be4b92",
             "8d3f9b25a17f952fc70a22b0728e0a04",
             "952520314d4f32df5c047416588f9efa",
             "a2300bce0aa3fb7447578ac0d8433e3e",
+            "ba7a9d50ae9cfb4242191413a1d9dd86",
             "d132cd74bc003dbd0b18bda7f826f884",
             "de749192b3bf0140f02ddfef44e9a2a3"
           ],
@@ -44790,16 +44790,16 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
-              "targetMD5": "85217d97602aa2c96b4c2310e2be4b92",
+              "targetMD5": "ba7a9d50ae9cfb4242191413a1d9dd86",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "6c595c2b03b89bc7eb6a61ec64c89353",
@@ -44921,7 +44921,7 @@
           "note": "Tumoflip adds system time synchronization and keeps the full CLI plugin family.",
           "targetMD5s": [
             "027d901f85a11e03922fcdd3d805721e",
-            "1e0c892e0df5a7fffbaa434d61a71484",
+            "029cc448f71f500987b9c64e36c09db8",
             "8225d84c410395ecf71256ec7e5c4626",
             "c3cafa4b91be1c1205d04730709a1ec1",
             "dec1f146e731ead8a5b865cd57c7b4a5",
@@ -44940,16 +44940,16 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
-              "targetMD5": "1e0c892e0df5a7fffbaa434d61a71484",
+              "targetMD5": "029cc448f71f500987b9c64e36c09db8",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "8225d84c410395ecf71256ec7e5c4626",
@@ -45072,8 +45072,8 @@
           "targetMD5s": [
             "10f4fc37c0e94b302ab0973a8261cbcd",
             "14cd18ad63d0e46e43eee0c40667b244",
+            "27576962296583a1a6a7cac0d8f66485",
             "4c5657e85807f4c8ce9eb7abd4053e45",
-            "a6fe664b50c00f9e07f20eddcd757400",
             "c4e91ff79363cf04af5362d3abf99309",
             "de0104434aa1c14e515338e9741a0dcf",
             "e12c2180db33b8d4642f080404b5cbdc"
@@ -45091,16 +45091,16 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
-              "targetMD5": "a6fe664b50c00f9e07f20eddcd757400",
+              "targetMD5": "27576962296583a1a6a7cac0d8f66485",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "10f4fc37c0e94b302ab0973a8261cbcd",
@@ -45222,10 +45222,10 @@
           "note": "Tumoflip adds system time synchronization and keeps the full CLI plugin family.",
           "targetMD5s": [
             "05d9b41ecaa3932aee3d1cf9ad2ac4cd",
+            "2614eacbb1939c8d9cc1429910fa88ec",
             "6de0ccbd472050b95c8072edee87bcbb",
             "baa1969dd4432b44cb65cad0ba43da39",
             "cb6dd549f6ac602eef686b18a5335c94",
-            "d86d01c7532e09b97c166d0b3c650c61",
             "e5a4c1dd709ffd9a04d4dc598c40d5e6"
           ],
           "targetProvenance": [
@@ -45241,16 +45241,16 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
-              "targetMD5": "d86d01c7532e09b97c166d0b3c650c61",
+              "targetMD5": "2614eacbb1939c8d9cc1429910fa88ec",
               "channel": "dev",
-              "releaseTag": "t-dev-008-005",
-              "manifestSHA256": "45f849daaf4b549f9f8e6ba7423a62f4fffe7980e406861dd144d5dff2192cab",
+              "releaseTag": "t-dev-008-006",
+              "manifestSHA256": "c0092e7ae781c574b36bb752469fa6ad4bfc1183dddfbe2b74336e7f9c38bcd2",
               "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "0ab6fa86f7f802f864de9138c8124c1ebeb2b0ed431a2329b789a5fb23bd4b07",
-              "targetReleaseTag": "t-dev-008-005",
-              "targetSourceCommit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-              "firmwareVersion": "t-dev-008-005",
-              "resourcesSHA256": "0181c8d87bba3f369b4858abd980e4f50938b3ff6775044ab996b402c0756a20"
+              "containerSHA256": "3fed20f2ec1b16e9e80507b9cc04a2feba0b99f4092718df296c2da48054ec44",
+              "targetReleaseTag": "t-dev-008-006",
+              "targetSourceCommit": "58e8584fac8337a9b8b998066e484f63b833007b",
+              "firmwareVersion": "t-dev-008-006",
+              "resourcesSHA256": "afee4c8e4869984b07b3605cbea39c91a9aa4e85e9c4fc6ea6f03419b1cc2fd1"
             },
             {
               "targetMD5": "baa1969dd4432b44cb65cad0ba43da39",
@@ -45809,7 +45809,7 @@
         }
       ],
       "unresolved": [],
-      "generatedAt": "2026-08-29T12:43:07+00:00"
+      "generatedAt": "2026-08-30T07:29:47+00:00"
     }
   ]
 }
