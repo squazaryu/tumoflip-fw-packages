@@ -82,6 +82,33 @@ uses schema 2. Accepted
 target entries contain `targetMD5s` and one or more unique provenance records for
 each allowed hash. Stable and dev may legitimately prove the same target MD5.
 
+The published entry dispositions are an audit schema, not an informal task
+status. `sourceMatches`, `auditedDifference`, and `intentionallyReplaced` are
+accepted only when the complete release audit is `verified`. A review decision
+of `rejected` retains exact target evidence and is published operationally as an
+`auditedDifference`; it is not an unresolved result. Source or author changes
+without a matching reviewed decision remain unresolved and keep the canonical
+issue open.
+
+## Multi-surface protected features
+
+`coverageSurfaces` records protected functionality that is intentionally split
+across more than one Tumoflip implementation. The scanner validates and carries
+this metadata into the immutable audit so downstream automation compares
+capabilities instead of assuming that one upstream directory must map to one
+local FAP.
+
+ProtoPirate currently has two reviewed surfaces:
+
+- Standard Sub-GHz owns radio-free RAW Auto Decode, Protocol Pack traversal,
+  and restoration of the user's active pack;
+- `applications_user/protopirate` remains the advanced ARF module with its own
+  receiver lifecycle and radio-broker integration.
+
+A package hash or route difference alone therefore cannot prove missing
+ProtoPirate behavior. Any upstream change must be classified against the
+specific surface that owns the affected capability.
+
 ## Reviewed decision example
 
 ```json

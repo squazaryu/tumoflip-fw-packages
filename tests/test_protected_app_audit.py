@@ -32,6 +32,26 @@ class ProtectedAppAuditTests(unittest.TestCase):
         self.assertTrue(REGISTRY_PATH.is_relative_to(checkout))
         self.assertTrue(REGISTRY_PATH.is_file())
 
+    def test_protopirate_registry_tracks_standard_and_arf_surfaces(self) -> None:
+        apps = audit.validate_registry(audit.read_json(REGISTRY_PATH))
+        proto = next(app for app in apps if app["id"] == "proto_pirate")
+        surfaces = {surface["id"]: surface for surface in proto["coverageSurfaces"]}
+        self.assertEqual(set(surfaces), {"standard-subghz-auto-decode", "arf-module"})
+        self.assertIn(
+            "applications/main/subghz/scenes/subghz_scene_decode_raw.c",
+            surfaces["standard-subghz-auto-decode"]["sourcePaths"],
+        )
+        self.assertIn(
+            proto["localSourcePath"], surfaces["arf-module"]["sourcePaths"]
+        )
+
+    def test_registry_rejects_unsafe_coverage_surface_path(self) -> None:
+        registry = audit.read_json(REGISTRY_PATH)
+        proto = next(app for app in registry["apps"] if app["id"] == "proto_pirate")
+        proto["coverageSurfaces"][0]["sourcePaths"][0] = "../escape"
+        with self.assertRaisesRegex(audit.AuditError, "unsafe coverage surface path"):
+            audit.validate_registry(registry)
+
     def test_author_head_fetch_retries_transient_timeout(self) -> None:
         completed = SimpleNamespace(
             returncode=0,

@@ -145,7 +145,65 @@ def validate_registry(document: dict[str, Any]) -> list[dict[str, Any]]:
             raise SurfaceError(f"duplicate protected source path: {path}")
         seen_ids.add(app_id)
         seen_paths.add(path)
-        result.append({"id": app_id, "localSourcePath": path})
+        raw_surfaces = app.get("coverageSurfaces", [])
+        if not isinstance(raw_surfaces, list):
+            raise SurfaceError(f"registry {app_id}.coverageSurfaces must be an array")
+        surfaces: list[dict[str, Any]] = []
+        surface_ids: set[str] = set()
+        for surface_index, surface in enumerate(raw_surfaces):
+            if not isinstance(surface, dict):
+                raise SurfaceError(
+                    f"registry {app_id}.coverageSurfaces[{surface_index}] must be an object"
+                )
+            surface_id = require_string(
+                surface.get("id"),
+                f"registry {app_id}.coverageSurfaces[{surface_index}].id",
+            )
+            if surface_id in surface_ids:
+                raise SurfaceError(
+                    f"duplicate coverage surface id for {app_id}: {surface_id}"
+                )
+            surface_ids.add(surface_id)
+            raw_paths = surface.get("sourcePaths")
+            if not isinstance(raw_paths, list) or not raw_paths:
+                raise SurfaceError(
+                    f"registry {app_id}.{surface_id}.sourcePaths must be a non-empty array"
+                )
+            source_paths = [
+                require_repo_path(
+                    value, f"registry {app_id}.{surface_id}.sourcePaths entry"
+                )
+                for value in raw_paths
+            ]
+            if len(source_paths) != len(set(source_paths)):
+                raise SurfaceError(
+                    f"duplicate coverage source path for {app_id}: {surface_id}"
+                )
+            raw_capabilities = surface.get("capabilities")
+            if not isinstance(raw_capabilities, list) or not raw_capabilities:
+                raise SurfaceError(
+                    f"registry {app_id}.{surface_id}.capabilities must be a non-empty array"
+                )
+            capabilities = [
+                require_string(
+                    value, f"registry {app_id}.{surface_id}.capabilities entry"
+                )
+                for value in raw_capabilities
+            ]
+            if len(capabilities) != len(set(capabilities)):
+                raise SurfaceError(
+                    f"duplicate coverage capability for {app_id}: {surface_id}"
+                )
+            surfaces.append(
+                {
+                    "id": surface_id,
+                    "sourcePaths": source_paths,
+                    "capabilities": capabilities,
+                }
+            )
+        result.append(
+            {"id": app_id, "localSourcePath": path, "coverageSurfaces": surfaces}
+        )
     return result
 
 
@@ -203,6 +261,36 @@ def is_under(path: str, prefix: str) -> bool:
     return path == prefix.rstrip("/") or path.startswith(prefix.rstrip("/") + "/")
 
 
+def classify_coverage_changes(
+    paths: Iterable[str], registry: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Map changed implementation paths to explicit protected feature surfaces."""
+
+    changes: list[dict[str, Any]] = []
+    for app in registry:
+        for surface in app["coverageSurfaces"]:
+            matched = sorted(
+                {
+                    path
+                    for path in paths
+                    if any(
+                        is_under(path, source_path)
+                        for source_path in surface["sourcePaths"]
+                    )
+                }
+            )
+            if matched:
+                changes.append(
+                    {
+                        "appId": app["id"],
+                        "surfaceId": surface["id"],
+                        "capabilities": surface["capabilities"],
+                        "changedPaths": matched,
+                    }
+                )
+    return sorted(changes, key=lambda item: (item["appId"], item["surfaceId"]))
+
+
 def branch_report(
     *,
     repo: Path,
@@ -211,6 +299,7 @@ def branch_report(
     baseline: str,
     known_roots: set[str],
     review_prefixes: list[str],
+    registry: list[dict[str, Any]],
 ) -> dict[str, Any]:
     current = require_commit(git(repo, "rev-parse", ref), f"{name}.currentCommit")
     if not git_ok(repo, "cat-file", "-e", f"{baseline}^{{commit}}"):
@@ -228,6 +317,7 @@ def branch_report(
     review_changes = sorted(
         path for path in paths if any(is_under(path, prefix) for prefix in review_prefixes)
     )
+    coverage_surface_changes = classify_coverage_changes(paths, registry)
     ahead = int(git(repo, "rev-list", "--count", f"{baseline}..{current}"))
     status = "verified"
     if unclassified or removed or protected_changes or review_changes:
@@ -249,6 +339,7 @@ def branch_report(
         "removedRoots": removed,
         "protectedChanges": protected_changes,
         "reviewChanges": review_changes,
+        "coverageSurfaceChanges": coverage_surface_changes,
     }
 
 
@@ -261,6 +352,7 @@ def audit_pin_entry(
     current: str,
     known_roots: set[str],
     review_prefixes: list[str],
+    registry: list[dict[str, Any]],
 ) -> dict[str, Any]:
     relation = commit_relation(repo, pin, current)
     entry: dict[str, Any] = {
@@ -275,6 +367,7 @@ def audit_pin_entry(
         "changedPaths": [],
         "protectedChanges": [],
         "reviewChanges": [],
+        "coverageSurfaceChanges": [],
         "addedRoots": [],
         "removedRoots": [],
     }
@@ -290,6 +383,7 @@ def audit_pin_entry(
     review_changes = sorted(
         path for path in paths if any(is_under(path, prefix) for prefix in review_prefixes)
     )
+    coverage_surface_changes = classify_coverage_changes(paths, registry)
     added_roots = sorted(roots_at_current - roots_at_pin)
     removed_roots = sorted(roots_at_pin - roots_at_current)
     relevant = bool(protected_changes or review_changes or added_roots or removed_roots)
@@ -300,6 +394,7 @@ def audit_pin_entry(
             "changedPaths": paths,
             "protectedChanges": protected_changes,
             "reviewChanges": review_changes,
+            "coverageSurfaceChanges": coverage_surface_changes,
             "addedRoots": added_roots,
             "removedRoots": removed_roots,
         }
@@ -315,6 +410,7 @@ def audit_pin_report(
     parity_path: Path | None,
     known_roots_by_branch: dict[str, set[str]],
     review_prefixes: list[str],
+    registry: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     pins: list[dict[str, Any]] = []
     if targets_path is not None and targets_path.exists():
@@ -335,6 +431,7 @@ def audit_pin_report(
                     current=current,
                     known_roots=known_roots_by_branch[branch],
                     review_prefixes=review_prefixes,
+                    registry=registry,
                 )
             )
     if parity_path is not None and parity_path.exists() and "dev" in ref_by_name:
@@ -352,6 +449,7 @@ def audit_pin_report(
                     current=current,
                     known_roots=known_roots_by_branch["dev"],
                     review_prefixes=review_prefixes,
+                    registry=registry,
                 )
             )
     return pins
@@ -396,6 +494,7 @@ def scan(
                 baseline=require_commit(item.get("commit"), f"{name}.commit"),
                 known_roots=known_roots_by_branch[name],
                 review_prefixes=contract["reviewPrefixes"],
+                registry=registry,
             )
         )
     pins = audit_pin_report(
@@ -405,6 +504,7 @@ def scan(
         parity_path=parity_path,
         known_roots_by_branch=known_roots_by_branch,
         review_prefixes=contract["reviewPrefixes"],
+        registry=registry,
     )
     status = "verified"
     if any(item["status"] == "needsReview" for item in reports) or any(
@@ -463,6 +563,15 @@ def render_markdown(report: dict[str, Any]) -> str:
             if values:
                 lines.append(f"- {label}:")
                 lines.extend(f"  - `{value}`" for value in values)
+        for surface in item.get("coverageSurfaceChanges", []):
+            capabilities = ", ".join(surface["capabilities"])
+            lines.append(
+                f"- Protected feature surface `{surface['appId']}/{surface['surfaceId']}` "
+                f"({capabilities}):"
+            )
+            lines.extend(
+                f"  - `{value}`" for value in surface["changedPaths"]
+            )
         if item["status"] == "verified":
             lines.append("- No protected surface drift detected.")
     if report["auditPins"]:
@@ -483,6 +592,15 @@ def render_markdown(report: dict[str, Any]) -> str:
                 if values:
                     lines.append(f"  - {label}:")
                     lines.extend(f"    - `{value}`" for value in values)
+            for surface in item.get("coverageSurfaceChanges", []):
+                capabilities = ", ".join(surface["capabilities"])
+                lines.append(
+                    f"  - Protected feature surface "
+                    f"`{surface['appId']}/{surface['surfaceId']}` ({capabilities}):"
+                )
+                lines.extend(
+                    f"    - `{value}`" for value in surface["changedPaths"]
+                )
     lines.extend(
         [
             "",

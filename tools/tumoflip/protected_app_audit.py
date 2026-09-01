@@ -297,7 +297,12 @@ def validate_registry(registry: dict[str, Any]) -> list[dict[str, Any]]:
                 raise AuditError(f"registry app alias is not in protectedKeys: {alias}")
             aliases.add(alias)
         require_string(raw_app.get("packSourcePath"), f"{app_id}.packSourcePath")
-        require_string(raw_app.get("localSourcePath"), f"{app_id}.localSourcePath")
+        local_source_path = require_string(
+            raw_app.get("localSourcePath"), f"{app_id}.localSourcePath"
+        )
+        coverage_surfaces = raw_app.get("coverageSurfaces")
+        if coverage_surfaces is not None:
+            _validate_coverage_surfaces(app_id, local_source_path, coverage_surfaces)
         author = raw_app.get("author")
         if not isinstance(author, dict):
             raise AuditError(f"author must be an object for {app_id}")
@@ -329,6 +334,55 @@ def validate_registry(registry: dict[str, Any]) -> list[dict[str, Any]]:
                 raise AuditError(f"invalid family expectedCount for {app_id}")
         apps.append(raw_app)
     return apps
+
+
+def _validate_coverage_surfaces(
+    app_id: str, local_source_path: str, surfaces: Any
+) -> None:
+    if not isinstance(surfaces, list) or not surfaces:
+        raise AuditError(f"coverageSurfaces must be a non-empty array for {app_id}")
+    surface_ids: set[str] = set()
+    source_paths: set[str] = set()
+    for index, surface in enumerate(surfaces):
+        if not isinstance(surface, dict):
+            raise AuditError(f"coverage surface {index} must be an object for {app_id}")
+        surface_id = require_string(
+            surface.get("id"), f"{app_id}.coverageSurfaces[{index}].id"
+        )
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", surface_id):
+            raise AuditError(f"invalid coverage surface id for {app_id}: {surface_id}")
+        if surface_id in surface_ids:
+            raise AuditError(f"duplicate coverage surface id for {app_id}: {surface_id}")
+        surface_ids.add(surface_id)
+
+        paths = surface.get("sourcePaths")
+        if not isinstance(paths, list) or not paths or not all(
+            isinstance(path, str) and path.strip() for path in paths
+        ):
+            raise AuditError(f"coverage surface paths must be non-empty for {app_id}")
+        if len(paths) != len(set(paths)):
+            raise AuditError(f"duplicate coverage surface path for {app_id}: {surface_id}")
+        for path in paths:
+            path = require_string(path, f"{app_id}.{surface_id}.sourcePaths")
+            parts = path.split("/")
+            if path.startswith("/") or "\\" in path or any(
+                part in {"", ".", ".."} for part in parts
+            ):
+                raise AuditError(f"unsafe coverage surface path for {app_id}: {path}")
+            source_paths.add(path)
+
+        capabilities = surface.get("capabilities")
+        if not isinstance(capabilities, list) or not capabilities or not all(
+            isinstance(value, str) and value.strip() for value in capabilities
+        ):
+            raise AuditError(f"coverage surface capabilities must be non-empty for {app_id}")
+        if len(capabilities) != len(set(capabilities)):
+            raise AuditError(f"duplicate coverage capability for {app_id}: {surface_id}")
+
+    if local_source_path not in source_paths:
+        raise AuditError(
+            f"coverageSurfaces must include localSourcePath for {app_id}: {local_source_path}"
+        )
 
 
 def _validate_artifact_spec(
@@ -1610,6 +1664,8 @@ def audit_release(args: argparse.Namespace) -> tuple[dict[str, Any], str]:
             "note": note,
             "artifacts": artifact_results,
         }
+        if "coverageSurfaces" in app:
+            result["coverageSurfaces"] = app["coverageSurfaces"]
         if decision_disposition == "rejected":
             result["decisionDisposition"] = "rejected"
         if source_error:

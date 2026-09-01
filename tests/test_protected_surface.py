@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tools.protected_surface import SurfaceError, scan
+from tools.protected_surface import SurfaceError, render_markdown, scan
 
 
 class ProtectedSurfaceTests(unittest.TestCase):
@@ -86,7 +86,7 @@ class ProtectedSurfaceTests(unittest.TestCase):
         surface = json.loads((root / "contracts/protected-surface.json").read_text())
         targets = json.loads((root / "contracts/protected-audit-targets.json").read_text())
         parity = json.loads((root / "contracts/protected-source-parity.json").read_text())
-        expected_dev = "769e4145d9b402ff9b404fbcce2e57a918d7669b"
+        expected_dev = "a0c0a1e57b576bbeed18a992997ccec866d07140"
         self.assertEqual(surface["schema"], 2)
         self.assertIn(
             "applications_user/morse_player",
@@ -142,6 +142,41 @@ class ProtectedSurfaceTests(unittest.TestCase):
         )
         self.assertEqual(report["status"], "needsReview")
         self.assertIn("applications_user/owned/app.c", report["branches"][0]["protectedChanges"])
+
+    def test_coverage_surface_names_the_affected_capabilities(self) -> None:
+        registry = json.loads(self.registry.read_text(encoding="utf-8"))
+        registry["apps"][0]["coverageSurfaces"] = [
+            {
+                "id": "standard-subghz-auto-decode",
+                "sourcePaths": ["applications_user/upstream"],
+                "capabilities": ["RAW Auto Decode", "Protocol Pack restoration"],
+            }
+        ]
+        self.registry.write_text(json.dumps(registry), encoding="utf-8")
+        changed = self.repo / "applications_user/upstream/decode.c"
+        changed.write_text("change", encoding="utf-8")
+        self.git("add", ".")
+        self.git("commit", "-qm", "change protected feature surface")
+
+        report = scan(
+            repo=self.repo,
+            contract_path=self.contract,
+            registry_path=self.registry,
+            refs={"dev": "HEAD"},
+        )
+
+        surface = report["branches"][0]["coverageSurfaceChanges"][0]
+        self.assertEqual(surface["appId"], "upstream")
+        self.assertEqual(surface["surfaceId"], "standard-subghz-auto-decode")
+        self.assertEqual(
+            surface["changedPaths"], ["applications_user/upstream/decode.c"]
+        )
+        markdown = render_markdown(report)
+        self.assertIn(
+            "`upstream/standard-subghz-auto-decode` "
+            "(RAW Auto Decode, Protocol Pack restoration)",
+            markdown,
+        )
 
     def test_new_application_root_is_not_silent(self) -> None:
         target = self.repo / "applications_user/new_app"
