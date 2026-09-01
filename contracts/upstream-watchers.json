@@ -95,6 +95,79 @@
       "fromExclusive": "240ba3db883cb0792b06c3445f9c38476e1dc5ec",
       "reviewedAt": "2026-08-28T13:59:53Z",
       "throughInclusive": "469ff492613b7ffec6e4df2835d6dce4df115be4"
+    },
+    {
+      "entries": [
+        {
+          "classification": "metadataOnly",
+          "summary": "Upstream application-development documentation only; no Tumoflip firmware or package delta is required.",
+          "upstreamCommit": "9b7ccb3fd3cd88c7adb2ab2f49909e4a7b3bc56b"
+        },
+        {
+          "classification": "covered",
+          "issue": "https://github.com/squazaryu/tumoflip/issues/421",
+          "summary": "The CUID one-past-end marker is published to the poller without leaking into the displayed sector cursor; physical card acceptance remains tracked separately.",
+          "tumoflip": {
+            "commit": "1d584d7a200e48d95a12ca2aa6a2f32687ff5d75",
+            "hardwareAcceptance": "pending",
+            "releaseTag": "t-dev-008-006"
+          },
+          "upstreamCommit": "cc3a1bc79a8663430d4be12b78488860ab861550"
+        },
+        {
+          "classification": "covered",
+          "summary": "Tumoflip selectively integrated the first shared Sub-GHz protocol-handler phase while preserving its extended protocol registry.",
+          "tumoflip": {
+            "commit": "cb73e0b06c77d787428dc6bfbdda9583c695ae7c",
+            "hardwareAcceptance": "notRequired",
+            "releaseTag": "t-dev-008-006"
+          },
+          "upstreamCommit": "af2370573dd413e91e27421cdcd6828a70bf0de7"
+        },
+        {
+          "classification": "metadataOnly",
+          "summary": "Changelog correction for the flash-reduction work; no additional implementation delta is present.",
+          "upstreamCommit": "297518f0b6bd317758d66880d938236908ac6720"
+        },
+        {
+          "classification": "covered",
+          "summary": "The exact Bluetooth HAL source correction is present in Tumoflip and covered by the full F7 build.",
+          "tumoflip": {
+            "commit": "b0a66db907b68027ec18594a1562aa20bca75ae0",
+            "hardwareAcceptance": "notRequired",
+            "releaseTag": "t-dev-008-007"
+          },
+          "upstreamCommit": "2d8711939ac8442a572219ed0fb4beaa02a89858"
+        },
+        {
+          "classification": "metadataOnly",
+          "summary": "Merge topology only; its documentation and Bluetooth component commits are classified separately in this batch.",
+          "upstreamCommit": "50e362c3ec4d6bef6b5c5a99ca4b74ec249b5a19"
+        },
+        {
+          "classification": "metadataOnly",
+          "summary": "Changelog-only update; no Tumoflip code or package delta is required.",
+          "upstreamCommit": "6d506f261daa2c0279e8450c90af391f47dbed74"
+        },
+        {
+          "classification": "metadataOnly",
+          "summary": "Community application tag bump; protected apps remain covered by the package audit workflows.",
+          "upstreamCommit": "770a8b6d10b3498b81e93624c76bc0ab9bd88195"
+        },
+        {
+          "classification": "covered",
+          "summary": "The complete Sub-GHz and Storage deduplication was selectively integrated after preserving Tumoflip Protocol Packs and custom protocol behavior.",
+          "tumoflip": {
+            "commit": "7f30ebeade5c88077ba43253754326b1ac3f0ece",
+            "hardwareAcceptance": "notRequired",
+            "releaseTag": "t-dev-008-010"
+          },
+          "upstreamCommit": "5629fc5e1758e58deb0a903c81d765a7d05e7fe8"
+        }
+      ],
+      "fromExclusive": "469ff492613b7ffec6e4df2835d6dce4df115be4",
+      "reviewedAt": "2026-09-01T20:54:33Z",
+      "throughInclusive": "5629fc5e1758e58deb0a903c81d765a7d05e7fe8"
     }
   ],
   "kind": "upstreamWatch",
@@ -117,13 +190,13 @@
   },
   "repository": "DarkFlippers/unleashed-firmware",
   "reviewed": {
-    "commit": "469ff492613b7ffec6e4df2835d6dce4df115be4",
+    "commit": "5629fc5e1758e58deb0a903c81d765a7d05e7fe8",
     "release": {
       "commit": "3c9be0fdd9d301a9436765099a2d1780b36a1795",
       "publishedAt": "2026-08-21T23:00:27Z",
       "tag": "unlshd-092"
     },
-    "reviewedAt": "2026-08-28T13:59:53Z"
+    "reviewedAt": "2026-09-01T20:54:33Z"
   },
   "schema": 3
 }

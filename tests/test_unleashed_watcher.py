@@ -14,7 +14,7 @@ from tools import watch_unleashed as watcher
 
 
 BASELINE = "240ba3db883cb0792b06c3445f9c38476e1dc5ec"
-CHECKED_IN_BASELINE = "469ff492613b7ffec6e4df2835d6dce4df115be4"
+CHECKED_IN_BASELINE = "5629fc5e1758e58deb0a903c81d765a7d05e7fe8"
 RELEASE = "3c9be0fdd9d301a9436765099a2d1780b36a1795"
 CONTROL = "c" * 40
 REPOSITORY = "DarkFlippers/unleashed-firmware"
@@ -113,9 +113,12 @@ class UnleashedWatcherTests(unittest.TestCase):
         self.assertEqual(checked_in["reviewed"]["commit"], CHECKED_IN_BASELINE)
         self.assertEqual(checked_in["reviewed"]["release"]["tag"], "unlshd-092")
         ledger = checked_in["decisionLedger"]
-        self.assertEqual(len(ledger), 1)
+        self.assertEqual(len(ledger), 2)
         self.assertEqual(ledger[0]["fromExclusive"], BASELINE)
-        self.assertEqual(ledger[0]["throughInclusive"], CHECKED_IN_BASELINE)
+        self.assertEqual(
+            ledger[0]["throughInclusive"],
+            "469ff492613b7ffec6e4df2835d6dce4df115be4",
+        )
         self.assertEqual(len(ledger[0]["entries"]), 10)
         self.assertEqual(
             {entry["classification"] for entry in ledger[0]["entries"]},
@@ -129,6 +132,23 @@ class UnleashedWatcherTests(unittest.TestCase):
         )
         self.assertEqual(cuid["tumoflip"]["releaseTag"], "t-dev-008-003")
         self.assertEqual(cuid["tumoflip"]["hardwareAcceptance"], "pending")
+        latest = ledger[1]
+        self.assertEqual(
+            latest["fromExclusive"],
+            "469ff492613b7ffec6e4df2835d6dce4df115be4",
+        )
+        self.assertEqual(latest["throughInclusive"], CHECKED_IN_BASELINE)
+        self.assertEqual(len(latest["entries"]), 9)
+        self.assertEqual(
+            {entry["classification"] for entry in latest["entries"]},
+            {"covered", "metadataOnly"},
+        )
+        subghz = next(
+            entry
+            for entry in latest["entries"]
+            if entry["upstreamCommit"] == CHECKED_IN_BASELINE
+        )
+        self.assertEqual(subghz["tumoflip"]["releaseTag"], "t-dev-008-010")
 
     def test_schema_two_rejects_a_ledger_that_skips_the_reviewed_commit(self) -> None:
         value = contract()
