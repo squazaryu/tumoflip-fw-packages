@@ -5,8 +5,8 @@
   "reviewedImplementations": {
     "dev": {
       "ref": "refs/heads/dev",
-      "commit": "769e4145d9b402ff9b404fbcce2e57a918d7669b",
-      "label": "dev-008-005-2026-08-29"
+      "commit": "a0c0a1e57b576bbeed18a992997ccec866d07140",
+      "label": "dev-008-010-2026-08-31"
     },
     "main": {
       "ref": "refs/heads/main",
