@@ -120,6 +120,34 @@
       "aliases": ["protopirate"],
       "packSourcePath": "base_pack/protopirate",
       "localSourcePath": "applications_user/protopirate",
+      "coverageSurfaces": [
+        {
+          "id": "standard-subghz-auto-decode",
+          "sourcePaths": [
+            "applications/main/subghz/scenes/subghz_scene_decode_raw.c",
+            "applications/main/subghz/scenes/subghz_scene_more_raw.c",
+            "applications/main/subghz/views/receiver.c",
+            "lib/subghz/protocols/plugin_registry.c",
+            "lib/subghz/protocols/plugin_registry.h"
+          ],
+          "capabilities": [
+            "radio-free RAW Auto Decode",
+            "Protocol Pack traversal",
+            "active Protocol Pack restoration"
+          ]
+        },
+        {
+          "id": "arf-module",
+          "sourcePaths": [
+            "applications_user/protopirate"
+          ],
+          "capabilities": [
+            "advanced ProtoPirate receiver lifecycle",
+            "ARF radio broker integration",
+            "isolated ARF module routing"
+          ]
+        }
+      ],
       "author": {
         "repository": "https://protopirate.net/ProtoPirate/ProtoPirate.git",
         "ref": "refs/heads/main",
@@ -134,7 +162,7 @@
         }
       ],
       "defaultDisposition": "auditedDifference",
-      "note": "Tumoflip keeps the isolated ARF module build and radio broker integration."
+      "note": "Tumoflip splits reviewed ProtoPirate behavior between Standard Sub-GHz RAW Auto Decode and the isolated ARF module; audit both surfaces by capability."
     },
     {
       "id": "subghz_bruteforcer",
