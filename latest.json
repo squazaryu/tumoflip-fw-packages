@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "sourceRepository": "xMasterX/all-the-plugins",
-  "generatedAt": "2026-09-03T09:54:02+00:00",
+  "generatedAt": "2026-09-03T14:38:03+00:00",
   "audits": [
     {
       "sequence": 20260809193105,
@@ -56770,7 +56770,7 @@
             "repository": "https://github.com/0xchocolate/flipperzero-wifi-marauder.git",
             "ref": "refs/heads/feature_wifi_marauder_app",
             "previousCommit": "8f8b79e4a97b283faac41dda4e4da8d260ddc459",
-            "currentCommit": "d9f063b36ee287cdebe8165f4efa76c51583c3e0",
+            "currentCommit": "ed6d2b814768e811cacd24c928813248fcaf95a4",
             "changed": true,
             "license": "GPL-3.0"
           },
@@ -57232,7 +57232,7 @@
         "esp32_wifi_marauder:/ext/apps/GPIO/ESP32/esp32_wifi_marauder.fap: author source changed or unavailable",
         "quac:/ext/apps/Tools/quac.fap: author source changed or unavailable"
       ],
-      "generatedAt": "2026-09-03T09:54:02+00:00"
+      "generatedAt": "2026-09-03T14:38:03+00:00"
     }
   ]
 }
