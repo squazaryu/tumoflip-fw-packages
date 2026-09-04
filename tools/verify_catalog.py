@@ -27,6 +27,61 @@ except ImportError:  # Direct script execution.
     )
 
 
+HEX_64 = re.compile(r"^[0-9a-f]{64}$")
+
+
+def resolve_current_release(root: Path, channel: str) -> dict[str, object]:
+    """Return the exact current predecessor contract for one catalog channel."""
+
+    if channel not in {"stable", "dev"}:
+        raise ContractError("current release channel must be stable or dev")
+    current = load_json(root / "contracts/current-releases.json")
+    channels = current.get("channels")
+    release = channels.get(channel) if isinstance(channels, dict) else None
+    if current.get("schema") != 1 or not isinstance(release, dict):
+        raise ContractError(f"current {channel} release contract is missing")
+
+    tag = release.get("tag")
+    match = PACKAGE_TAG.fullmatch(tag) if isinstance(tag, str) else None
+    revision = release.get("revision")
+    if (
+        match is None
+        or match.group(1) != channel
+        or not isinstance(revision, int)
+        or isinstance(revision, bool)
+        or int(match.group(2)) != revision
+    ):
+        raise ContractError(f"current {channel} release tag or revision differs")
+    if release.get("prerelease") is not (channel == "dev"):
+        raise ContractError(f"current {channel} prerelease state differs")
+    release_id = release.get("releaseId")
+    if not isinstance(release_id, str) or HEX_64.fullmatch(release_id) is None:
+        raise ContractError(f"current {channel} release ID is invalid")
+
+    required_assets = {
+        "tumoflip-packages.json",
+        "tumoflip-packages.zip",
+        f"{tag}-SHA256SUMS",
+    }
+    assets = release.get("assets")
+    if (
+        not isinstance(assets, dict)
+        or set(assets) != required_assets
+        or any(
+            not isinstance(digest, str) or HEX_64.fullmatch(digest) is None
+            for digest in assets.values()
+        )
+    ):
+        raise ContractError(f"current {channel} release assets are invalid")
+    return release
+
+
+def verify_current_release(root: Path, directory: Path, channel: str) -> None:
+    """Verify downloaded predecessor bytes against the selected current head."""
+
+    verify_release_directory(directory, resolve_current_release(root, channel))
+
+
 def verify_contract(root: Path) -> None:
     try:
         from .mirror_history import load_contract as load_history_contract
@@ -211,6 +266,10 @@ def parser() -> argparse.ArgumentParser:
     migration.add_argument("--contract-root", type=Path, default=Path("."))
     migration.add_argument("--publisher-repository", required=True)
     migration.add_argument("--publisher-commit", required=True)
+    current = sub.add_parser("current-release")
+    current.add_argument("--root", type=Path, default=Path("."))
+    current.add_argument("--directory", type=Path, required=True)
+    current.add_argument("--channel", choices=("stable", "dev"), required=True)
     return value
 
 
@@ -223,13 +282,15 @@ def main() -> int:
             verify_release_directory(args.directory)
         elif args.command == "seed":
             verify_seed(args.root, args.contract_root)
-        else:
+        elif args.command == "migration":
             verify_migration(
                 args.root,
                 args.contract_root,
                 args.publisher_repository,
                 args.publisher_commit,
             )
+        else:
+            verify_current_release(args.root, args.directory, args.channel)
     except (ContractError, KeyError, TypeError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1

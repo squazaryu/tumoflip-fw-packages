@@ -82,10 +82,9 @@ jobs:
         run: |
           set -euo pipefail
           BASE_TAG="$(
-            jq -r --arg channel "$CHANNEL" \
-              '.channels[$channel].tag' control/contracts/legacy-sources.json
+            jq -er --arg channel "$CHANNEL" \
+              '.channels[$channel].tag' control/contracts/current-releases.json
           )"
-          test "$BASE_TAG" != null
           mkdir base-release
           gh release download "$BASE_TAG" \
             --repo "$GITHUB_REPOSITORY" \
@@ -93,6 +92,10 @@ jobs:
             --pattern 'tumoflip-packages.json' \
             --pattern 'tumoflip-packages.zip' \
             --pattern "${BASE_TAG}-SHA256SUMS"
+          python3 control/tools/verify_catalog.py current-release \
+            --root control \
+            --directory base-release \
+            --channel "$CHANNEL"
       - name: Check out exact firmware source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
