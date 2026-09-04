@@ -274,7 +274,7 @@ class NativeReleaseTests(unittest.TestCase):
     def test_plan_rejects_wrong_next_revision_and_parallelism_drift(self) -> None:
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
-                self.repository, "dev", 14, self.source_commit, self.publisher_commit
+                self.repository, "dev", 15, self.source_commit, self.publisher_commit
             )
 
         control = self.root / "parallelism-control"
@@ -305,7 +305,43 @@ class NativeReleaseTests(unittest.TestCase):
                 self.publisher_commit,
             )
 
-    def test_repository_authorizes_only_the_exact_quac_dev_013_plan(self) -> None:
+    def test_repository_records_exact_quac_dev_013_release(self) -> None:
+        current = json.loads(
+            (self.repository / "contracts/current-releases.json").read_text()
+        )
+        self.assertEqual(
+            current["channels"]["dev"],
+            {
+                "tag": "fw-packages-dev-013",
+                "revision": 13,
+                "prerelease": True,
+                "releaseId": "ef73de88a1a516f9486db3a31ad0480fb2424464d3018bb19f24e0dabb8de1b8",
+                "tagCommit": "63110d8c6f761736e9194c0e77eed10fce54d7a1",
+                "sourceCommit": self.quac_source_commit,
+                "targetFirmwareTag": "t-dev-004-015",
+                "targetFirmwareCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
+                "assets": {
+                    "fw-packages-dev-013-SHA256SUMS": "1cb9a8cef56456c11238f4f1af234a76d1f74b51cba37714c6d2ea82f782c49a",
+                    "tumoflip-packages.json": "7a19b992d451fe46be0d23cea359fa033186fc6fda91a1633671bf7974d24949",
+                    "tumoflip-packages.zip": "b13527ec24c71f13e4056443a44df3a0dd56231950d5a3e09d70ad198c7884f9",
+                },
+            },
+        )
+
+        lineage = json.loads(
+            (self.repository / "contracts/catalog-lineage.json").read_text()
+        )
+        self.assertEqual(
+            lineage["channels"]["dev"],
+            {
+                "currentTag": "fw-packages-dev-013",
+                "currentRevision": 13,
+                "nextNativeRevision": 14,
+                "nextNativeTag": "fw-packages-dev-014",
+                "seededFromLegacy": False,
+            },
+        )
+
         policy = json.loads(
             (self.repository / "contracts/native-build-policy.json").read_text()
         )
@@ -317,41 +353,14 @@ class NativeReleaseTests(unittest.TestCase):
         }
         self.assertEqual(quac_overlays, {"quac": "apps/Tools/quac.fap"})
         self.assertEqual(policy["overlayGroups"]["quac"], "base")
-        self.assertEqual(
-            policy["releasePlans"],
-            {
-                "fw-packages-dev-013": {
-                    "mode": "overlay",
-                    "sourceCommit": self.quac_source_commit,
-                    "selectedOverlays": ["quac"],
-                }
-            },
-        )
+        self.assertEqual(policy["releasePlans"], {})
 
-        plan = load_native_plan(
-            self.repository,
-            "dev",
-            13,
-            self.quac_source_commit,
-            self.publisher_commit,
-        )
-        self.assertEqual(plan["tag"], "fw-packages-dev-013")
-        self.assertEqual(plan["mode"], "overlay")
-        self.assertEqual(
-            plan["selectedOverlays"], {"quac": "apps/Tools/quac.fap"}
-        )
-        self.assertEqual(plan["overlayTargets"], ["apps/Tools/quac.fap"])
-        self.assertEqual(plan["overlayGroups"], {"apps/Tools/quac.fap": "base"})
-        self.assertEqual(plan["maxChangedTargets"], 1)
-        self.assertEqual(plan["baseRelease"]["tag"], "fw-packages-dev-012")
-        self.assertEqual(plan["baseRelease"]["revision"], 12)
-
-        with self.assertRaisesRegex(ContractError, "source commit is not authorized"):
+        with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
                 self.repository,
                 "dev",
                 13,
-                "0" * 40,
+                self.quac_source_commit,
                 self.publisher_commit,
             )
 
