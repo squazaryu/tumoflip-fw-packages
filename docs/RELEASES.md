@@ -73,11 +73,11 @@ create false mass updates.
 
 An allowlist entry grants build capability, not release authorization. Quac is
 reserved only as the `base` overlay `apps/Tools/quac.fap`; no
-`apps_data/quac` path is package-owned. `fw-packages-dev-013` remains blocked
-until a separate reviewed plan pins the exact merged firmware source commit and
-selects only `quac`. The current release contract and rollback index advance
-only after the candidate is built, independently verified, and published as an
-immutable release.
+`apps_data/quac` path is package-owned. The `fw-packages-dev-013` plan pins the
+exact merged firmware source commit and selects only `quac`; this authorizes a
+verified candidate build, not publication. The current release contract and
+rollback index advance only after the candidate is independently verified and
+published as an immutable release.
 
 `tools/native_release.py` then:
 
