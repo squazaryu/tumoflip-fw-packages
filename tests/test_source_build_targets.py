@@ -6,7 +6,7 @@ from pathlib import Path
 
 from tools.catalog_contract import ContractError
 from tools.source_build_targets import main as targets_main
-from tools.source_build_targets import source_build_targets
+from tools.source_build_targets import selected_overlay_paths, source_build_targets
 
 
 class SourceBuildTargetsTests(unittest.TestCase):
@@ -56,6 +56,38 @@ def package_extapp_exports():
         )
         with self.assertRaisesRegex(ContractError, "one canonical export"):
             source_build_targets(root, {"edit": "apps/edit.fap"})
+
+    def test_quac_plan_builds_only_the_matching_source_owned_export(self) -> None:
+        control = Path(__file__).resolve().parents[1]
+        selected = selected_overlay_paths(control, "dev", 13)
+        self.assertEqual(selected, {"quac": "apps/Tools/quac.fap"})
+
+        matching_source = self._source(
+            '''
+PACKAGE_RELEASE_OVERLAY_FILES = {
+    "apps/Tools/morse_player.fap",
+    "apps/Tools/quac.fap",
+}
+def package_extapp_exports():
+    return {
+        "morse_player.fap": "apps/Tools/morse_player.fap",
+        "quac.fap": "apps/Tools/quac.fap",
+    }
+'''
+        )
+        self.assertEqual(source_build_targets(matching_source, selected), ("fap_quac",))
+
+        mismatching_source = self._source(
+            '''
+PACKAGE_RELEASE_OVERLAY_FILES = {"apps_data/quac/quac.fap"}
+def package_extapp_exports():
+    return {"quac.fap": "apps_data/quac/quac.fap"}
+'''
+        )
+        with self.assertRaisesRegex(
+            ContractError, "release overlay plan differs from source package contract"
+        ):
+            source_build_targets(mismatching_source, selected)
 
     def test_shell_format_emits_valid_single_space_tokens(self) -> None:
         import sys

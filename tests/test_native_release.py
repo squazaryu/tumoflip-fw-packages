@@ -20,6 +20,7 @@ from tools.native_release import (
 
 class NativeReleaseTests(unittest.TestCase):
     source_commit = "a6bb38f027f5f17f2752d5dfca157478472b5c10"
+    quac_source_commit = "9598136346b8b691dd3eefa85623e53dcf1eacb2"
     publisher_commit = "b" * 40
 
     def setUp(self) -> None:
@@ -304,7 +305,7 @@ class NativeReleaseTests(unittest.TestCase):
                 self.publisher_commit,
             )
 
-    def test_repository_reserves_only_the_canonical_quac_tools_overlay(self) -> None:
+    def test_repository_authorizes_only_the_exact_quac_dev_013_plan(self) -> None:
         policy = json.loads(
             (self.repository / "contracts/native-build-policy.json").read_text()
         )
@@ -316,7 +317,43 @@ class NativeReleaseTests(unittest.TestCase):
         }
         self.assertEqual(quac_overlays, {"quac": "apps/Tools/quac.fap"})
         self.assertEqual(policy["overlayGroups"]["quac"], "base")
-        self.assertNotIn("fw-packages-dev-013", policy["releasePlans"])
+        self.assertEqual(
+            policy["releasePlans"],
+            {
+                "fw-packages-dev-013": {
+                    "mode": "overlay",
+                    "sourceCommit": self.quac_source_commit,
+                    "selectedOverlays": ["quac"],
+                }
+            },
+        )
+
+        plan = load_native_plan(
+            self.repository,
+            "dev",
+            13,
+            self.quac_source_commit,
+            self.publisher_commit,
+        )
+        self.assertEqual(plan["tag"], "fw-packages-dev-013")
+        self.assertEqual(plan["mode"], "overlay")
+        self.assertEqual(
+            plan["selectedOverlays"], {"quac": "apps/Tools/quac.fap"}
+        )
+        self.assertEqual(plan["overlayTargets"], ["apps/Tools/quac.fap"])
+        self.assertEqual(plan["overlayGroups"], {"apps/Tools/quac.fap": "base"})
+        self.assertEqual(plan["maxChangedTargets"], 1)
+        self.assertEqual(plan["baseRelease"]["tag"], "fw-packages-dev-012")
+        self.assertEqual(plan["baseRelease"]["revision"], 12)
+
+        with self.assertRaisesRegex(ContractError, "source commit is not authorized"):
+            load_native_plan(
+                self.repository,
+                "dev",
+                13,
+                "0" * 40,
+                self.publisher_commit,
+            )
 
     def test_unapproved_source_commit_is_terminal(self) -> None:
         with self.assertRaisesRegex(ContractError, "not authorized"):
