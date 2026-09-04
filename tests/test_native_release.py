@@ -304,6 +304,20 @@ class NativeReleaseTests(unittest.TestCase):
                 self.publisher_commit,
             )
 
+    def test_repository_reserves_only_the_canonical_quac_tools_overlay(self) -> None:
+        policy = json.loads(
+            (self.repository / "contracts/native-build-policy.json").read_text()
+        )
+
+        quac_overlays = {
+            name: source
+            for name, source in policy["allowedOverlays"].items()
+            if name == "quac" or "quac" in source.lower()
+        }
+        self.assertEqual(quac_overlays, {"quac": "apps/Tools/quac.fap"})
+        self.assertEqual(policy["overlayGroups"]["quac"], "base")
+        self.assertNotIn("fw-packages-dev-013", policy["releasePlans"])
+
     def test_unapproved_source_commit_is_terminal(self) -> None:
         with self.assertRaisesRegex(ContractError, "not authorized"):
             load_native_plan(
