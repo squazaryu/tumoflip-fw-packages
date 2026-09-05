@@ -21,6 +21,7 @@ from tools.native_release import (
 class NativeReleaseTests(unittest.TestCase):
     source_commit = "a6bb38f027f5f17f2752d5dfca157478472b5c10"
     quac_source_commit = "9598136346b8b691dd3eefa85623e53dcf1eacb2"
+    quac_010_source_commit = "f3ad1896fb1ea893e2530dcb836d376e8a20ff00"
     publisher_commit = "b" * 40
 
     def setUp(self) -> None:
@@ -353,7 +354,16 @@ class NativeReleaseTests(unittest.TestCase):
         }
         self.assertEqual(quac_overlays, {"quac": "apps/Tools/quac.fap"})
         self.assertEqual(policy["overlayGroups"]["quac"], "base")
-        self.assertEqual(policy["releasePlans"], {})
+        self.assertEqual(
+            policy["releasePlans"],
+            {
+                "fw-packages-dev-014": {
+                    "mode": "overlay",
+                    "sourceCommit": self.quac_010_source_commit,
+                    "selectedOverlays": ["quac"],
+                }
+            },
+        )
 
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
@@ -361,6 +371,32 @@ class NativeReleaseTests(unittest.TestCase):
                 "dev",
                 13,
                 self.quac_source_commit,
+                self.publisher_commit,
+            )
+
+        plan = load_native_plan(
+            self.repository,
+            "dev",
+            14,
+            self.quac_010_source_commit,
+            self.publisher_commit,
+        )
+        self.assertEqual(plan["tag"], "fw-packages-dev-014")
+        self.assertEqual(plan["mode"], "overlay")
+        self.assertEqual(
+            plan["selectedOverlays"], {"quac": "apps/Tools/quac.fap"}
+        )
+        self.assertEqual(plan["overlayTargets"], ["apps/Tools/quac.fap"])
+        self.assertEqual(plan["maxChangedTargets"], 1)
+        self.assertEqual(plan["baseRelease"]["tag"], "fw-packages-dev-013")
+        self.assertEqual(plan["baseRelease"]["revision"], 13)
+
+        with self.assertRaisesRegex(ContractError, "source commit is not authorized"):
+            load_native_plan(
+                self.repository,
+                "dev",
+                14,
+                "0" * 40,
                 self.publisher_commit,
             )
 
