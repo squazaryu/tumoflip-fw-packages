@@ -71,10 +71,10 @@ def package_extapp_exports():
             ContractError, "cannot load exact overlay plan for fw-packages-dev-013"
         ):
             selected_overlay_paths(control, "dev", 13)
-        self.assertEqual(
-            selected_overlay_paths(control, "dev", 14),
-            {"quac": "apps/Tools/quac.fap"},
-        )
+        with self.assertRaisesRegex(
+            ContractError, "cannot load exact overlay plan for fw-packages-dev-014"
+        ):
+            selected_overlay_paths(control, "dev", 14)
 
     def test_shell_format_emits_valid_single_space_tokens(self) -> None:
         import sys
