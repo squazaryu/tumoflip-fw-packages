@@ -333,6 +333,52 @@ def validate_registry(registry: dict[str, Any]) -> list[dict[str, Any]]:
             if not isinstance(expected, int) or isinstance(expected, bool) or expected < 1:
                 raise AuditError(f"invalid family expectedCount for {app_id}")
         apps.append(raw_app)
+
+    raw_unrouted = registry.get("unroutedArtifacts")
+    if not isinstance(raw_unrouted, list):
+        raise AuditError("registry unroutedArtifacts must be an array")
+    unrouted_remote_paths: set[str] = set()
+    for index, artifact in enumerate(raw_unrouted):
+        if not isinstance(artifact, dict):
+            raise AuditError(f"unrouted artifact {index} must be an object")
+        pack = artifact.get("pack")
+        if pack not in PACK_ARTIFACT_PREFIXES:
+            raise AuditError(f"invalid unrouted artifact pack at index {index}")
+        archive_file_name = require_string(
+            artifact.get("archiveFileName"),
+            f"unroutedArtifacts[{index}].archiveFileName",
+        )
+        remote_path = require_string(
+            artifact.get("remotePath"), f"unroutedArtifacts[{index}].remotePath"
+        )
+        owner = require_string(
+            artifact.get("owner"), f"unroutedArtifacts[{index}].owner"
+        )
+        if artifact.get("routeDisposition") != "not-routed-by-design":
+            raise AuditError(
+                "unrouted artifact routeDisposition must be not-routed-by-design"
+            )
+        if (
+            not archive_file_name.endswith(".fap")
+            or archive_file_name.startswith(".")
+            or "/" in archive_file_name
+            or "\\" in archive_file_name
+            or archive_file_name != Path(archive_file_name).name
+        ):
+            raise AuditError(f"unsafe unrouted archive file name: {archive_file_name}")
+        if not remote_path.startswith("/ext/apps/") or Path(remote_path).name != archive_file_name:
+            raise AuditError(f"invalid unrouted artifact remote path: {remote_path}")
+        if owner not in app_ids:
+            raise AuditError(f"unrouted artifact owner is not a registry app: {owner}")
+        archive_key = (pack, archive_file_name)
+        if archive_key in archive_file_names:
+            raise AuditError(
+                f"duplicate protected archive file name: {pack}:{archive_file_name}"
+            )
+        if remote_path in target_paths or remote_path in unrouted_remote_paths:
+            raise AuditError(f"duplicate protected unrouted target path: {remote_path}")
+        archive_file_names.add(archive_key)
+        unrouted_remote_paths.add(remote_path)
     return apps
 
 
@@ -1346,6 +1392,10 @@ def validate_protected_intersections(
     archives: dict[str, dict[str, bytes]],
 ) -> None:
     known: set[tuple[str, str]] = set()
+    explicitly_unrouted = {
+        (artifact["pack"], artifact["remotePath"])
+        for artifact in registry["unroutedArtifacts"]
+    }
     protected_keys = set(registry["protectedKeys"])
     data_families = registry["protectedDataFamilies"]
     for app in apps:
@@ -1379,7 +1429,11 @@ def validate_protected_intersections(
             elif remote_path.startswith("/ext/apps_data/"):
                 suffix = remote_path.removeprefix("/ext/apps_data/")
                 keys.add(suffix.split("/", 1)[0].lower())
-            if keys & protected_keys and (pack, remote_path) not in known:
+            if (
+                keys & protected_keys
+                and (pack, remote_path) not in known
+                and (pack, remote_path) not in explicitly_unrouted
+            ):
                 raise AuditError(f"unregistered protected artifact: {pack}:{remote_path}")
 
 

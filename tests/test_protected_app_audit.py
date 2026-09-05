@@ -45,6 +45,22 @@ class ProtectedAppAuditTests(unittest.TestCase):
             proto["localSourcePath"], surfaces["arf-module"]["sourcePaths"]
         )
 
+    def test_registry_tracks_xremote_as_explicitly_unrouted(self) -> None:
+        registry = audit.read_json(REGISTRY_PATH)
+        unrouted = registry["unroutedArtifacts"]
+        self.assertEqual(len(unrouted), 1)
+        self.assertEqual(
+            unrouted[0],
+            {
+                "pack": "extra",
+                "archiveFileName": "xremote.fap",
+                "remotePath": "/ext/apps/Infrared/xremote.fap",
+                "owner": "flipper_xremote",
+                "routeDisposition": "not-routed-by-design",
+            },
+        )
+        self.assertIn("xremote", registry["protectedKeys"])
+
     def test_registry_rejects_unsafe_coverage_surface_path(self) -> None:
         registry = audit.read_json(REGISTRY_PATH)
         proto = next(app for app in registry["apps"] if app["id"] == "proto_pirate")
@@ -161,6 +177,7 @@ class ProtectedAppAuditTests(unittest.TestCase):
         route_directories: Optional[dict[tuple[str, str], str]] = None,
         duplicate_artifact: Optional[tuple[str, str]] = None,
         add_unknown: bool = False,
+        add_unrouted: bool = False,
     ) -> None:
         route_directories = route_directories or {}
         members: dict[str, dict[str, bytes]] = {"base": {}, "extra": {}}
@@ -187,6 +204,10 @@ class ProtectedAppAuditTests(unittest.TestCase):
             members["extra"][
                 "extra_pack_build/artifacts-extra/Tools/field_logger.fap"
             ] = b"new protected intersection"
+        if add_unrouted:
+            members["extra"][
+                "extra_pack_build/artifacts-extra/Infrared/xremote.fap"
+            ] = b"upstream cross remote, intentionally not routed"
         for pack, path in (("base", self.base), ("extra", self.extra)):
             with zipfile.ZipFile(path, "w") as archive:
                 for name, data in sorted(members[pack].items()):
@@ -1132,6 +1153,13 @@ class ProtectedAppAuditTests(unittest.TestCase):
         self._write_archives(add_unknown=True)
         with self.assertRaisesRegex(audit.AuditError, "unregistered protected artifact"):
             audit.audit_release(self._args())
+
+    def test_explicitly_unrouted_xremote_does_not_fail_intersection_audit(self) -> None:
+        expected, _ = audit.audit_release(self._args())
+        self._write_archives(add_unrouted=True)
+        result, _ = audit.audit_release(self._args())
+        self.assertEqual(result["entries"], expected["entries"])
+        self.assertEqual(result["unresolved"], expected["unresolved"])
 
     def test_merge_preserves_pinned_release_and_replaces_exact_audit(self) -> None:
         first, _ = audit.audit_release(self._args())

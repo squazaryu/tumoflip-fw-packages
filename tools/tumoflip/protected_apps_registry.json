@@ -72,6 +72,15 @@
     {"prefix": "/ext/apps_data/subghz/plugins/", "owner": "subghz_protocols"},
     {"prefix": "/ext/apps_data/totp/", "owner": "totp"}
   ],
+  "unroutedArtifacts": [
+    {
+      "pack": "extra",
+      "archiveFileName": "xremote.fap",
+      "remotePath": "/ext/apps/Infrared/xremote.fap",
+      "owner": "flipper_xremote",
+      "routeDisposition": "not-routed-by-design"
+    }
+  ],
   "apps": [
     {
       "id": "esp32_wifi_marauder",
