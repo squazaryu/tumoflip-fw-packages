@@ -48,13 +48,5 @@
     "totp_cli_update_plugin": "base",
     "totp_cli_version_plugin": "base"
   },
-  "releasePlans": {
-    "fw-packages-dev-014": {
-      "mode": "overlay",
-      "sourceCommit": "f3ad1896fb1ea893e2530dcb836d376e8a20ff00",
-      "selectedOverlays": [
-        "quac"
-      ]
-    }
-  }
+  "releasePlans": {}
 }
