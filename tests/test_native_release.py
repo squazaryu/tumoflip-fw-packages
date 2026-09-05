@@ -275,7 +275,7 @@ class NativeReleaseTests(unittest.TestCase):
     def test_plan_rejects_wrong_next_revision_and_parallelism_drift(self) -> None:
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
-                self.repository, "dev", 15, self.source_commit, self.publisher_commit
+                self.repository, "dev", 16, self.source_commit, self.publisher_commit
             )
 
         control = self.root / "parallelism-control"
@@ -306,25 +306,25 @@ class NativeReleaseTests(unittest.TestCase):
                 self.publisher_commit,
             )
 
-    def test_repository_records_exact_quac_dev_013_release(self) -> None:
+    def test_repository_records_exact_quac_dev_014_release(self) -> None:
         current = json.loads(
             (self.repository / "contracts/current-releases.json").read_text()
         )
         self.assertEqual(
             current["channels"]["dev"],
             {
-                "tag": "fw-packages-dev-013",
-                "revision": 13,
+                "tag": "fw-packages-dev-014",
+                "revision": 14,
                 "prerelease": True,
-                "releaseId": "ef73de88a1a516f9486db3a31ad0480fb2424464d3018bb19f24e0dabb8de1b8",
-                "tagCommit": "63110d8c6f761736e9194c0e77eed10fce54d7a1",
-                "sourceCommit": self.quac_source_commit,
+                "releaseId": "630dbbd9986aa7da50ad219d988b5030f1da0b5e3db964f8f89f2fcc42bf9e61",
+                "tagCommit": "cb2358283fe8023dc5ba7b9a147e73805eab7f96",
+                "sourceCommit": self.quac_010_source_commit,
                 "targetFirmwareTag": "t-dev-004-015",
                 "targetFirmwareCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
                 "assets": {
-                    "fw-packages-dev-013-SHA256SUMS": "1cb9a8cef56456c11238f4f1af234a76d1f74b51cba37714c6d2ea82f782c49a",
-                    "tumoflip-packages.json": "7a19b992d451fe46be0d23cea359fa033186fc6fda91a1633671bf7974d24949",
-                    "tumoflip-packages.zip": "b13527ec24c71f13e4056443a44df3a0dd56231950d5a3e09d70ad198c7884f9",
+                    "fw-packages-dev-014-SHA256SUMS": "e08431ae09dff0fd53c51648d5cf29175cbcd81ad0c1819886dd93809ffb531a",
+                    "tumoflip-packages.json": "1e99ac61273a7313b68c1d72df2755e6eb8ae70086c65ffe855af83293ce3959",
+                    "tumoflip-packages.zip": "c29faf99b360613e7e196b22b4d52cb8e51fd3b3347e5d53d52cde40706de269",
                 },
             },
         )
@@ -335,10 +335,10 @@ class NativeReleaseTests(unittest.TestCase):
         self.assertEqual(
             lineage["channels"]["dev"],
             {
-                "currentTag": "fw-packages-dev-013",
-                "currentRevision": 13,
-                "nextNativeRevision": 14,
-                "nextNativeTag": "fw-packages-dev-014",
+                "currentTag": "fw-packages-dev-014",
+                "currentRevision": 14,
+                "nextNativeRevision": 15,
+                "nextNativeTag": "fw-packages-dev-015",
                 "seededFromLegacy": False,
             },
         )
@@ -354,49 +354,14 @@ class NativeReleaseTests(unittest.TestCase):
         }
         self.assertEqual(quac_overlays, {"quac": "apps/Tools/quac.fap"})
         self.assertEqual(policy["overlayGroups"]["quac"], "base")
-        self.assertEqual(
-            policy["releasePlans"],
-            {
-                "fw-packages-dev-014": {
-                    "mode": "overlay",
-                    "sourceCommit": self.quac_010_source_commit,
-                    "selectedOverlays": ["quac"],
-                }
-            },
-        )
+        self.assertEqual(policy["releasePlans"], {})
 
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
                 self.repository,
                 "dev",
-                13,
-                self.quac_source_commit,
-                self.publisher_commit,
-            )
-
-        plan = load_native_plan(
-            self.repository,
-            "dev",
-            14,
-            self.quac_010_source_commit,
-            self.publisher_commit,
-        )
-        self.assertEqual(plan["tag"], "fw-packages-dev-014")
-        self.assertEqual(plan["mode"], "overlay")
-        self.assertEqual(
-            plan["selectedOverlays"], {"quac": "apps/Tools/quac.fap"}
-        )
-        self.assertEqual(plan["overlayTargets"], ["apps/Tools/quac.fap"])
-        self.assertEqual(plan["maxChangedTargets"], 1)
-        self.assertEqual(plan["baseRelease"]["tag"], "fw-packages-dev-013")
-        self.assertEqual(plan["baseRelease"]["revision"], 13)
-
-        with self.assertRaisesRegex(ContractError, "source commit is not authorized"):
-            load_native_plan(
-                self.repository,
-                "dev",
                 14,
-                "0" * 40,
+                self.quac_010_source_commit,
                 self.publisher_commit,
             )
 
