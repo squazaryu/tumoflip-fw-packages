@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "sourceRepository": "xMasterX/all-the-plugins",
-  "generatedAt": "2026-09-07T21:33:55+00:00",
+  "generatedAt": "2026-09-07T23:49:01+00:00",
   "audits": [
     {
       "sequence": 20260809193105,
@@ -64376,15 +64376,6 @@
       ],
       "entries": [
         {
-          "remotePath": "/ext/apps/Bluetooth/claude_remote_ble.fap",
-          "targetPath": "/ext/apps/Bluetooth/claude_remote_ble.fap",
-          "sourceMD5": "0f85bb744fdc445551037425f2bde766",
-          "disposition": "intentionallyReplaced",
-          "note": "Claude Buddy replaces Agentic Remote by design; the upstream target remains absent.",
-          "targetMD5s": [],
-          "targetProvenance": []
-        },
-        {
           "remotePath": "/ext/apps/GPIO/ESP32/esp_flasher.fap",
           "targetPath": "/ext/apps/Module One/ESP32 Wi-Fi/esp_flasher.fap",
           "sourceMD5": "458a23769b1bf101d733b51f1ff5cdfc",
@@ -67838,12 +67829,12 @@
             "repository": "https://github.com/D4C1-Labs/Flipper-ARF.git",
             "ref": "refs/heads/main",
             "previousCommit": "56701a815b54121a4b4d102e361add5468ffa92b",
-            "currentCommit": "56701a815b54121a4b4d102e361add5468ffa92b",
-            "changed": false,
+            "currentCommit": "833c9ad29b68c12e86c1d125792e5004cc8e359a",
+            "changed": true,
             "license": "replacement-by-design"
           },
-          "status": "verified",
-          "disposition": "intentionallyReplaced",
+          "status": "needsReview",
+          "disposition": "needsReview",
           "note": "Claude Buddy replaces Agentic Remote by design; the upstream target remains absent.",
           "artifacts": [
             {
@@ -67851,7 +67842,7 @@
               "remotePath": "/ext/apps/Bluetooth/claude_remote_ble.fap",
               "targetPath": "/ext/apps/Bluetooth/claude_remote_ble.fap",
               "sourceMD5": "0f85bb744fdc445551037425f2bde766",
-              "ledgerStatus": "accepted"
+              "ledgerStatus": "needsReview"
             }
           ]
         },
@@ -67975,9 +67966,10 @@
       ],
       "unresolved": [
         "esp32_wifi_marauder:/ext/apps/GPIO/ESP32/esp32_wifi_marauder.fap: author source changed or unavailable",
-        "quac:/ext/apps/Tools/quac.fap: author source changed or unavailable"
+        "quac:/ext/apps/Tools/quac.fap: author source changed or unavailable",
+        "claude_buddy:/ext/apps/Bluetooth/claude_remote_ble.fap: author source changed or unavailable"
       ],
-      "generatedAt": "2026-09-07T21:33:55+00:00"
+      "generatedAt": "2026-09-07T23:49:01+00:00"
     }
   ]
 }
