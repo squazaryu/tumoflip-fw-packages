@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "sourceRepository": "xMasterX/all-the-plugins",
-  "generatedAt": "2026-09-08T04:41:57+00:00",
+  "generatedAt": "2026-09-08T09:09:34+00:00",
   "audits": [
     {
       "sequence": 20260809193105,
@@ -64376,6 +64376,15 @@
       ],
       "entries": [
         {
+          "remotePath": "/ext/apps/Bluetooth/claude_remote_ble.fap",
+          "targetPath": "/ext/apps/Bluetooth/claude_remote_ble.fap",
+          "sourceMD5": "0f85bb744fdc445551037425f2bde766",
+          "disposition": "intentionallyReplaced",
+          "note": "ARF main rewound from 56701a815b to its ancestor a483f253c7, removing exactly 8117e422d0, 833c9ad29b and 56701a815b. The replaced applications/system/claude_remote_ble subtree is byte-identical across the rewind. Preserve the existing intentionally absent Agentic Remote target and the separately maintained Tumoflip Claude Buddy implementation. This decision is scoped to this exact pack and author head; it does not accept changed BLE firmware or claim hardware testing.",
+          "targetMD5s": [],
+          "targetProvenance": []
+        },
+        {
           "remotePath": "/ext/apps/GPIO/ESP32/esp_flasher.fap",
           "targetPath": "/ext/apps/Module One/ESP32 Wi-Fi/esp_flasher.fap",
           "sourceMD5": "458a23769b1bf101d733b51f1ff5cdfc",
@@ -67833,18 +67842,25 @@
             "changed": true,
             "license": "replacement-by-design"
           },
-          "status": "needsReview",
-          "disposition": "needsReview",
-          "note": "Claude Buddy replaces Agentic Remote by design; the upstream target remains absent.",
+          "status": "verified",
+          "disposition": "intentionallyReplaced",
+          "note": "ARF main rewound from 56701a815b to its ancestor a483f253c7, removing exactly 8117e422d0, 833c9ad29b and 56701a815b. The replaced applications/system/claude_remote_ble subtree is byte-identical across the rewind. Preserve the existing intentionally absent Agentic Remote target and the separately maintained Tumoflip Claude Buddy implementation. This decision is scoped to this exact pack and author head; it does not accept changed BLE firmware or claim hardware testing.",
           "artifacts": [
             {
               "pack": "extra",
               "remotePath": "/ext/apps/Bluetooth/claude_remote_ble.fap",
               "targetPath": "/ext/apps/Bluetooth/claude_remote_ble.fap",
               "sourceMD5": "0f85bb744fdc445551037425f2bde766",
-              "ledgerStatus": "needsReview"
+              "ledgerStatus": "accepted"
             }
-          ]
+          ],
+          "decision": {
+            "appId": "claude_buddy",
+            "throughAuthorCommit": "a483f253c710b9e27654d28eec08022f3989c936",
+            "sourceCommit": "a6fc8deadd97b6e2710645b22a873bda7740c241",
+            "disposition": "intentionallyReplaced",
+            "changelog": "ARF main rewound from 56701a815b to its ancestor a483f253c7, removing exactly 8117e422d0, 833c9ad29b and 56701a815b. The replaced applications/system/claude_remote_ble subtree is byte-identical across the rewind. Preserve the existing intentionally absent Agentic Remote target and the separately maintained Tumoflip Claude Buddy implementation. This decision is scoped to this exact pack and author head; it does not accept changed BLE firmware or claim hardware testing."
+          }
         },
         {
           "appId": "arf_frequency_analyzer",
@@ -67966,10 +67982,9 @@
       ],
       "unresolved": [
         "esp32_wifi_marauder:/ext/apps/GPIO/ESP32/esp32_wifi_marauder.fap: author source changed or unavailable",
-        "quac:/ext/apps/Tools/quac.fap: author source changed or unavailable",
-        "claude_buddy:/ext/apps/Bluetooth/claude_remote_ble.fap: author source changed or unavailable"
+        "quac:/ext/apps/Tools/quac.fap: author source changed or unavailable"
       ],
-      "generatedAt": "2026-09-08T04:41:57+00:00"
+      "generatedAt": "2026-09-08T09:09:34+00:00"
     }
   ]
 }
