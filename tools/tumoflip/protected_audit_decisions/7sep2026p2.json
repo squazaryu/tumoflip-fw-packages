@@ -1,0 +1,12 @@
+{
+  "schema": 2,
+  "decisions": [
+    {
+      "appId": "claude_buddy",
+      "throughAuthorCommit": "a483f253c710b9e27654d28eec08022f3989c936",
+      "sourceCommit": "a6fc8deadd97b6e2710645b22a873bda7740c241",
+      "disposition": "intentionallyReplaced",
+      "changelog": "ARF main rewound from 56701a815b to its ancestor a483f253c7, removing exactly 8117e422d0, 833c9ad29b and 56701a815b. The replaced applications/system/claude_remote_ble subtree is byte-identical across the rewind. Preserve the existing intentionally absent Agentic Remote target and the separately maintained Tumoflip Claude Buddy implementation. This decision is scoped to this exact pack and author head; it does not accept changed BLE firmware or claim hardware testing."
+    }
+  ]
+}
