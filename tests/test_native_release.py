@@ -275,7 +275,7 @@ class NativeReleaseTests(unittest.TestCase):
     def test_plan_rejects_wrong_next_revision_and_parallelism_drift(self) -> None:
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
-                self.repository, "dev", 16, self.source_commit, self.publisher_commit
+                self.repository, "dev", 17, self.source_commit, self.publisher_commit
             )
 
         control = self.root / "parallelism-control"
@@ -311,25 +311,27 @@ class NativeReleaseTests(unittest.TestCase):
                 self.publisher_commit,
             )
 
-    def test_repository_records_exact_quac_dev_014_release(self) -> None:
+    def test_repository_records_exact_nearby_dev_015_release(self) -> None:
         current = json.loads(
             (self.repository / "contracts/current-releases.json").read_text()
         )
         self.assertEqual(
             current["channels"]["dev"],
             {
-                "tag": "fw-packages-dev-014",
-                "revision": 14,
+                "tag": "fw-packages-dev-015",
+                "revision": 15,
                 "prerelease": True,
-                "releaseId": "630dbbd9986aa7da50ad219d988b5030f1da0b5e3db964f8f89f2fcc42bf9e61",
-                "tagCommit": "cb2358283fe8023dc5ba7b9a147e73805eab7f96",
-                "sourceCommit": self.quac_010_source_commit,
+                "releaseId": "b788e5d5572375b09ed9689702f02143bf95307e1cd3398277441163f58450c4",
+                "tagCommit": "f3304aad92a912da3d1a436d3123b58db0c03418",
+                "sourceCommit": "e2d03acda01a8f71f9b80719fc788f2cf6a42f6a",
                 "targetFirmwareTag": "t-dev-004-015",
                 "targetFirmwareCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
+                "api": "88.0",
+                "target": 7,
                 "assets": {
-                    "fw-packages-dev-014-SHA256SUMS": "e08431ae09dff0fd53c51648d5cf29175cbcd81ad0c1819886dd93809ffb531a",
-                    "tumoflip-packages.json": "1e99ac61273a7313b68c1d72df2755e6eb8ae70086c65ffe855af83293ce3959",
-                    "tumoflip-packages.zip": "c29faf99b360613e7e196b22b4d52cb8e51fd3b3347e5d53d52cde40706de269",
+                    "fw-packages-dev-015-SHA256SUMS": "f7e8b518ad540c04f3b484466cdf5a4a3de7c81fea2b7d015153050415d8254c",
+                    "tumoflip-packages.json": "61782a3fdc9d43af8118105d7428a118b87109fe44f69a448915f31afe9e7627",
+                    "tumoflip-packages.zip": "3852ed60544a03798323eb0e79d0a89a1c84048252bb9193a9e2606d5a06a7cf",
                 },
             },
         )
@@ -340,10 +342,10 @@ class NativeReleaseTests(unittest.TestCase):
         self.assertEqual(
             lineage["channels"]["dev"],
             {
-                "currentTag": "fw-packages-dev-014",
-                "currentRevision": 14,
-                "nextNativeRevision": 15,
-                "nextNativeTag": "fw-packages-dev-015",
+                "currentTag": "fw-packages-dev-015",
+                "currentRevision": 15,
+                "nextNativeRevision": 16,
+                "nextNativeTag": "fw-packages-dev-016",
                 "seededFromLegacy": False,
             },
         )
@@ -359,34 +361,7 @@ class NativeReleaseTests(unittest.TestCase):
         }
         self.assertEqual(quac_overlays, {"quac": "apps/Tools/quac.fap"})
         self.assertEqual(policy["overlayGroups"]["quac"], "base")
-        self.assertEqual(
-            policy["releasePlans"]["fw-packages-dev-015"],
-            {
-                "mode": "overlay",
-                "sourceCommit": "e2d03acda01a8f71f9b80719fc788f2cf6a42f6a",
-                "selectedOverlays": [
-                    "esp_flasher",
-                    "subghz_raw_edit",
-                    "morse_player",
-                    "quac",
-                    "nearby_files",
-                    "totp_cli_add_plugin",
-                    "totp_cli_automation_plugin",
-                    "totp_cli_delete_plugin",
-                    "totp_cli_details_plugin",
-                    "totp_cli_export_plugin",
-                    "totp_cli_help_plugin",
-                    "totp_cli_list_plugin",
-                    "totp_cli_move_plugin",
-                    "totp_cli_notification_plugin",
-                    "totp_cli_pin_plugin",
-                    "totp_cli_reset_plugin",
-                    "totp_cli_timezone_plugin",
-                    "totp_cli_update_plugin",
-                    "totp_cli_version_plugin",
-                ],
-            },
-        )
+        self.assertEqual(policy["releasePlans"], {})
 
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
