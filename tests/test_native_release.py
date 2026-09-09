@@ -297,6 +297,11 @@ class NativeReleaseTests(unittest.TestCase):
             "apps/Tools/morse_player.fap",
         )
         self.assertEqual(policy["overlayGroups"]["morse_player"], "base")
+        self.assertEqual(
+            policy["allowedOverlays"]["nearby_files"],
+            "apps/GPIO/nearby_files.fap",
+        )
+        self.assertEqual(policy["overlayGroups"]["nearby_files"], "base")
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
                 self.repository,
@@ -354,7 +359,34 @@ class NativeReleaseTests(unittest.TestCase):
         }
         self.assertEqual(quac_overlays, {"quac": "apps/Tools/quac.fap"})
         self.assertEqual(policy["overlayGroups"]["quac"], "base")
-        self.assertEqual(policy["releasePlans"], {})
+        self.assertEqual(
+            policy["releasePlans"]["fw-packages-dev-015"],
+            {
+                "mode": "overlay",
+                "sourceCommit": "e2d03acda01a8f71f9b80719fc788f2cf6a42f6a",
+                "selectedOverlays": [
+                    "esp_flasher",
+                    "subghz_raw_edit",
+                    "morse_player",
+                    "quac",
+                    "nearby_files",
+                    "totp_cli_add_plugin",
+                    "totp_cli_automation_plugin",
+                    "totp_cli_delete_plugin",
+                    "totp_cli_details_plugin",
+                    "totp_cli_export_plugin",
+                    "totp_cli_help_plugin",
+                    "totp_cli_list_plugin",
+                    "totp_cli_move_plugin",
+                    "totp_cli_notification_plugin",
+                    "totp_cli_pin_plugin",
+                    "totp_cli_reset_plugin",
+                    "totp_cli_timezone_plugin",
+                    "totp_cli_update_plugin",
+                    "totp_cli_version_plugin",
+                ],
+            },
+        )
 
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
