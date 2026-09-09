@@ -27,6 +27,7 @@
     "keeloq_keystore_decryptor",
     "module_one_cockpit",
     "module_one_sensor_logger",
+    "nearby_files",
     "nfc_ccid_bridge",
     "proto_pirate",
     "protocol_compiler",
@@ -235,6 +236,27 @@
       ],
       "defaultDisposition": "auditedDifference",
       "note": "No source was imported by this audit; license must be resolved before a future port."
+    },
+    {
+      "id": "nearby_files",
+      "aliases": [],
+      "packSourcePath": "base_pack/nearby_files",
+      "localSourcePath": "applications_user/nearby_files",
+      "author": {
+        "repository": "https://github.com/Stichoza/flipper-nearby-files.git",
+        "ref": "refs/heads/master",
+        "lastReviewedCommit": "669a8c7f919a43a77c8aa47ce8655b3070d9cc6f",
+        "license": "MIT"
+      },
+      "artifacts": [
+        {
+          "pack": "base",
+          "archiveFileName": "nearby_files.fap",
+          "targetPath": "/ext/apps/GPIO/nearby_files.fap"
+        }
+      ],
+      "defaultDisposition": "auditedDifference",
+      "note": "Tumoflip ships a package-owned Nearby Files build with one-shot TumoCompanion GPS over BLE and a retained Flipper GPS/NMEA fallback; the Community Pack binary is protected from overwriting it."
     },
     {
       "id": "totp",
