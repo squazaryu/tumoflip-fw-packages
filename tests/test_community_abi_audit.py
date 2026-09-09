@@ -1,6 +1,3 @@
-import csv
-import io
-import json
 import tempfile
 import unittest
 import zipfile
@@ -42,16 +39,19 @@ Variable,+,usb_cdc_dual,FuriHalUsbInterface,
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             archive = root / "base.zip"
+            extra = root / "extra.zip"
             with zipfile.ZipFile(archive, "w") as zf:
                 zf.writestr(
                     "base_pack_build/artifacts-base/Tools/sample.fap", b"fap"
                 )
+            with zipfile.ZipFile(extra, "w"):
+                pass
 
             def nm(_path: Path) -> str:
                 return "         U gps_request_stream\n"
 
             report = audit_archives(
-                [("base", archive)],
+                [("base", archive), ("extra", extra)],
                 firmware_symbols={"canvas_clear"},
                 nm_runner=nm,
             )
@@ -66,6 +66,7 @@ Variable,+,usb_cdc_dual,FuriHalUsbInterface,
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             archive = root / "base.zip"
+            extra = root / "extra.zip"
             with zipfile.ZipFile(archive, "w") as zf:
                 zf.writestr(
                     "base_pack_build/artifacts-base/Tools/host.fap", b"host"
@@ -73,14 +74,16 @@ Variable,+,usb_cdc_dual,FuriHalUsbInterface,
                 zf.writestr(
                     "base_pack_build/artifacts-base/apps/plugin.fal", b"plugin"
                 )
+            with zipfile.ZipFile(extra, "w"):
+                pass
 
             def nm(path: Path) -> str:
-                if path.name == "host.fap":
+                if path.name.endswith("-host.fap"):
                     return "00000000 T host_export\n"
                 return "         U host_export\n"
 
             report = audit_archives(
-                [("base", archive)],
+                [("base", archive), ("extra", extra)],
                 firmware_symbols=set(),
                 nm_runner=nm,
             )
@@ -92,11 +95,35 @@ Variable,+,usb_cdc_dual,FuriHalUsbInterface,
     def test_archive_path_traversal_fails_closed(self):
         with tempfile.TemporaryDirectory() as directory:
             archive = Path(directory) / "bad.zip"
+            extra = Path(directory) / "extra.zip"
             with zipfile.ZipFile(archive, "w") as zf:
                 zf.writestr("base_pack_build/artifacts-base/../escape.fap", b"x")
+            with zipfile.ZipFile(extra, "w"):
+                pass
             with self.assertRaisesRegex(AbiAuditError, "unsafe archive member"):
                 audit_archives(
-                    [("base", archive)], firmware_symbols=set(), nm_runner=lambda _: ""
+                    [("base", archive), ("extra", extra)],
+                    firmware_symbols=set(),
+                    nm_runner=lambda _: "",
+                )
+
+    def test_oversized_binary_member_fails_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            archive = root / "base.zip"
+            extra = root / "extra.zip"
+            with zipfile.ZipFile(archive, "w") as zf:
+                zf.writestr(
+                    "base_pack_build/artifacts-base/Tools/large.fap",
+                    b"x" * (16 * 1024 * 1024 + 1),
+                )
+            with zipfile.ZipFile(extra, "w"):
+                pass
+            with self.assertRaisesRegex(AbiAuditError, "too large"):
+                audit_archives(
+                    [("base", archive), ("extra", extra)],
+                    firmware_symbols=set(),
+                    nm_runner=lambda _: "",
                 )
 
 

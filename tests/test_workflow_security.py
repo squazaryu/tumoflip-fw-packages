@@ -55,6 +55,7 @@ class WorkflowSecurityTests(unittest.TestCase):
             scheduled,
             [
                 "catalog-index.yml",
+                "community-abi-audit.yml",
                 "esp-installer-audit.yml",
                 "implementation-drift.yml",
                 "protected-app-audit.yml",
