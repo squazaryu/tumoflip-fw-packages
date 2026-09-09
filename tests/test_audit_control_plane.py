@@ -116,7 +116,7 @@ class AuditControlPlaneTests(unittest.TestCase):
         )
         self.assertEqual(
             contract["implementations"]["dev"]["commit"],
-            "e2d03acda01a8f71f9b80719fc788f2cf6a42f6a",
+            "d06858658012eeed48880f70f8e10b44fe09f341",
         )
         self.assertEqual(contract["implementation"], contract["implementations"]["dev"])
         firmware = {item["releaseTag"]: item for item in contract["firmware"]}
