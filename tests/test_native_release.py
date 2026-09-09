@@ -297,6 +297,11 @@ class NativeReleaseTests(unittest.TestCase):
             "apps/Tools/morse_player.fap",
         )
         self.assertEqual(policy["overlayGroups"]["morse_player"], "base")
+        self.assertEqual(
+            policy["allowedOverlays"]["nearby_files"],
+            "apps/GPIO/nearby_files.fap",
+        )
+        self.assertEqual(policy["overlayGroups"]["nearby_files"], "base")
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
                 self.repository,
