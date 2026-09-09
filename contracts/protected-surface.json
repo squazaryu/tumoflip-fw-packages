@@ -55,8 +55,7 @@
   ],
   "ownedSourcePathsByImplementation": {
     "dev": [
-      "applications_user/morse_player",
-      "applications_user/nearby_files"
+      "applications_user/morse_player"
     ],
     "main": []
   },
