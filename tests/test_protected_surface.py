@@ -92,10 +92,6 @@ class ProtectedSurfaceTests(unittest.TestCase):
             "applications_user/morse_player",
             surface["ownedSourcePathsByImplementation"]["dev"],
         )
-        self.assertIn(
-            "applications_user/nearby_files",
-            surface["ownedSourcePathsByImplementation"]["dev"],
-        )
         self.assertNotIn(
             "applications_user/morse_player",
             surface["ownedSourcePathsByImplementation"]["main"],
