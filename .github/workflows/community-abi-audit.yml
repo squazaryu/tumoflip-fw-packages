@@ -1,0 +1,162 @@
+name: Audit Community Pack ABI compatibility
+
+on:
+  schedule:
+    - cron: "11 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: community-pack-abi-audit
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    if: github.ref == 'refs/heads/main' && github.event.repository.default_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out control plane
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          persist-credentials: false
+
+      - name: Resolve exact Community Pack release and Tumoflip head
+        id: source
+        working-directory: control
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          community_repository="xMasterX/all-the-plugins"
+          community_tag="$(gh api "repos/$community_repository/releases/latest" --jq .tag_name)"
+          community_commit="$(git ls-remote "https://github.com/$community_repository.git" "refs/tags/$community_tag^{}" | cut -f1)"
+          if [[ -z "$community_commit" ]]; then
+            community_commit="$(git ls-remote "https://github.com/$community_repository.git" "refs/tags/$community_tag" | cut -f1)"
+          fi
+          firmware_commit="$(git ls-remote https://github.com/squazaryu/tumoflip.git refs/heads/dev | cut -f1)"
+          [[ "$community_tag" =~ ^[0-9]{1,2}[a-z]{3}[0-9]{4}(p[0-9]+)?$ ]]
+          [[ "$community_commit" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$firmware_commit" =~ ^[0-9a-f]{40}$ ]]
+          echo "community_repository=$community_repository" >> "$GITHUB_OUTPUT"
+          echo "community_tag=$community_tag" >> "$GITHUB_OUTPUT"
+          echo "community_commit=$community_commit" >> "$GITHUB_OUTPUT"
+          echo "firmware_commit=$firmware_commit" >> "$GITHUB_OUTPUT"
+
+      - name: Check out exact Tumoflip API table
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: squazaryu/tumoflip
+          ref: ${{ steps.source.outputs.firmware_commit }}
+          path: firmware
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download and verify Community Pack archives
+        working-directory: control
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMUNITY_REPOSITORY: ${{ steps.source.outputs.community_repository }}
+          COMMUNITY_TAG: ${{ steps.source.outputs.community_tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/community"
+          gh api "repos/$COMMUNITY_REPOSITORY/releases/tags/$COMMUNITY_TAG" > "$RUNNER_TEMP/community/release.json"
+          for asset in all-the-apps-base.zip all-the-apps-extra.zip; do
+            gh release download "$COMMUNITY_TAG" \
+              --repo "$COMMUNITY_REPOSITORY" \
+              --dir "$RUNNER_TEMP/community" \
+              --pattern "$asset"
+            expected_size="$(jq -er --arg name "$asset" '.assets[] | select(.name == $name) | .size' "$RUNNER_TEMP/community/release.json")"
+            expected_digest="$(jq -er --arg name "$asset" '.assets[] | select(.name == $name) | .digest' "$RUNNER_TEMP/community/release.json")"
+            actual_size="$(wc -c < "$RUNNER_TEMP/community/$asset" | tr -d ' ')"
+            actual_digest="sha256:$(sha256sum "$RUNNER_TEMP/community/$asset" | cut -d' ' -f1)"
+            [[ "$actual_size" == "$expected_size" ]]
+            [[ "$actual_digest" == "$expected_digest" ]]
+          done
+
+      - name: Run fail-closed ABI audit
+        id: audit
+        working-directory: control
+        env:
+          COMMUNITY_TAG: ${{ steps.source.outputs.community_tag }}
+          COMMUNITY_COMMIT: ${{ steps.source.outputs.community_commit }}
+          FIRMWARE_COMMIT: ${{ steps.source.outputs.firmware_commit }}
+        run: |
+          set +e
+          NM_COMMAND="$(command -v llvm-nm || command -v nm || true)"
+          [[ -n "$NM_COMMAND" ]] || exit 2
+          python3 tools/community_abi_audit.py \
+            --base-archive "$RUNNER_TEMP/community/all-the-apps-base.zip" \
+            --extra-archive "$RUNNER_TEMP/community/all-the-apps-extra.zip" \
+            --api-symbols ../firmware/targets/f7/api_symbols.csv \
+            --nm "$NM_COMMAND" \
+            --output "$RUNNER_TEMP/community-abi-audit.json"
+          status=$?
+          set -e
+          [[ "$status" == 0 || "$status" == 1 ]]
+          jq --arg tag "$COMMUNITY_TAG" --arg commit "$COMMUNITY_COMMIT" \
+             --arg firmware "$FIRMWARE_COMMIT" \
+             '.community = {tag:$tag, commit:$commit} | .firmware = {commit:$firmware}' \
+             "$RUNNER_TEMP/community-abi-audit.json" > "$RUNNER_TEMP/community-abi-audit.normalized.json"
+          mv "$RUNNER_TEMP/community-abi-audit.normalized.json" "$RUNNER_TEMP/community-abi-audit.json"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Upload ABI audit report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: community-pack-abi-audit
+          path: ${{ runner.temp }}/community-abi-audit.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Reconcile one canonical ABI review issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATUS: ${{ steps.audit.outputs.status }}
+          COMMUNITY_TAG: ${{ steps.source.outputs.community_tag }}
+        run: |
+          set -euo pipefail
+          report="$RUNNER_TEMP/community-abi-audit.json"
+          marker='<!-- community-pack-abi-audit -->'
+          title='Review Community Pack ABI compatibility'
+          body="$(printf '%s\n' "$marker"; cat "$report")"
+          gh api "repos/$GITHUB_REPOSITORY/issues?state=all&per_page=100" \
+            --paginate --slurp > "$RUNNER_TEMP/issues.json"
+          issue="$(jq -r --arg marker "$marker" --arg title "$title" \
+            '[.[][] | select(.pull_request == null) | select(.user.login == "github-actions[bot]") | select(.title == $title and ((.body // "") | startswith($marker)))][0].number // empty' \
+            "$RUNNER_TEMP/issues.json")"
+          verify_issue() {
+            gh api "repos/$GITHUB_REPOSITORY/issues/$issue" > "$RUNNER_TEMP/issue.json"
+            jq -e --arg marker "$marker" --arg title "$title" \
+              '.pull_request == null and .user.login == "github-actions[bot]" and .title == $title and ((.body // "") | startswith($marker))' \
+              "$RUNNER_TEMP/issue.json" >/dev/null
+          }
+          if [[ "$STATUS" == 1 ]]; then
+            if [[ -z "$issue" ]]; then
+              issue_url="$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body")"
+              issue="${issue_url##*/}"
+              verify_issue
+            else
+              verify_issue
+              gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --body "$body"
+              verify_issue
+            fi
+          elif [[ -n "$issue" ]]; then
+            verify_issue
+            gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --body "$body"
+            verify_issue
+            gh issue close "$issue" --repo "$GITHUB_REPOSITORY" \
+              --comment "Community Pack $COMMUNITY_TAG has no unresolved Tumoflip API imports."
+          fi
+
+      - name: Fail closed when Community Pack imports are unavailable
+        if: steps.audit.outputs.status == '1'
+        run: |
+          echo "Community Pack contains FAP imports unavailable in the current Tumoflip API; see the canonical ABI review issue." >&2
+          exit 1
