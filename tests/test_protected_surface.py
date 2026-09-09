@@ -86,7 +86,7 @@ class ProtectedSurfaceTests(unittest.TestCase):
         surface = json.loads((root / "contracts/protected-surface.json").read_text())
         targets = json.loads((root / "contracts/protected-audit-targets.json").read_text())
         parity = json.loads((root / "contracts/protected-source-parity.json").read_text())
-        expected_dev = "e2d03acda01a8f71f9b80719fc788f2cf6a42f6a"
+        expected_dev = "d06858658012eeed48880f70f8e10b44fe09f341"
         self.assertEqual(surface["schema"], 2)
         self.assertIn(
             "applications_user/morse_player",

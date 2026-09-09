@@ -3,7 +3,7 @@
   "kind": "protectedAuditTargets",
   "implementation": {
     "repository": "squazaryu/tumoflip",
-    "commit": "e2d03acda01a8f71f9b80719fc788f2cf6a42f6a"
+    "commit": "d06858658012eeed48880f70f8e10b44fe09f341"
   },
   "implementations": {
     "stable": {
@@ -12,7 +12,7 @@
     },
     "dev": {
       "repository": "squazaryu/tumoflip",
-      "commit": "e2d03acda01a8f71f9b80719fc788f2cf6a42f6a"
+      "commit": "d06858658012eeed48880f70f8e10b44fe09f341"
     }
   },
   "packages": [
