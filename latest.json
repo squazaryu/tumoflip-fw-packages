@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "sourceRepository": "xMasterX/all-the-plugins",
-  "generatedAt": "2026-09-10T01:31:12+00:00",
+  "generatedAt": "2026-09-10T06:40:52+00:00",
   "audits": [
     {
       "sequence": 20260809193105,
@@ -78815,7 +78815,7 @@
             "repository": "https://github.com/0xchocolate/flipperzero-wifi-marauder.git",
             "ref": "refs/heads/feature_wifi_marauder_app",
             "previousCommit": "8f8b79e4a97b283faac41dda4e4da8d260ddc459",
-            "currentCommit": "e39f24bdba4fc9c8deccfc6fc92470b3dc7e9382",
+            "currentCommit": "522606371f30be6fef35ec2057d717989fa6af83",
             "changed": true,
             "license": "GPL-3.0"
           },
@@ -79305,7 +79305,7 @@
         "quac:/ext/apps/Tools/quac.fap: author source changed or unavailable",
         "claude_buddy:/ext/apps/Bluetooth/claude_remote_ble.fap: author source changed or unavailable"
       ],
-      "generatedAt": "2026-09-10T01:31:12+00:00"
+      "generatedAt": "2026-09-10T06:40:52+00:00"
     }
   ]
 }
