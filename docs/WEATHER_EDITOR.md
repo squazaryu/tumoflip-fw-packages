@@ -6,12 +6,14 @@ Source preview: `handoff/weather-editor-native-ui/after/comparison.png` and
 `handoff/weather-editor-native-ui/after/all-screens.png` in that source tree.
 The preview uses production draw callbacks, U8g2 fonts and controlled models.
 
-The published predecessor is `fw-packages-dev-015`. Its payloads, including
-Nearby Files, must be preserved by the eventual `fw-packages-dev-016` overlay.
+Published as `fw-packages-dev-016`, built by workflow 34718181465 from publisher
+commit `a790d4958290d808838bd040606aa5c483e6a079`. Its immutable predecessor is
+`fw-packages-dev-015`; all predecessor payloads, including Nearby Files, were
+verified byte-for-byte and preserved by the Weather Editor overlay.
 The earlier local weather dev-015 plan was based on a stale checkout and is
 not a release input. Do not publish, install or promote its generated ZIPs.
 
-The dev-016 plan selects only Weather Editor and preserves every dev-015
+The dev-016 release adds only Weather Editor and preserves every dev-015
 payload. Install Tumoflip Dev 008-028 before this package: it supplies API 88.7
 and the common TextInput and scrolling-message fixes validated with this FAP.
 The inherited API 88.0 catalog baseline is historical compatibility metadata,

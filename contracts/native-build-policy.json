@@ -52,11 +52,5 @@
     "totp_cli_update_plugin": "base",
     "totp_cli_version_plugin": "base"
   },
-  "releasePlans": {
-    "fw-packages-dev-016": {
-      "mode": "overlay",
-      "selectedOverlays": ["weather_editor"],
-      "sourceCommit": "77ca83763507a3098182e32cb01cfa8135e373dc"
-    }
-  }
+  "releasePlans": {}
 }

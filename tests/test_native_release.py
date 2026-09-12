@@ -275,7 +275,7 @@ class NativeReleaseTests(unittest.TestCase):
     def test_plan_rejects_wrong_next_revision_and_parallelism_drift(self) -> None:
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
-                self.repository, "dev", 17, self.source_commit, self.publisher_commit
+                self.control, "dev", 10, self.source_commit, self.publisher_commit
             )
 
         control = self.root / "parallelism-control"
@@ -311,64 +311,57 @@ class NativeReleaseTests(unittest.TestCase):
                 self.publisher_commit,
             )
 
-    def test_repository_records_exact_nearby_dev_015_release(self) -> None:
+    def test_repository_records_exact_weather_dev_016_release(self) -> None:
         current = json.loads(
             (self.repository / "contracts/current-releases.json").read_text()
         )
         self.assertEqual(
             current["channels"]["dev"],
             {
-                "tag": "fw-packages-dev-015",
-                "revision": 15,
+                "tag": "fw-packages-dev-016",
+                "revision": 16,
                 "prerelease": True,
-                "releaseId": "b788e5d5572375b09ed9689702f02143bf95307e1cd3398277441163f58450c4",
-                "tagCommit": "f3304aad92a912da3d1a436d3123b58db0c03418",
-                "sourceCommit": "e2d03acda01a8f71f9b80719fc788f2cf6a42f6a",
+                "releaseId": "6e3adf6e018b570340879e25141a67542a6faf04abd87d4697618005a7936eba",
+                "tagCommit": "a790d4958290d808838bd040606aa5c483e6a079",
+                "sourceCommit": "77ca83763507a3098182e32cb01cfa8135e373dc",
                 "targetFirmwareTag": "t-dev-004-015",
                 "targetFirmwareCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
                 "api": "88.0",
                 "target": 7,
                 "assets": {
-                    "fw-packages-dev-015-SHA256SUMS": "f7e8b518ad540c04f3b484466cdf5a4a3de7c81fea2b7d015153050415d8254c",
-                    "tumoflip-packages.json": "61782a3fdc9d43af8118105d7428a118b87109fe44f69a448915f31afe9e7627",
-                    "tumoflip-packages.zip": "3852ed60544a03798323eb0e79d0a89a1c84048252bb9193a9e2606d5a06a7cf",
-                },
+                    "fw-packages-dev-016-SHA256SUMS": "e0e61b98753ac402b2187ec9d005f3287dabc14f6a9644718e8ec5bfe4125f8f",
+                    "tumoflip-packages.json": "b7ec96bd4b8cba0c24e2694edfa402da992b2e92e0adba8470b5de773bb17027",
+                    "tumoflip-packages.zip": "fdab87d1deca6bf5a8a7afc26d3db61d2745f290f8a541fd6db03db43abdc3e4"
+                }
             },
         )
-
         lineage = json.loads(
             (self.repository / "contracts/catalog-lineage.json").read_text()
         )
         self.assertEqual(
             lineage["channels"]["dev"],
             {
-                "currentTag": "fw-packages-dev-015",
-                "currentRevision": 15,
-                "nextNativeRevision": 16,
-                "nextNativeTag": "fw-packages-dev-016",
+                "currentTag": "fw-packages-dev-016",
+                "currentRevision": 16,
+                "nextNativeRevision": 17,
+                "nextNativeTag": "fw-packages-dev-017",
                 "seededFromLegacy": False,
             },
         )
-
         policy = json.loads(
             (self.repository / "contracts/native-build-policy.json").read_text()
         )
-
-        quac_overlays = {
-            name: source
-            for name, source in policy["allowedOverlays"].items()
-            if name == "quac" or "quac" in source.lower()
-        }
-        self.assertEqual(quac_overlays, {"quac": "apps/Tools/quac.fap"})
-        self.assertEqual(policy["overlayGroups"]["quac"], "base")
-        self.assertNotIn("fw-packages-dev-015", policy["releasePlans"])
-
+        self.assertEqual(policy["allowedOverlays"]["quac"], "apps/Tools/quac.fap")
+        self.assertEqual(
+            policy["allowedOverlays"]["weather_editor"],
+            "apps/Sub-GHz/weather_editor.fap",
+        )
+        self.assertEqual(policy["overlayGroups"]["weather_editor"], "base")
+        self.assertNotIn("fw-packages-dev-016", policy["releasePlans"])
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
-                self.repository,
-                "dev",
-                14,
-                self.quac_010_source_commit,
+                self.repository, "dev", 16,
+                "77ca83763507a3098182e32cb01cfa8135e373dc",
                 self.publisher_commit,
             )
 
