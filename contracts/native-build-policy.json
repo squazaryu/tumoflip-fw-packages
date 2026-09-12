@@ -6,6 +6,7 @@
     "morse_player": "apps/Tools/morse_player.fap",
     "quac": "apps/Tools/quac.fap",
     "nearby_files": "apps/GPIO/nearby_files.fap",
+    "weather_editor": "apps/Sub-GHz/weather_editor.fap",
     "totp_cli_add_plugin": "apps_data/totp/plugins/totp_cli_add_plugin.fal",
     "totp_cli_automation_plugin": "apps_data/totp/plugins/totp_cli_automation_plugin.fal",
     "totp_cli_delete_plugin": "apps_data/totp/plugins/totp_cli_delete_plugin.fal",
@@ -35,6 +36,7 @@
     "morse_player": "base",
     "quac": "base",
     "nearby_files": "base",
+    "weather_editor": "base",
     "totp_cli_add_plugin": "base",
     "totp_cli_automation_plugin": "base",
     "totp_cli_delete_plugin": "base",
@@ -50,5 +52,11 @@
     "totp_cli_update_plugin": "base",
     "totp_cli_version_plugin": "base"
   },
-  "releasePlans": {}
+  "releasePlans": {
+    "fw-packages-dev-016": {
+      "mode": "overlay",
+      "selectedOverlays": ["weather_editor"],
+      "sourceCommit": "77ca83763507a3098182e32cb01cfa8135e373dc"
+    }
+  }
 }
