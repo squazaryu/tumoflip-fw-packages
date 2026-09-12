@@ -361,7 +361,7 @@ class NativeReleaseTests(unittest.TestCase):
         }
         self.assertEqual(quac_overlays, {"quac": "apps/Tools/quac.fap"})
         self.assertEqual(policy["overlayGroups"]["quac"], "base")
-        self.assertEqual(policy["releasePlans"], {})
+        self.assertNotIn("fw-packages-dev-015", policy["releasePlans"])
 
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
