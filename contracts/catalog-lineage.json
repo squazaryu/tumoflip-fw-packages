@@ -4,10 +4,10 @@
   "sourceRepository": "squazaryu/tumoflip",
   "channels": {
     "stable": {
-      "currentTag": "fw-packages-stable-005",
-      "currentRevision": 5,
-      "nextNativeRevision": 6,
-      "nextNativeTag": "fw-packages-stable-006",
+      "currentTag": "fw-packages-stable-006",
+      "currentRevision": 6,
+      "nextNativeRevision": 7,
+      "nextNativeTag": "fw-packages-stable-007",
       "seededFromLegacy": false
     },
     "dev": {

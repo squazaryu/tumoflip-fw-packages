@@ -11,6 +11,10 @@ Stable 007/API 88.4 baseline is immutable provenance, not the SDK against which
 the three new FAPs were built. The package stream remains independent; do not
 replace it with a full firmware snapshot or an empty reference baseline.
 
-This plan authorizes an exact-source candidate build. Publication and catalog
-index advancement follow successful verification of that candidate. Native UI,
-transaction and build checks are separate from physical sensor/radio acceptance.
+Published as `fw-packages-stable-006`, built in workflow `34745090570` from
+publisher `5a823f8149a2437fb2063d2e5739ed1e6b117b0f`. Independent verification
+confirmed exactly three changed FAPs and preservation of every other payload.
+Publication verified the remotely downloaded asset bytes before and after
+publishing. The catalog index records this immutable release; the next stable
+revision is 007. Native UI, transaction and build checks remain separate from
+physical sensor/radio acceptance.
