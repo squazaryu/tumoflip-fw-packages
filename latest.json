@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "sourceRepository": "xMasterX/all-the-plugins",
-  "generatedAt": "2026-09-15T01:00:14+00:00",
+  "generatedAt": "2026-09-15T06:12:18+00:00",
   "audits": [
     {
       "sequence": 20260809193105,
@@ -79923,7 +79923,7 @@
             "repository": "https://github.com/D4C1-Labs/Flipper-ARF.git",
             "ref": "refs/heads/main",
             "previousCommit": "56701a815b54121a4b4d102e361add5468ffa92b",
-            "currentCommit": "e928e1b5cf261fc13944f3097cdd770629892f90",
+            "currentCommit": "4509f512747bf45082b9b1c37f2d2bde02b2fe25",
             "changed": true,
             "license": "replacement-by-design"
           },
@@ -80083,7 +80083,7 @@
         "wifi_mapper:/ext/apps/GPIO/ESP32/wifi_map.fap: pack source changed, author source changed or unavailable",
         "flipper_xremote:/ext/apps/Infrared/flipper_xremote.fap: pack source changed"
       ],
-      "generatedAt": "2026-09-15T01:00:14+00:00"
+      "generatedAt": "2026-09-15T06:12:18+00:00"
     }
   ]
 }
