@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "sourceRepository": "xMasterX/all-the-plugins",
-  "generatedAt": "2026-09-15T11:48:41+00:00",
+  "generatedAt": "2026-09-15T15:44:48+00:00",
   "audits": [
     {
       "sequence": 20260809193105,
@@ -79629,7 +79629,7 @@
             "repository": "https://protopirate.net/ProtoPirate/ProtoPirate.git",
             "ref": "refs/heads/main",
             "previousCommit": "4b039064a02d95c9bc23d390caacee1d40efe790",
-            "currentCommit": "8da3290500b81827a1e3dd3149d082737fbc4c21",
+            "currentCommit": "53e908b1cd0e11a1583bbb4ca36725fbd7815daf",
             "changed": true,
             "license": "GPL-3.0"
           },
@@ -80083,7 +80083,7 @@
         "wifi_mapper:/ext/apps/GPIO/ESP32/wifi_map.fap: pack source changed, author source changed or unavailable",
         "flipper_xremote:/ext/apps/Infrared/flipper_xremote.fap: pack source changed"
       ],
-      "generatedAt": "2026-09-15T11:48:41+00:00"
+      "generatedAt": "2026-09-15T15:44:48+00:00"
     }
   ]
 }
