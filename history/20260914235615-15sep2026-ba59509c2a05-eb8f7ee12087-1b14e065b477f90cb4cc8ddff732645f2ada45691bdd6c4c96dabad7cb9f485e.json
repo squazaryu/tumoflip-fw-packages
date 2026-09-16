@@ -1,0 +1,916 @@
+{
+  "sequence": 20260914235615,
+  "sourceTag": "15sep2026",
+  "sourceCommit": "a8d968f6c92eddad068cc38799ebc7570a8c2a7e",
+  "sourceURL": "https://github.com/xMasterX/all-the-plugins/releases/tag/15sep2026",
+  "publishedAt": "2026-09-14T23:56:15Z",
+  "api": "88.11",
+  "auditIssue": "https://github.com/squazaryu/tumoflip-fw-packages/issues/108",
+  "issue": {
+    "number": 108,
+    "url": "https://github.com/squazaryu/tumoflip-fw-packages/issues/108",
+    "state": "open"
+  },
+  "overallStatus": "pending",
+  "archives": [
+    {
+      "pack": "base",
+      "fileName": "all-the-apps-base.zip",
+      "sha256": "ba59509c2a05ffcabce9fd645a6e154d9c657a3b739d3d8dd0cd7be52539a37b"
+    },
+    {
+      "pack": "extra",
+      "fileName": "all-the-apps-extra.zip",
+      "sha256": "eb8f7ee12087a5a5a36fb6a20856b69fa1b368b1808a6085acf737146a11c502"
+    }
+  ],
+  "entries": [
+    {
+      "remotePath": "/ext/apps/GPIO/GPS/nearby_files.fap",
+      "targetPath": "/ext/apps/GPIO/nearby_files.fap",
+      "sourceMD5": "fbf2adc96857412937fab3e0356dfa6f",
+      "disposition": "auditedDifference",
+      "note": "Tumoflip ships a package-owned Nearby Files build with one-shot TumoCompanion GPS over BLE and a retained Flipper GPS/NMEA fallback; the Community Pack binary is protected from overwriting it.",
+      "targetMD5s": [
+        "db7c116e68c466bc373bc325a9b731ee"
+      ],
+      "targetProvenance": [
+        {
+          "targetMD5": "db7c116e68c466bc373bc325a9b731ee",
+          "channel": "dev",
+          "releaseTag": "fw-packages-dev-015",
+          "manifestSHA256": "61782a3fdc9d43af8118105d7428a118b87109fe44f69a448915f31afe9e7627",
+          "containerKind": "fwPackagesZip",
+          "containerSHA256": "3852ed60544a03798323eb0e79d0a89a1c84048252bb9193a9e2606d5a06a7cf",
+          "targetReleaseTag": "t-dev-004-015",
+          "targetSourceCommit": "e2d03acda01a8f71f9b80719fc788f2cf6a42f6a"
+        }
+      ]
+    },
+    {
+      "remotePath": "/ext/apps/Sub-GHz/Analyzers/freq_analyzer_ext.fap",
+      "targetPath": "/ext/apps/Module One/Sub-GHz/freq_analyzer_ext.fap",
+      "sourceMD5": "6424699ea0a12e5f421d5c430afb0585",
+      "disposition": "intentionallyReplaced",
+      "note": "ARF Frequency Analyzer replaces the standalone upstream analyzer; the duplicate target remains absent.",
+      "targetMD5s": [],
+      "targetProvenance": []
+    },
+    {
+      "remotePath": "/ext/apps/Sub-GHz/subghz_raw_edit.fap",
+      "targetPath": "/ext/apps/ARF Tools/subghz_raw_edit.fap",
+      "sourceMD5": "3c62693d3274f9bb489f79a96a8d54ef",
+      "disposition": "auditedDifference",
+      "note": "Author changes through d60ee2a34fa87b89c99f1ba9056737765f9f921f were ported by issue #281 at implementation commit 485dad9c28ee59595c06023101efd14af8b42f21 and hardware-accepted from fw-packages-dev-004; later author changes require a new exact audit.",
+      "targetMD5s": [
+        "1872c1cc6ebcbc045118213d2d7860b5",
+        "19221ada96599cab415b860c8d5f67d6",
+        "2df1dfd0e26398578c6b0aebf583cb6a",
+        "4f9ad431ecec4bb028a3c883df9bb97b",
+        "a1e3446572362a2d200819cd9dbe51fd",
+        "ac9d4fab62499e8ea35ee20efa52063a",
+        "b077a6bbcb9fc00fa094c00decfb3dd8",
+        "cf732b7e71733a11e0face98c63f6fbb"
+      ],
+      "targetProvenance": [
+        {
+          "targetMD5": "b077a6bbcb9fc00fa094c00decfb3dd8",
+          "channel": "dev",
+          "releaseTag": "fw-packages-dev-004",
+          "manifestSHA256": "b7ec500ffb58c620c253327d950d6dece1ef3e9c4be0da2b7bb433e210d5c425",
+          "containerKind": "fwPackagesCompatibleBuild",
+          "containerSHA256": "1d2d9cf822e08cd9f2c76a75d9a5fc8a468779ce0076f69cf02c15c2cb40090c",
+          "targetReleaseTag": "t-dev-004-015",
+          "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
+          "compatibilityCatalogTag": "fw-packages-dev-008"
+        },
+        {
+          "targetMD5": "ac9d4fab62499e8ea35ee20efa52063a",
+          "channel": "dev",
+          "releaseTag": "t-dev-004-015",
+          "manifestSHA256": "d79e8508d9c2bd1494cda991e0f3d06300844276510b6df28c5c439a80ec0a48",
+          "containerKind": "firmwareUpdaterBundle",
+          "containerSHA256": "55e23f1976e73e7bff27b345695d484fac8b21cddd522b3c4e96c6b0758028ab",
+          "targetReleaseTag": "t-dev-004-015",
+          "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
+          "firmwareVersion": "t-dev-004-015",
+          "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
+        },
+        {
+          "targetMD5": "19221ada96599cab415b860c8d5f67d6",
+          "channel": "dev",
+          "releaseTag": "t-dev-007-001",
+          "manifestSHA256": "87a5e52b76d0b8e2f3fee704a9f546a80c5c2d1d13c4d3a66c25734901055d0d",
+          "containerKind": "firmwareUpdaterBundle",
+          "containerSHA256": "9253d71a9fe3396bf9afe81c2a174ad6d08898cdcb17c64139077dd4e86257a4",
+          "targetReleaseTag": "t-dev-007-001",
+          "targetSourceCommit": "adf7431acdd735dcd3d714fa339d76cef71df0a3",
+          "firmwareVersion": "t-dev-007-001",
+          "resourcesSHA256": "fd9976ff1ff455982392a8d251ab35f6c48f453c60ba72659ec127b6f2a57577"
+        },
+        {
+          "targetMD5": "a1e3446572362a2d200819cd9dbe51fd",
+          "channel": "dev",
+          "releaseTag": "t-dev-009-001",
+          "manifestSHA256": "f7ce4ab7331d754242623fe95bb61ebafd2fa7779a9d2557854a07a9457aac2d",
+          "containerKind": "firmwareUpdaterBundle",
+          "containerSHA256": "c96fab4ce7888c36ebc7d246f2299b8f8b6dc04dbff0af991fcc2e53b2770d37",
+          "targetReleaseTag": "t-dev-009-001",
+          "targetSourceCommit": "1b18c4b6246f1b81fa7996a66b52a2415814fe1c",
+          "firmwareVersion": "t-dev-009-001",
+          "resourcesSHA256": "9bba1a80f1fa12a0b5f6fcca488903518f9504648d6174113e78a7b7b98e2559"
+        },
+        {
+          "targetMD5": "1872c1cc6ebcbc045118213d2d7860b5",
+          "channel": "dev",
+          "releaseTag": "fw-packages-dev-015",
+          "manifestSHA256": "61782a3fdc9d43af8118105d7428a118b87109fe44f69a448915f31afe9e7627",
+          "containerKind": "fwPackagesZip",
+          "containerSHA256": "3852ed60544a03798323eb0e79d0a89a1c84048252bb9193a9e2606d5a06a7cf",
+          "targetReleaseTag": "t-dev-004-015",
+          "targetSourceCommit": "e2d03acda01a8f71f9b80719fc788f2cf6a42f6a"
+        },
+        {
+          "targetMD5": "ac9d4fab62499e8ea35ee20efa52063a",
+          "channel": "dev",
+          "releaseTag": "fw-packages-dev-005",
+          "manifestSHA256": "f469e91db78f77449f1d6ff2853a8b70479a6cb635f5f6205818cef421b759be",
+          "containerKind": "fwPackagesZip",
+          "containerSHA256": "4ed1b743291a06c5fb45ce95a5843fcadf3de96a75811fb50a9ddad808bfc19c",
+          "targetReleaseTag": "t-dev-004-015",
+          "targetSourceCommit": "8458827d6f0fd385661ce9da52cd73ce5ec21286"
+        },
+        {
+          "targetMD5": "ac9d4fab62499e8ea35ee20efa52063a",
+          "channel": "dev",
+          "releaseTag": "fw-packages-dev-008",
+          "manifestSHA256": "1d2d9cf822e08cd9f2c76a75d9a5fc8a468779ce0076f69cf02c15c2cb40090c",
+          "containerKind": "fwPackagesZip",
+          "containerSHA256": "7e66feae8a2431172b2e30894905c37a25893a14b2ba073ac72fe3d556a2592f",
+          "targetReleaseTag": "t-dev-004-015",
+          "targetSourceCommit": "cf5f27221bf42d3dd98a5634c62feaabf305e34b"
+        },
+        {
+          "targetMD5": "ac9d4fab62499e8ea35ee20efa52063a",
+          "channel": "dev",
+          "releaseTag": "fw-packages-dev-007",
+          "manifestSHA256": "f2ab7b5b164780c313a268043a3115bac6e7b41d9b746fee47def242ad3cd6c1",
+          "containerKind": "fwPackagesZip",
+          "containerSHA256": "8d0d08d4728d9ace2b3fae62c7e5b903d8e1296cc176fb924025cb0148c0aed0",
+          "targetReleaseTag": "t-dev-004-015",
+          "targetSourceCommit": "89905fa8da20f1ad165b6b2615578d5b66326e75"
+        },
+        {
+          "targetMD5": "b077a6bbcb9fc00fa094c00decfb3dd8",
+          "channel": "stable",
+          "releaseTag": "v1.0.6",
+          "manifestSHA256": "d887e3aabfff457dc9b4a3e8b53c2ad51a97d7da251892325dfbac1d0c914258",
+          "containerKind": "firmwareUpdaterBundle",
+          "containerSHA256": "1c4d89691cd373e3b074cd4fce6a1e4967fb70ecb84faf676b6a510ab5346335",
+          "targetReleaseTag": "v1.0.6",
+          "targetSourceCommit": "8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758",
+          "firmwareVersion": "t-flppr-fw-006",
+          "resourcesSHA256": "09c42a4719e2d0a30942b8f71ac51da739c5a30d5ed75c2ff1ac2dbe3397dd8c"
+        },
+        {
+          "targetMD5": "4f9ad431ecec4bb028a3c883df9bb97b",
+          "channel": "stable",
+          "releaseTag": "v1.0.8",
+          "manifestSHA256": "998d12ef788f884063ee32c784e91d37aae95795317c119e34337bc0a13b24a8",
+          "containerKind": "firmwareUpdaterBundle",
+          "containerSHA256": "382afc7cb46f62f005e280fda445eba0fa6a14fcc1e0b534be017c10b7d8e621",
+          "targetReleaseTag": "v1.0.8",
+          "targetSourceCommit": "e2cf3ba8fa96f36d05b86cee973ea36d0e55403d",
+          "firmwareVersion": "t-flppr-fw-008",
+          "resourcesSHA256": "132efda2e4d5d2ad115f7dfe195601bff32f61af0ecf4d73eb08b929f8620c6a"
+        },
+        {
+          "targetMD5": "cf732b7e71733a11e0face98c63f6fbb",
+          "channel": "stable",
+          "releaseTag": "v1.0.4",
+          "manifestSHA256": "dc71dde47d3f68c38ec771ba8b6b3fb1409cab708a95b332df79f5fd1637a7f9",
+          "containerKind": "firmwareUpdaterBundle",
+          "containerSHA256": "fe2580df2aaad3991a225fc5f2637bb5f6d775990880307490158c36729f240a",
+          "targetReleaseTag": "v1.0.4",
+          "targetSourceCommit": "b5f8f76ea564fe0e4d447b1f3d85dbac168bad25",
+          "firmwareVersion": "t-flppr-fw-004",
+          "resourcesSHA256": "267c7a2c86d98f383a3898b25ad38337088e0af581b8be2d0561220affd4996a"
+        },
+        {
+          "targetMD5": "2df1dfd0e26398578c6b0aebf583cb6a",
+          "channel": "stable",
+          "releaseTag": "fw-packages-stable-004",
+          "manifestSHA256": "ecb111e05784eff7b57d1e5e0fef25152d74a6829ad8c11387886eea4e3df8f8",
+          "containerKind": "fwPackagesZip",
+          "containerSHA256": "0b28b0d8d5dc00764a30280bf78545cffbb526f227cb5da42df27801a011206e",
+          "targetReleaseTag": "v1.0.7",
+          "targetSourceCommit": "eba1cfd8cfb022d788433bd540a82cc2e4e25245"
+        },
+        {
+          "targetMD5": "b077a6bbcb9fc00fa094c00decfb3dd8",
+          "channel": "stable",
+          "releaseTag": "fw-packages-stable-003",
+          "manifestSHA256": "28d771c6017aa9e630dbfe6cc2e63423e2ef1018b58c4f57515ee99f8f5dc918",
+          "containerKind": "fwPackagesZip",
+          "containerSHA256": "d658cb783f8c4a38493e5c6dd5f4ac1ca0dd6a5113394a71eb86e0cc455573c0",
+          "targetReleaseTag": "v1.0.6",
+          "targetSourceCommit": "8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758"
+        },
+        {
+          "targetMD5": "cf732b7e71733a11e0face98c63f6fbb",
+          "channel": "stable",
+          "releaseTag": "fw-packages-stable-001",
+          "manifestSHA256": "62fc425cfb89417fbfc3b0c5ecc83bd3daeaf3dc8ed2b80a6a850137edc214a2",
+          "containerKind": "fwPackagesZip",
+          "containerSHA256": "efb1d259115fcd938eb16b7548231052d75a739870a9fb66af075116aca9b552",
+          "targetReleaseTag": "v1.0.4",
+          "targetSourceCommit": "49b47de9044c1b135b31c0612740f4533c8d6eef"
+        }
+      ]
+    },
+    {
+      "remotePath": "/ext/apps/Sub-GHz/subghz_wardriving.fap",
+      "targetPath": "/ext/apps/Sub-GHz/subghz_wardriving.fap",
+      "sourceMD5": "43466bf4727d9cb530338e09ebca9cfa",
+      "disposition": "auditedDifference",
+      "note": "Tumoflip keeps its API 88 and iPhone GPS bridge integration.",
+      "targetMD5s": [
+        "3e4836491d9c7e144320507a66fec476",
+        "40b56f7de3724b1bb295126166297ef5",
+        "7cd4e29d162042e48b57c1fb3139db93",
+        "a221bdb7e63c5a5c3b62b8edca697d18",
+        "af8626c22c7f2581cb72194acf6dc9f6",
+        "c799645afc1de026bdae64f452438023",
+        "c9c832b9172b064e249099116cc71a7d"
+      ],
+      "targetProvenance": [
+        {
+          "targetMD5": "40b56f7de3724b1bb295126166297ef5",
+          "channel": "dev",
+          "releaseTag": "t-dev-004-015",
+          "manifestSHA256": "d79e8508d9c2bd1494cda991e0f3d06300844276510b6df28c5c439a80ec0a48",
+          "containerKind": "firmwareUpdaterBundle",
+          "containerSHA256": "55e23f1976e73e7bff27b345695d484fac8b21cddd522b3c4e96c6b0758028ab",
+          "targetReleaseTag": "t-dev-004-015",
+          "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
+          "firmwareVersion": "t-dev-004-015",
+          "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
+        },
+        {
+          "targetMD5": "af8626c22c7f2581cb72194acf6dc9f6",
+          "channel": "dev",
+          "releaseTag": "t-dev-007-001",
+          "manifestSHA256": "87a5e52b76d0b8e2f3fee704a9f546a80c5c2d1d13c4d3a66c25734901055d0d",
+          "containerKind": "firmwareUpdaterBundle",
+          "containerSHA256": "9253d71a9fe3396bf9afe81c2a174ad6d08898cdcb17c64139077dd4e86257a4",
+          "targetReleaseTag": "t-dev-007-001",
+          "targetSourceCommit": "adf7431acdd735dcd3d714fa339d76cef71df0a3",
+          "firmwareVersion": "t-dev-007-001",
+          "resourcesSHA256": "fd9976ff1ff455982392a8d251ab35f6c48f453c60ba72659ec127b6f2a57577"
+        },
+        {
+          "targetMD5": "3e4836491d9c7e144320507a66fec476",
+          "channel": "dev",
+          "releaseTag": "t-dev-009-001",
+          "manifestSHA256": "f7ce4ab7331d754242623fe95bb61ebafd2fa7779a9d2557854a07a9457aac2d",
+          "containerKind": "firmwareUpdaterBundle",
+          "containerSHA256": "c96fab4ce7888c36ebc7d246f2299b8f8b6dc04dbff0af991fcc2e53b2770d37",
+          "targetReleaseTag": "t-dev-009-001",
+          "targetSourceCommit": "1b18c4b6246f1b81fa7996a66b52a2415814fe1c",
+          "firmwareVersion": "t-dev-009-001",
+          "resourcesSHA256": "9bba1a80f1fa12a0b5f6fcca488903518f9504648d6174113e78a7b7b98e2559"
+        },
+        {
+          "targetMD5": "40b56f7de3724b1bb295126166297ef5",
+          "channel": "dev",
+          "releaseTag": "fw-packages-dev-015",
+          "manifestSHA256": "61782a3fdc9d43af8118105d7428a118b87109fe44f69a448915f31afe9e7627",
+          "containerKind": "fwPackagesZip",
+          "containerSHA256": "3852ed60544a03798323eb0e79d0a89a1c84048252bb9193a9e2606d5a06a7cf",
+          "targetReleaseTag": "t-dev-004-015",
+          "targetSourceCommit": "e2d03acda01a8f71f9b80719fc788f2cf6a42f6a"
+        },
+        {
+          "targetMD5": "40b56f7de3724b1bb295126166297ef5",
+          "channel": "dev",
+          "releaseTag": "fw-packages-dev-005",
+          "manifestSHA256": "f469e91db78f77449f1d6ff2853a8b70479a6cb635f5f6205818cef421b759be",
+          "containerKind": "fwPackagesZip",
+          "containerSHA256": "4ed1b743291a06c5fb45ce95a5843fcadf3de96a75811fb50a9ddad808bfc19c",
+          "targetReleaseTag": "t-dev-004-015",
+          "targetSourceCommit": "8458827d6f0fd385661ce9da52cd73ce5ec21286"
+        },
+        {
+          "targetMD5": "40b56f7de3724b1bb295126166297ef5",
+          "channel": "dev",
+          "releaseTag": "fw-packages-dev-008",
+          "manifestSHA256": "1d2d9cf822e08cd9f2c76a75d9a5fc8a468779ce0076f69cf02c15c2cb40090c",
+          "containerKind": "fwPackagesZip",
+          "containerSHA256": "7e66feae8a2431172b2e30894905c37a25893a14b2ba073ac72fe3d556a2592f",
+          "targetReleaseTag": "t-dev-004-015",
+          "targetSourceCommit": "cf5f27221bf42d3dd98a5634c62feaabf305e34b"
+        },
+        {
+          "targetMD5": "40b56f7de3724b1bb295126166297ef5",
+          "channel": "dev",
+          "releaseTag": "fw-packages-dev-007",
+          "manifestSHA256": "f2ab7b5b164780c313a268043a3115bac6e7b41d9b746fee47def242ad3cd6c1",
+          "containerKind": "fwPackagesZip",
+          "containerSHA256": "8d0d08d4728d9ace2b3fae62c7e5b903d8e1296cc176fb924025cb0148c0aed0",
+          "targetReleaseTag": "t-dev-004-015",
+          "targetSourceCommit": "89905fa8da20f1ad165b6b2615578d5b66326e75"
+        },
+        {
+          "targetMD5": "c799645afc1de026bdae64f452438023",
+          "channel": "stable",
+          "releaseTag": "v1.0.6",
+          "manifestSHA256": "d887e3aabfff457dc9b4a3e8b53c2ad51a97d7da251892325dfbac1d0c914258",
+          "containerKind": "firmwareUpdaterBundle",
+          "containerSHA256": "1c4d89691cd373e3b074cd4fce6a1e4967fb70ecb84faf676b6a510ab5346335",
+          "targetReleaseTag": "v1.0.6",
+          "targetSourceCommit": "8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758",
+          "firmwareVersion": "t-flppr-fw-006",
+          "resourcesSHA256": "09c42a4719e2d0a30942b8f71ac51da739c5a30d5ed75c2ff1ac2dbe3397dd8c"
+        },
+        {
+          "targetMD5": "a221bdb7e63c5a5c3b62b8edca697d18",
+          "channel": "stable",
+          "releaseTag": "v1.0.8",
+          "manifestSHA256": "998d12ef788f884063ee32c784e91d37aae95795317c119e34337bc0a13b24a8",
+          "containerKind": "firmwareUpdaterBundle",
+          "containerSHA256": "382afc7cb46f62f005e280fda445eba0fa6a14fcc1e0b534be017c10b7d8e621",
+          "targetReleaseTag": "v1.0.8",
+          "targetSourceCommit": "e2cf3ba8fa96f36d05b86cee973ea36d0e55403d",
+          "firmwareVersion": "t-flppr-fw-008",
+          "resourcesSHA256": "132efda2e4d5d2ad115f7dfe195601bff32f61af0ecf4d73eb08b929f8620c6a"
+        },
+        {
+          "targetMD5": "c9c832b9172b064e249099116cc71a7d",
+          "channel": "stable",
+          "releaseTag": "v1.0.4",
+          "manifestSHA256": "dc71dde47d3f68c38ec771ba8b6b3fb1409cab708a95b332df79f5fd1637a7f9",
+          "containerKind": "firmwareUpdaterBundle",
+          "containerSHA256": "fe2580df2aaad3991a225fc5f2637bb5f6d775990880307490158c36729f240a",
+          "targetReleaseTag": "v1.0.4",
+          "targetSourceCommit": "b5f8f76ea564fe0e4d447b1f3d85dbac168bad25",
+          "firmwareVersion": "t-flppr-fw-004",
+          "resourcesSHA256": "267c7a2c86d98f383a3898b25ad38337088e0af581b8be2d0561220affd4996a"
+        },
+        {
+          "targetMD5": "7cd4e29d162042e48b57c1fb3139db93",
+          "channel": "stable",
+          "releaseTag": "fw-packages-stable-004",
+          "manifestSHA256": "ecb111e05784eff7b57d1e5e0fef25152d74a6829ad8c11387886eea4e3df8f8",
+          "containerKind": "fwPackagesZip",
+          "containerSHA256": "0b28b0d8d5dc00764a30280bf78545cffbb526f227cb5da42df27801a011206e",
+          "targetReleaseTag": "v1.0.7",
+          "targetSourceCommit": "eba1cfd8cfb022d788433bd540a82cc2e4e25245"
+        },
+        {
+          "targetMD5": "c799645afc1de026bdae64f452438023",
+          "channel": "stable",
+          "releaseTag": "fw-packages-stable-003",
+          "manifestSHA256": "28d771c6017aa9e630dbfe6cc2e63423e2ef1018b58c4f57515ee99f8f5dc918",
+          "containerKind": "fwPackagesZip",
+          "containerSHA256": "d658cb783f8c4a38493e5c6dd5f4ac1ca0dd6a5113394a71eb86e0cc455573c0",
+          "targetReleaseTag": "v1.0.6",
+          "targetSourceCommit": "8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758"
+        },
+        {
+          "targetMD5": "c9c832b9172b064e249099116cc71a7d",
+          "channel": "stable",
+          "releaseTag": "fw-packages-stable-001",
+          "manifestSHA256": "62fc425cfb89417fbfc3b0c5ecc83bd3daeaf3dc8ed2b80a6a850137edc214a2",
+          "containerKind": "fwPackagesZip",
+          "containerSHA256": "efb1d259115fcd938eb16b7548231052d75a739870a9fb66af075116aca9b552",
+          "targetReleaseTag": "v1.0.4",
+          "targetSourceCommit": "49b47de9044c1b135b31c0612740f4533c8d6eef"
+        }
+      ]
+    }
+  ],
+  "apps": [
+    {
+      "appId": "esp32_wifi_marauder",
+      "aliases": [
+        "wifi_marauder_companion"
+      ],
+      "packSourcePath": "base_pack/wifi_marauder_companion",
+      "localSourcePath": "applications_user/esp32_wifi_marauder",
+      "packSourceChanged": true,
+      "author": {
+        "repository": "https://github.com/0xchocolate/flipperzero-wifi-marauder.git",
+        "ref": "refs/heads/feature_wifi_marauder_app",
+        "previousCommit": "8f8b79e4a97b283faac41dda4e4da8d260ddc459",
+        "currentCommit": "b39a2cb6c8ec13670ee0268fb803f747a1757482",
+        "changed": true,
+        "license": "GPL-3.0"
+      },
+      "status": "needsReview",
+      "disposition": "needsReview",
+      "note": "Tumoflip keeps its Module One CLI-compatible protected build.",
+      "artifacts": [
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps/GPIO/ESP32/esp32_wifi_marauder.fap",
+          "targetPath": "/ext/apps/Module One/ESP32 Wi-Fi/esp32_wifi_marauder.fap",
+          "sourceMD5": "1f80a5288e6ed1fe94a7bca9d5ccb108",
+          "ledgerStatus": "needsReview"
+        }
+      ]
+    },
+    {
+      "appId": "esp_flasher",
+      "aliases": [],
+      "packSourcePath": "non_catalog_apps/esp_flasher",
+      "localSourcePath": "applications_user/esp_flasher",
+      "packSourceChanged": true,
+      "author": {
+        "repository": "https://github.com/0xchocolate/flipperzero-esp-flasher.git",
+        "ref": "refs/heads/main",
+        "previousCommit": "1f6f801c3ebecbc4afbf6500564bf99748710e24",
+        "currentCommit": "1f6f801c3ebecbc4afbf6500564bf99748710e24",
+        "changed": false,
+        "license": "GPL-3.0"
+      },
+      "status": "needsReview",
+      "disposition": "needsReview",
+      "note": "Tumoflip ships a package-aware protected ESP Flasher through FW Packages.",
+      "artifacts": [
+        {
+          "pack": "extra",
+          "remotePath": "/ext/apps/GPIO/ESP32/esp_flasher.fap",
+          "targetPath": "/ext/apps/Module One/ESP32 Wi-Fi/esp_flasher.fap",
+          "sourceMD5": "c4b14163d22181a37fa1b9764035b201",
+          "ledgerStatus": "needsReview"
+        }
+      ]
+    },
+    {
+      "appId": "proto_pirate",
+      "aliases": [
+        "protopirate"
+      ],
+      "packSourcePath": "base_pack/protopirate",
+      "localSourcePath": "applications_user/protopirate",
+      "packSourceChanged": true,
+      "author": {
+        "repository": "https://protopirate.net/ProtoPirate/ProtoPirate.git",
+        "ref": "refs/heads/main",
+        "previousCommit": "4b039064a02d95c9bc23d390caacee1d40efe790",
+        "currentCommit": "ff4b2af3f138552c99a9e2f86cae9d3352b9ae0c",
+        "changed": true,
+        "license": "GPL-3.0"
+      },
+      "status": "needsReview",
+      "disposition": "needsReview",
+      "note": "Tumoflip splits reviewed ProtoPirate behavior between Standard Sub-GHz RAW Auto Decode and the isolated ARF module; audit both surfaces by capability.",
+      "artifacts": [
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps/Sub-GHz/proto_pirate.fap",
+          "targetPath": "/ext/apps_data/arf_subghz_full/modules/proto_pirate.fap",
+          "sourceMD5": "ea4c53d31ba257d3f195d736e7059f7c",
+          "ledgerStatus": "needsReview"
+        }
+      ],
+      "coverageSurfaces": [
+        {
+          "id": "standard-subghz-auto-decode",
+          "sourcePaths": [
+            "applications/main/subghz/scenes/subghz_scene_decode_raw.c",
+            "applications/main/subghz/scenes/subghz_scene_more_raw.c",
+            "applications/main/subghz/views/receiver.c",
+            "lib/subghz/protocols/plugin_registry.c",
+            "lib/subghz/protocols/plugin_registry.h"
+          ],
+          "capabilities": [
+            "radio-free RAW Auto Decode",
+            "Protocol Pack traversal",
+            "active Protocol Pack restoration"
+          ]
+        },
+        {
+          "id": "arf-module",
+          "sourcePaths": [
+            "applications_user/protopirate"
+          ],
+          "capabilities": [
+            "advanced ProtoPirate receiver lifecycle",
+            "ARF radio broker integration",
+            "isolated ARF module routing"
+          ]
+        }
+      ]
+    },
+    {
+      "appId": "subghz_bruteforcer",
+      "aliases": [
+        "subbrute"
+      ],
+      "packSourcePath": "base_pack/subbrute",
+      "localSourcePath": "applications_user/subghz_bruteforcer",
+      "packSourceChanged": true,
+      "author": {
+        "repository": "https://github.com/DarkFlippers/flipperzero-subbrute.git",
+        "ref": "refs/heads/master",
+        "previousCommit": "b199dcef9181a220cb665a84f893d1d6a6608099",
+        "currentCommit": "631e09eb4447d22404bc0bf710c5b463b2cf078e",
+        "changed": true,
+        "license": "MIT"
+      },
+      "status": "needsReview",
+      "disposition": "needsReview",
+      "note": "Tumoflip keeps the isolated ARF module and radio broker integration.",
+      "artifacts": [
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps/Sub-GHz/subghz_bruteforcer.fap",
+          "targetPath": "/ext/apps_data/arf_subghz_full/modules/subghz_bruteforcer.fap",
+          "sourceMD5": "d708c5f90832fb0a5a2590d50b6f1980",
+          "ledgerStatus": "needsReview"
+        }
+      ]
+    },
+    {
+      "appId": "subghz_wardriving",
+      "aliases": [],
+      "packSourcePath": "base_pack/subghz_wardriving",
+      "localSourcePath": "applications_user/subghz_wardriving",
+      "packSourceChanged": false,
+      "author": {
+        "repository": "https://github.com/xMasterX/all-the-plugins.git",
+        "ref": "release-source",
+        "previousCommit": "0b71d9f34fec8ae3ba763b8de27ef15d1d604c5b",
+        "currentCommit": "a8d968f6c92eddad068cc38799ebc7570a8c2a7e",
+        "changed": false,
+        "license": "not-declared"
+      },
+      "status": "verified",
+      "disposition": "auditedDifference",
+      "note": "Tumoflip keeps its API 88 and iPhone GPS bridge integration.",
+      "artifacts": [
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps/Sub-GHz/subghz_wardriving.fap",
+          "targetPath": "/ext/apps/Sub-GHz/subghz_wardriving.fap",
+          "sourceMD5": "43466bf4727d9cb530338e09ebca9cfa",
+          "ledgerStatus": "accepted"
+        }
+      ]
+    },
+    {
+      "appId": "quac",
+      "aliases": [],
+      "packSourcePath": "base_pack/quac",
+      "localSourcePath": "applications_user/quac",
+      "packSourceChanged": false,
+      "author": {
+        "repository": "https://github.com/rdefeo/quac.git",
+        "ref": "refs/heads/master",
+        "previousCommit": "54e897fe2d862963e5c19ef5d4feb3d025630610",
+        "currentCommit": "a46cffc15fcd437587e9b013ccc21c9439c7ab5e",
+        "changed": true,
+        "license": "not-declared"
+      },
+      "status": "needsReview",
+      "disposition": "needsReview",
+      "note": "No source was imported by this audit; license must be resolved before a future port.",
+      "artifacts": [
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps/Tools/quac.fap",
+          "targetPath": "/ext/apps/Tools/quac.fap",
+          "sourceMD5": "e7539d32bcc9add7aa6ff3efbfbeca0c",
+          "ledgerStatus": "needsReview"
+        }
+      ]
+    },
+    {
+      "appId": "nearby_files",
+      "aliases": [],
+      "packSourcePath": "base_pack/nearby_files",
+      "localSourcePath": "applications_user/nearby_files",
+      "packSourceChanged": false,
+      "author": {
+        "repository": "https://github.com/Stichoza/flipper-nearby-files.git",
+        "ref": "refs/heads/master",
+        "previousCommit": "669a8c7f919a43a77c8aa47ce8655b3070d9cc6f",
+        "currentCommit": "669a8c7f919a43a77c8aa47ce8655b3070d9cc6f",
+        "changed": false,
+        "license": "MIT"
+      },
+      "status": "verified",
+      "disposition": "auditedDifference",
+      "note": "Tumoflip ships a package-owned Nearby Files build with one-shot TumoCompanion GPS over BLE and a retained Flipper GPS/NMEA fallback; the Community Pack binary is protected from overwriting it.",
+      "artifacts": [
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps/GPIO/GPS/nearby_files.fap",
+          "targetPath": "/ext/apps/GPIO/nearby_files.fap",
+          "sourceMD5": "fbf2adc96857412937fab3e0356dfa6f",
+          "ledgerStatus": "accepted"
+        }
+      ]
+    },
+    {
+      "appId": "totp",
+      "aliases": [
+        "authenticator"
+      ],
+      "packSourcePath": "base_pack/totp",
+      "localSourcePath": "applications_user/totp",
+      "packSourceChanged": true,
+      "author": {
+        "repository": "https://github.com/akopachov/flipper-zero_authenticator.git",
+        "ref": "refs/heads/master",
+        "previousCommit": "753e953baaaacad67e9054ef62177ef36a8f5f7e",
+        "currentCommit": "753e953baaaacad67e9054ef62177ef36a8f5f7e",
+        "changed": false,
+        "license": "GPL-3.0"
+      },
+      "status": "needsReview",
+      "disposition": "needsReview",
+      "note": "Tumoflip adds system time synchronization and keeps the full CLI plugin family.",
+      "artifacts": [
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps/Tools/Crypto/totp.fap",
+          "targetPath": "/ext/apps/Tools/totp.fap",
+          "sourceMD5": "f0f0ad296501acfc756a59cb4d494886",
+          "ledgerStatus": "needsReview"
+        },
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps_data/totp/plugins/totp_cli_add_plugin.fal",
+          "targetPath": "/ext/apps_data/totp/plugins/totp_cli_add_plugin.fal",
+          "sourceMD5": "bd15e15221505d3bc56edc22e10dc296",
+          "ledgerStatus": "needsReview"
+        },
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps_data/totp/plugins/totp_cli_automation_plugin.fal",
+          "targetPath": "/ext/apps_data/totp/plugins/totp_cli_automation_plugin.fal",
+          "sourceMD5": "c85782254d1f516e5d505fc62444a026",
+          "ledgerStatus": "needsReview"
+        },
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps_data/totp/plugins/totp_cli_delete_plugin.fal",
+          "targetPath": "/ext/apps_data/totp/plugins/totp_cli_delete_plugin.fal",
+          "sourceMD5": "5f74fd5960631409b92ff8ae9f26043d",
+          "ledgerStatus": "needsReview"
+        },
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps_data/totp/plugins/totp_cli_details_plugin.fal",
+          "targetPath": "/ext/apps_data/totp/plugins/totp_cli_details_plugin.fal",
+          "sourceMD5": "fc616614561f762116571a069461a1dd",
+          "ledgerStatus": "needsReview"
+        },
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps_data/totp/plugins/totp_cli_export_plugin.fal",
+          "targetPath": "/ext/apps_data/totp/plugins/totp_cli_export_plugin.fal",
+          "sourceMD5": "e41133f571dc78bfa31e64dd85dcc3e1",
+          "ledgerStatus": "needsReview"
+        },
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps_data/totp/plugins/totp_cli_help_plugin.fal",
+          "targetPath": "/ext/apps_data/totp/plugins/totp_cli_help_plugin.fal",
+          "sourceMD5": "acb4f3ec2d09d47fb732c32b9cbc3693",
+          "ledgerStatus": "needsReview"
+        },
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps_data/totp/plugins/totp_cli_list_plugin.fal",
+          "targetPath": "/ext/apps_data/totp/plugins/totp_cli_list_plugin.fal",
+          "sourceMD5": "6847751847b05370791f9ca67c8c08de",
+          "ledgerStatus": "needsReview"
+        },
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps_data/totp/plugins/totp_cli_move_plugin.fal",
+          "targetPath": "/ext/apps_data/totp/plugins/totp_cli_move_plugin.fal",
+          "sourceMD5": "18b3fd568e135ef5ab4561e316a26d27",
+          "ledgerStatus": "needsReview"
+        },
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps_data/totp/plugins/totp_cli_notification_plugin.fal",
+          "targetPath": "/ext/apps_data/totp/plugins/totp_cli_notification_plugin.fal",
+          "sourceMD5": "ca52ec878d54250de63c5fed1d7e2c97",
+          "ledgerStatus": "needsReview"
+        },
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps_data/totp/plugins/totp_cli_pin_plugin.fal",
+          "targetPath": "/ext/apps_data/totp/plugins/totp_cli_pin_plugin.fal",
+          "sourceMD5": "46a6166e18e9280a2490ab888e75264e",
+          "ledgerStatus": "needsReview"
+        },
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps_data/totp/plugins/totp_cli_reset_plugin.fal",
+          "targetPath": "/ext/apps_data/totp/plugins/totp_cli_reset_plugin.fal",
+          "sourceMD5": "cdb5cae65f55b27cd9b6f0680eb08ec3",
+          "ledgerStatus": "needsReview"
+        },
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps_data/totp/plugins/totp_cli_timezone_plugin.fal",
+          "targetPath": "/ext/apps_data/totp/plugins/totp_cli_timezone_plugin.fal",
+          "sourceMD5": "b5fa59e3ea450a0fb04c9f327c1a471c",
+          "ledgerStatus": "needsReview"
+        },
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps_data/totp/plugins/totp_cli_update_plugin.fal",
+          "targetPath": "/ext/apps_data/totp/plugins/totp_cli_update_plugin.fal",
+          "sourceMD5": "2e71cb767950217d1887fd15fa7b5d06",
+          "ledgerStatus": "needsReview"
+        },
+        {
+          "pack": "base",
+          "remotePath": "/ext/apps_data/totp/plugins/totp_cli_version_plugin.fal",
+          "targetPath": "/ext/apps_data/totp/plugins/totp_cli_version_plugin.fal",
+          "sourceMD5": "3c69bbb91d80047cc395ad18196fac71",
+          "ledgerStatus": "needsReview"
+        }
+      ]
+    },
+    {
+      "appId": "claude_buddy",
+      "aliases": [
+        "claude_remote_ble"
+      ],
+      "packSourcePath": "non_catalog_apps/claude_remote_ble",
+      "localSourcePath": "applications_user/claude_buddy",
+      "packSourceChanged": false,
+      "author": {
+        "repository": "https://github.com/D4C1-Labs/Flipper-ARF.git",
+        "ref": "refs/heads/main",
+        "previousCommit": "56701a815b54121a4b4d102e361add5468ffa92b",
+        "currentCommit": "3852873974956acc50a89b535801cf7950f2c4f8",
+        "changed": true,
+        "license": "replacement-by-design"
+      },
+      "status": "needsReview",
+      "disposition": "needsReview",
+      "note": "Claude Buddy replaces Agentic Remote by design; the upstream target remains absent.",
+      "artifacts": [
+        {
+          "pack": "extra",
+          "remotePath": "/ext/apps/Bluetooth/claude_remote_ble.fap",
+          "targetPath": "/ext/apps/Bluetooth/claude_remote_ble.fap",
+          "sourceMD5": "023bb5e31db70379721606e4de912ff7",
+          "ledgerStatus": "needsReview"
+        }
+      ]
+    },
+    {
+      "appId": "arf_frequency_analyzer",
+      "aliases": [
+        "freq_analyzer_ext"
+      ],
+      "packSourcePath": "non_catalog_apps/freq_analyzer_ext",
+      "localSourcePath": "applications_user/arf_subghz_full",
+      "packSourceChanged": false,
+      "author": {
+        "repository": "https://github.com/xMasterX/all-the-plugins.git",
+        "ref": "release-source",
+        "previousCommit": "ce2650948899b50b8a8ec114784e025a117b0885",
+        "currentCommit": "a8d968f6c92eddad068cc38799ebc7570a8c2a7e",
+        "changed": false,
+        "license": "not-declared"
+      },
+      "status": "verified",
+      "disposition": "intentionallyReplaced",
+      "note": "ARF Frequency Analyzer replaces the standalone upstream analyzer; the duplicate target remains absent.",
+      "artifacts": [
+        {
+          "pack": "extra",
+          "remotePath": "/ext/apps/Sub-GHz/Analyzers/freq_analyzer_ext.fap",
+          "targetPath": "/ext/apps/Module One/Sub-GHz/freq_analyzer_ext.fap",
+          "sourceMD5": "6424699ea0a12e5f421d5c430afb0585",
+          "ledgerStatus": "accepted"
+        }
+      ]
+    },
+    {
+      "appId": "wifi_mapper",
+      "aliases": [
+        "wifi_map"
+      ],
+      "packSourcePath": "non_catalog_apps/wifi-map",
+      "localSourcePath": "applications_user/wifi_mapper",
+      "packSourceChanged": true,
+      "author": {
+        "repository": "https://github.com/xMasterX/all-the-plugins.git",
+        "ref": "release-source",
+        "previousCommit": "ce2650948899b50b8a8ec114784e025a117b0885",
+        "currentCommit": "a8d968f6c92eddad068cc38799ebc7570a8c2a7e",
+        "changed": true,
+        "license": "MIT"
+      },
+      "status": "needsReview",
+      "disposition": "needsReview",
+      "note": "TumoSurvey replaces the legacy UART-only WIFI Mapping app; the duplicate target remains absent.",
+      "artifacts": [
+        {
+          "pack": "extra",
+          "remotePath": "/ext/apps/GPIO/ESP32/wifi_map.fap",
+          "targetPath": "/ext/apps/Module One/ESP32 Wi-Fi/wifi_map.fap",
+          "sourceMD5": "18b087440454b41f3c724c538cf47fec",
+          "ledgerStatus": "needsReview"
+        }
+      ]
+    },
+    {
+      "appId": "flipper_xremote",
+      "aliases": [
+        "xremote",
+        "tumoflip_xremote"
+      ],
+      "packSourcePath": "non_catalog_apps/xremote",
+      "localSourcePath": "applications_user/flipper_xremote",
+      "packSourceChanged": true,
+      "author": {
+        "repository": "https://github.com/kala13x/flipper-xremote.git",
+        "ref": "refs/heads/main",
+        "previousCommit": "95e629eff960c71754d0a2768a54883df066a588",
+        "currentCommit": "95e629eff960c71754d0a2768a54883df066a588",
+        "changed": false,
+        "license": "GPL-3.0"
+      },
+      "status": "needsReview",
+      "disposition": "needsReview",
+      "note": "Tumoflip keeps its accepted profile editor and Module One route.",
+      "artifacts": [
+        {
+          "pack": "extra",
+          "remotePath": "/ext/apps/Infrared/flipper_xremote.fap",
+          "targetPath": "/ext/apps/Module One/IR Blaster/tumoflip_xremote.fap",
+          "sourceMD5": "4ae499e8b201684dd11efc68b0f371b6",
+          "ledgerStatus": "needsReview"
+        }
+      ]
+    },
+    {
+      "appId": "subghz_raw_edit",
+      "aliases": [
+        "subghz_raw_editor"
+      ],
+      "packSourcePath": "non_catalog_apps/subghz_raw_editor",
+      "localSourcePath": "applications_user/subghz_raw_edit",
+      "packSourceChanged": false,
+      "author": {
+        "repository": "https://github.com/Lechnio/SubGHz-RAW-Edit.git",
+        "ref": "refs/heads/main",
+        "previousCommit": "d60ee2a34fa87b89c99f1ba9056737765f9f921f",
+        "currentCommit": "d60ee2a34fa87b89c99f1ba9056737765f9f921f",
+        "changed": false,
+        "license": "GPL-3.0"
+      },
+      "status": "verified",
+      "disposition": "auditedDifference",
+      "note": "Author changes through d60ee2a34fa87b89c99f1ba9056737765f9f921f were ported by issue #281 at implementation commit 485dad9c28ee59595c06023101efd14af8b42f21 and hardware-accepted from fw-packages-dev-004; later author changes require a new exact audit.",
+      "artifacts": [
+        {
+          "pack": "extra",
+          "remotePath": "/ext/apps/Sub-GHz/subghz_raw_edit.fap",
+          "targetPath": "/ext/apps/ARF Tools/subghz_raw_edit.fap",
+          "sourceMD5": "3c62693d3274f9bb489f79a96a8d54ef",
+          "ledgerStatus": "accepted"
+        }
+      ]
+    }
+  ],
+  "unresolved": [
+    "esp32_wifi_marauder:/ext/apps/GPIO/ESP32/esp32_wifi_marauder.fap: pack source changed, author source changed or unavailable",
+    "esp_flasher:/ext/apps/GPIO/ESP32/esp_flasher.fap: pack source changed",
+    "proto_pirate:/ext/apps/Sub-GHz/proto_pirate.fap: pack source changed, author source changed or unavailable",
+    "subghz_bruteforcer:/ext/apps/Sub-GHz/subghz_bruteforcer.fap: pack source changed, author source changed or unavailable",
+    "quac:/ext/apps/Tools/quac.fap: author source changed or unavailable",
+    "totp:/ext/apps/Tools/Crypto/totp.fap: pack source changed",
+    "totp:/ext/apps_data/totp/plugins/totp_cli_add_plugin.fal: pack source changed",
+    "totp:/ext/apps_data/totp/plugins/totp_cli_automation_plugin.fal: pack source changed",
+    "totp:/ext/apps_data/totp/plugins/totp_cli_delete_plugin.fal: pack source changed",
+    "totp:/ext/apps_data/totp/plugins/totp_cli_details_plugin.fal: pack source changed",
+    "totp:/ext/apps_data/totp/plugins/totp_cli_export_plugin.fal: pack source changed",
+    "totp:/ext/apps_data/totp/plugins/totp_cli_help_plugin.fal: pack source changed",
+    "totp:/ext/apps_data/totp/plugins/totp_cli_list_plugin.fal: pack source changed",
+    "totp:/ext/apps_data/totp/plugins/totp_cli_move_plugin.fal: pack source changed",
+    "totp:/ext/apps_data/totp/plugins/totp_cli_notification_plugin.fal: pack source changed",
+    "totp:/ext/apps_data/totp/plugins/totp_cli_pin_plugin.fal: pack source changed",
+    "totp:/ext/apps_data/totp/plugins/totp_cli_reset_plugin.fal: pack source changed",
+    "totp:/ext/apps_data/totp/plugins/totp_cli_timezone_plugin.fal: pack source changed",
+    "totp:/ext/apps_data/totp/plugins/totp_cli_update_plugin.fal: pack source changed",
+    "totp:/ext/apps_data/totp/plugins/totp_cli_version_plugin.fal: pack source changed",
+    "claude_buddy:/ext/apps/Bluetooth/claude_remote_ble.fap: author source changed or unavailable",
+    "wifi_mapper:/ext/apps/GPIO/ESP32/wifi_map.fap: pack source changed, author source changed or unavailable",
+    "flipper_xremote:/ext/apps/Infrared/flipper_xremote.fap: pack source changed"
+  ],
+  "generatedAt": "2026-09-16T06:05:33+00:00"
+}

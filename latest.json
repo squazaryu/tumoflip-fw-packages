@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "sourceRepository": "xMasterX/all-the-plugins",
-  "generatedAt": "2026-09-15T22:19:58+00:00",
+  "generatedAt": "2026-09-16T06:05:33+00:00",
   "audits": [
     {
       "sequence": 20260809193105,
@@ -79629,7 +79629,7 @@
             "repository": "https://protopirate.net/ProtoPirate/ProtoPirate.git",
             "ref": "refs/heads/main",
             "previousCommit": "4b039064a02d95c9bc23d390caacee1d40efe790",
-            "currentCommit": "53e908b1cd0e11a1583bbb4ca36725fbd7815daf",
+            "currentCommit": "ff4b2af3f138552c99a9e2f86cae9d3352b9ae0c",
             "changed": true,
             "license": "GPL-3.0"
           },
@@ -79923,7 +79923,7 @@
             "repository": "https://github.com/D4C1-Labs/Flipper-ARF.git",
             "ref": "refs/heads/main",
             "previousCommit": "56701a815b54121a4b4d102e361add5468ffa92b",
-            "currentCommit": "4509f512747bf45082b9b1c37f2d2bde02b2fe25",
+            "currentCommit": "3852873974956acc50a89b535801cf7950f2c4f8",
             "changed": true,
             "license": "replacement-by-design"
           },
@@ -80083,7 +80083,7 @@
         "wifi_mapper:/ext/apps/GPIO/ESP32/wifi_map.fap: pack source changed, author source changed or unavailable",
         "flipper_xremote:/ext/apps/Infrared/flipper_xremote.fap: pack source changed"
       ],
-      "generatedAt": "2026-09-15T22:19:58+00:00"
+      "generatedAt": "2026-09-16T06:05:33+00:00"
     }
   ]
 }
