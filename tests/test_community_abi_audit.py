@@ -13,10 +13,11 @@ from tools.community_abi_audit import (
 )
 
 
-def elf_fixture(assets=None):
+def elf_fixture(assets=None, extra_sections=0):
     names = b"\0.shstrtab\0.fapmeta\0.fapassets\0"
     meta = struct.pack("<IIHHH", 0x52474448, 1, 10, 88, 7) + bytes(71)
     sections = [(0, b"", 0), (1, names, 3), (11, meta, 1)]
+    sections.extend([(0, b"", 0)] * extra_sections)
     if assets is not None:
         sections.append((20, assets, 1))
     offset = 52 + len(sections) * 40
@@ -42,6 +43,12 @@ def asset_fixture(files):
 
 
 class CommunityAbiAuditTests(unittest.TestCase):
+    def test_large_but_bounded_real_section_tables(self):
+        from tools.community_elf import elf_sections, ElfAuditError
+        self.assertEqual(elf_sections(elf_fixture(extra_sections=512))[1], (88, 10, 7))
+        with self.assertRaisesRegex(ElfAuditError, "section table"):
+            elf_sections(elf_fixture(extra_sections=4096))
+
     def test_ordinary_duplicate_section_names_are_valid_elf(self):
         from tools.community_elf import elf_sections, ElfAuditError
         data = bytearray(elf_fixture())
