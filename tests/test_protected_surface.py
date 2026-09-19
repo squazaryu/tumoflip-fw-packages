@@ -99,7 +99,12 @@ class ProtectedSurfaceTests(unittest.TestCase):
         self.assertEqual(surface["reviewedImplementations"]["dev"]["commit"], expected_dev)
         self.assertEqual(targets["implementation"]["commit"], expected_dev)
         self.assertEqual(targets["implementations"]["dev"]["commit"], expected_dev)
-        self.assertEqual(parity["implementation"]["commit"], expected_dev)
+        # Source-import provenance can advance independently of audit acceptance.
+        # Specter ownership must not mark unrelated protected audits reviewed.
+        self.assertEqual(
+            parity["implementation"]["commit"],
+            "2d635594c883cbbc3e9c28ad76ca2d5ec4015da5",
+        )
 
     def test_branch_specific_owned_app_is_not_required_on_other_branch(self) -> None:
         target = self.repo / "applications_user/dev_only"
