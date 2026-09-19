@@ -27,6 +27,15 @@ RAW_EDIT_DECISIONS = {
 
 
 class ProtectedAppAuditTests(unittest.TestCase):
+    def test_specter_is_package_owned_without_replacing_other_decisions(self):
+        registry = audit.read_json(REGISTRY_PATH)
+        apps = audit.validate_registry(registry)
+        self.assertIn("specter", registry["protectedKeys"])
+        specter = next(app for app in apps if app["id"] == "specter")
+        self.assertEqual(specter["localSourcePath"], "applications_user/specter")
+        self.assertEqual(specter["packSourcePath"], "non_catalog_apps/specter")
+        self.assertEqual(specter["artifacts"], [{"pack": "extra", "archiveFileName": "specter.fap", "targetPath": "/ext/apps/NFC/specter.fap"}])
+
     def test_registry_is_resolved_inside_the_checkout(self) -> None:
         checkout = Path(__file__).resolve().parents[1]
         self.assertTrue(REGISTRY_PATH.is_relative_to(checkout))
