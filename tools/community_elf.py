@@ -54,7 +54,7 @@ def elf_sections(blob):
             raise ElfAuditError("invalid ELF section name") from error
         if not name:
             continue
-        if name in result:
+        if name in result and name in (".fapmeta", ".fapassets"):
             raise ElfAuditError("duplicate ELF section name")
         result[name] = b"" if section[1] == 8 else contents(section)
     manifest = result.get(".fapmeta", b"")
