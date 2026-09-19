@@ -27,7 +27,7 @@ def elf_sections(blob):
     header_size, _, _, entry_size, count, names_index = struct.unpack_from("<6H", blob, 40)
     if (kind, machine, version, header_size, entry_size) != (1, 40, 1, 52, 40):
         raise ElfAuditError("unsupported ELF target/header")
-    if not 0 < count <= 256 or names_index >= count or table + count * 40 > len(blob):
+    if not 0 < count <= 4096 or names_index >= count or table + count * 40 > len(blob):
         raise ElfAuditError("invalid ELF section table")
     headers = [struct.unpack_from("<10I", blob, table + i * 40) for i in range(count)]
 
