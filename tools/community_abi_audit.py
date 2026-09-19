@@ -93,7 +93,11 @@ def parse_defined_symbols(output: str) -> set[str]:
     symbols: set[str] = set()
     for line in output.splitlines():
         fields = line.split()
-        if len(fields) < 2:
+        if len(fields) < 3:
+            continue
+        try:
+            int(fields[0], 16)
+        except ValueError:
             continue
         symbol_type_index = next(
             (index for index, field in enumerate(fields) if len(field) == 1 and field in _DEFINED_TYPES),
