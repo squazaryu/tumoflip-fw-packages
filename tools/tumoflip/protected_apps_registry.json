@@ -37,6 +37,7 @@
     "rolljam_standalone",
     "runtime_trace_viewer",
     "signal_workbench",
+    "specter",
     "subbrute",
     "subghz_bruteforcer",
     "subghz_protocols",
@@ -83,6 +84,27 @@
     }
   ],
   "apps": [
+    {
+      "id": "specter",
+      "aliases": [],
+      "packSourcePath": "non_catalog_apps/specter",
+      "localSourcePath": "applications_user/specter",
+      "author": {
+        "repository": "https://github.com/xMasterX/all-the-plugins.git",
+        "ref": "release-source",
+        "lastReviewedCommit": "8970b6ba0e48a9c63b4bfaf07ca121f5b08e5b34",
+        "license": "MIT"
+      },
+      "artifacts": [
+        {
+          "pack": "extra",
+          "archiveFileName": "specter.fap",
+          "targetPath": "/ext/apps/NFC/specter.fap"
+        }
+      ],
+      "defaultDisposition": "auditedDifference",
+      "note": "Tumoflip owns the FW Packages Specter adaptation with checked log writes, capacity handling and rollback. Preserve the local build instead of replacing it with a Community FAP. Source review is not physical-device acceptance."
+    },
     {
       "id": "esp32_wifi_marauder",
       "aliases": ["wifi_marauder_companion"],
