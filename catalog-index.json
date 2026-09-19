@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "repository": "squazaryu/tumoflip-fw-packages",
-  "generated_at": "2026-09-13T07:28:52+00:00",
+  "generated_at": "2026-09-19T18:12:27+00:00",
   "selection_policy": {
     "auto": "highest compatible active revision",
     "manual": "any compatible active or legacy revision",
@@ -82,7 +82,7 @@
       ]
     },
     "dev": {
-      "current_revision": 16,
+      "current_revision": 17,
       "releases": [
         {
           "revision": 1,
@@ -329,6 +329,23 @@
           "release_id": "6e3adf6e018b570340879e25141a67542a6faf04abd87d4697618005a7936eba",
           "manifest_sha256": "b7ec96bd4b8cba0c24e2694edfa402da992b2e92e0adba8470b5de773bb17027",
           "archive_sha256": "fdab87d1deca6bf5a8a7afc26d3db61d2745f290f8a541fd6db03db43abdc3e4",
+          "state": "active",
+          "compatibility": {
+            "targets": [
+              7
+            ],
+            "api_majors": [
+              88
+            ]
+          }
+        },
+        {
+          "revision": 17,
+          "tag": "fw-packages-dev-017",
+          "repository": "squazaryu/tumoflip-fw-packages",
+          "release_id": "05812603f495aa7020bb6730464c78dd8ee4dc9bc64193eeb9a63f6f0668fb7e",
+          "manifest_sha256": "50edabe1f42c489fbb64c0e4891bbbaff88ae104c0b9858f35eb961a88583b78",
+          "archive_sha256": "98a815fb26e369d113eb0b6b46c0b9ed5df2ae2c1bab0ebe9496912762aef088",
           "state": "active",
           "compatibility": {
             "targets": [

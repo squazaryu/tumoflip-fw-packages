@@ -58,15 +58,5 @@
     "totp_cli_update_plugin": "base",
     "totp_cli_version_plugin": "base"
   },
-  "releasePlans": {
-    "fw-packages-dev-017": {
-      "sourceCommit": "fe7e1babfdb093cac53d6384b795acda5aa01e40",
-      "selectedOverlays": [
-        "quac",
-        "specter",
-        "capture_inspector",
-        "protopirate_to_subghz"
-      ]
-    }
-  }
+  "releasePlans": {}
 }
