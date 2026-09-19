@@ -5,7 +5,8 @@ The Community Pack is built by a different firmware tree and may advertise a
 newer API minor than Tumoflip.  The Flipper loader only gates the API major, so
 this control-plane check inspects the actual undefined ELF imports as well.  A
 standalone FAP may only import the firmware API; a FAL is allowed to import a
-symbol exported by an FAP in the same archive because FALs are host plugins.
+symbol exported by its exact, content-pinned host API. Embedded .fapassets are
+inspected recursively; unknown ownership or changed host contracts fail closed.
 """
 
 from __future__ import annotations
@@ -22,6 +23,11 @@ import zipfile
 from io import StringIO
 from pathlib import Path, PurePosixPath
 from typing import Callable, Iterable
+
+try:
+    from .community_elf import ElfAuditError, bundled_files, elf_sections
+except ImportError:
+    from community_elf import ElfAuditError, bundled_files, elf_sections
 
 
 class AbiAuditError(ValueError):
@@ -87,7 +93,11 @@ def parse_defined_symbols(output: str) -> set[str]:
     symbols: set[str] = set()
     for line in output.splitlines():
         fields = line.split()
-        if len(fields) < 2:
+        if len(fields) < 3:
+            continue
+        try:
+            int(fields[0], 16)
+        except ValueError:
             continue
         symbol_type_index = next(
             (index for index, field in enumerate(fields) if len(field) == 1 and field in _DEFINED_TYPES),
@@ -141,11 +151,40 @@ def audit_archives(
     *,
     firmware_symbols: set[str],
     nm_runner: NMOutput,
+    host_contract: dict | None = None,
+    firmware_api_major: int = 88,
 ) -> dict[str, object]:
     """Inspect all FAP/FAL members in the supplied base and extra archives."""
 
     archive_reports: list[dict[str, object]] = []
-    binaries: list[tuple[str, str, str, bytes]] = []
+    binaries = []
+    contract = host_contract or {}
+    hosts = contract.get("hosts", {})
+    external_plugins = contract.get("externalPlugins", {})
+    total_bytes = 0
+    bundle_count = 0
+
+    def add_binary(pack, member, key, kind, data, host=None, depth=0):
+        nonlocal total_bytes, bundle_count
+        if depth > 4 or len(binaries) >= _MAX_BINARY_COUNT:
+            raise AbiAuditError("embedded binary depth/count limit")
+        total_bytes += len(data)
+        if total_bytes > 128 * 1024 * 1024:
+            raise AbiAuditError("uncompressed binary budget exceeded")
+        try:
+            sections, identity = elf_sections(data)
+            record = {"pack": pack, "member": member, "key": key, "kind": kind,
+                      "data": data, "host": host, "embedded": depth > 0, "identity": identity}
+            binaries.append(record)
+            if ".fapassets" in sections:
+                bundle_count += 1
+                for name, payload in bundled_files(sections[".fapassets"]).items():
+                    suffix = PurePosixPath(name).suffix.lower()
+                    if suffix in (".fal", ".fap"):
+                        add_binary(pack, member + "!" + name, key + "!" + name,
+                                   suffix[1:], payload, key if suffix == ".fal" else None, depth + 1)
+        except ElfAuditError as error:
+            raise AbiAuditError(f"{member}: {error}") from error
     seen_packs: set[str] = set()
     for pack, archive_path in archives:
         if pack not in _PACKS or pack in seen_packs:
@@ -167,13 +206,13 @@ def audit_archives(
                     info = archive.getinfo(member)
                     if info.file_size > _MAX_MEMBER_BYTES:
                         raise AbiAuditError(f"binary member is too large: {member}")
-                    _relative, kind = parsed
+                    relative, kind = parsed
                     data = archive.read(member)
                     if not data:
                         raise AbiAuditError(f"empty binary member: {member}")
-                    binaries.append((pack, member, kind, data))
-                    if len(binaries) > _MAX_BINARY_COUNT:
-                        raise AbiAuditError("archive contains too many binaries")
+                    key = f"{pack}/{relative}"
+                    add_binary(pack, member, key, kind, data,
+                               external_plugins.get(key) if kind == "fal" else None)
         except zipfile.BadZipFile as error:
             raise AbiAuditError(f"invalid {pack} archive: {error}") from error
         archive_reports.append(
@@ -190,43 +229,55 @@ def audit_archives(
 
     with tempfile.TemporaryDirectory(prefix="community-abi-") as temporary:
         root = Path(temporary)
-        symbol_outputs: dict[tuple[str, str], str] = {}
-        for index, (pack, member, kind, data) in enumerate(binaries):
-            path = root / f"{index}-{Path(member).name}"
-            path.write_bytes(data)
-            symbol_outputs[(pack, member)] = nm_runner(path)
-
-        host_exports: dict[str, set[str]] = {pack: set() for pack in _PACKS}
-        for pack, member, kind, _data in binaries:
-            if kind == "fap":
-                host_exports[pack].update(
-                    parse_defined_symbols(symbol_outputs[(pack, member)])
-                )
+        by_key = {binary["key"]: binary for binary in binaries}
+        if len(by_key) != len(binaries):
+            raise AbiAuditError("duplicate binary identity")
+        for index, binary in enumerate(binaries):
+            path = root / f"{index}-{Path(binary['member']).name}"
+            path.write_bytes(binary["data"])
+            binary["symbols"] = nm_runner(path)
 
         findings: list[dict[str, object]] = []
         compatible = 0
-        for pack, member, kind, _data in binaries:
-            imports = parse_undefined_symbols(symbol_outputs[(pack, member)])
-            allowed = (
-                firmware_symbols
-                if kind == "fap"
-                else firmware_symbols | host_exports[pack]
-            )
+        for binary in binaries:
+            imports = parse_undefined_symbols(binary["symbols"])
+            allowed = set(firmware_symbols)
+            reasons = []
+            major, minor, target = binary["identity"]
+            if major != firmware_api_major or target != 7:
+                reasons.append("incompatible_api_major_or_target")
+            if binary["kind"] == "fal":
+                parent = by_key.get(binary["host"])
+                if parent is None or parent["kind"] != "fap" or parent["pack"] != binary["pack"]:
+                    reasons.append("missing_plugin_host_binding")
+                elif imports - allowed:
+                    declaration = hosts.get(parent["key"], {})
+                    if declaration.get("sha256") != hashlib.sha256(parent["data"]).hexdigest():
+                        reasons.append("unverified_host_api")
+                    else:
+                        declared = set(declaration.get("exports", []))
+                        defined = parse_defined_symbols(parent["symbols"])
+                        if not declared <= defined:
+                            reasons.append("host_api_definition_mismatch")
+                        else:
+                            allowed.update(declared)
             missing = sorted(imports - allowed)
-            if missing:
+            if missing or reasons:
                 findings.append(
                     {
-                        "pack": pack,
-                        "archive_member": member,
-                        "kind": kind,
+                        "pack": binary["pack"],
+                        "archive_member": binary["member"],
+                        "kind": binary["kind"],
+                        "host": binary["host"],
+                        "reasons": reasons,
                         "missing_symbols": missing,
                     }
                 )
             else:
                 compatible += 1
 
-    fap_count = sum(kind == "fap" for _pack, _member, kind, _data in binaries)
-    fal_count = sum(kind == "fal" for _pack, _member, kind, _data in binaries)
+    fap_count = sum(b["kind"] == "fap" for b in binaries)
+    fal_count = sum(b["kind"] == "fal" for b in binaries)
     return {
         "schema": 1,
         "kind": "communityPackAbiAudit",
@@ -237,6 +288,8 @@ def audit_archives(
             "fal": fal_count,
             "compatible": compatible,
             "needs_review": len(findings),
+            "embedded": sum(b["embedded"] for b in binaries),
+            "asset_bundles": bundle_count,
         },
         "archives": archive_reports,
         "findings": findings,
@@ -266,6 +319,8 @@ def main() -> int:
     parser.add_argument("--api-symbols", type=Path, required=True)
     parser.add_argument("--nm", dest="nm_command")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--host-contract", type=Path,
+                        default=Path(__file__).resolve().parents[1] / "contracts/community-plugin-hosts.json")
     args = parser.parse_args()
 
     try:
@@ -273,6 +328,8 @@ def main() -> int:
         report = audit_archives(
             [("base", args.base_archive), ("extra", args.extra_archive)],
             firmware_symbols=parse_api_symbols(api_text),
+            firmware_api_major=int(parse_api_version(api_text).split(".")[0]),
+            host_contract=json.loads(args.host_contract.read_text()),
             nm_runner=_default_nm_runner(
                 args.nm_command
                 or shutil.which("arm-none-eabi-nm")

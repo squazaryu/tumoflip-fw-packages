@@ -365,6 +365,24 @@ class NativeReleaseTests(unittest.TestCase):
                 self.publisher_commit,
             )
 
+    def test_diagnostic_packages_have_exact_overlay_routes(self) -> None:
+        policy = json.loads(
+            (self.repository / "contracts/native-build-policy.json").read_text()
+        )
+        expected = {
+            "specter": ("apps/NFC/specter.fap", "base"),
+            "capture_inspector": (
+                "apps_data/arf_subghz_full/packages/capture_inspector.fap", "arf"
+            ),
+            "protopirate_to_subghz": (
+                "apps_data/arf_subghz_full/packages/protopirate_to_subghz.fap", "arf"
+            ),
+        }
+        for app, (path, group) in expected.items():
+            with self.subTest(app=app):
+                self.assertEqual(policy["allowedOverlays"].get(app), path)
+                self.assertEqual(policy["overlayGroups"].get(app), group)
+
     def test_unapproved_source_commit_is_terminal(self) -> None:
         with self.assertRaisesRegex(ContractError, "not authorized"):
             load_native_plan(

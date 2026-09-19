@@ -2,7 +2,7 @@
   "schema": 1,
   "implementation": {
     "repository": "squazaryu/tumoflip",
-    "commit": "d06858658012eeed48880f70f8e10b44fe09f341",
+    "commit": "2d635594c883cbbc3e9c28ad76ca2d5ec4015da5",
     "importsPath": "tools/tumoflip/protected_app_imports.json"
   },
   "community": {

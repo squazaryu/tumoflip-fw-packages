@@ -27,6 +27,15 @@ RAW_EDIT_DECISIONS = {
 
 
 class ProtectedAppAuditTests(unittest.TestCase):
+    def test_specter_is_package_owned_without_replacing_other_decisions(self):
+        registry = audit.read_json(REGISTRY_PATH)
+        apps = audit.validate_registry(registry)
+        self.assertIn("specter", registry["protectedKeys"])
+        specter = next(app for app in apps if app["id"] == "specter")
+        self.assertEqual(specter["localSourcePath"], "applications_user/specter")
+        self.assertEqual(specter["packSourcePath"], "non_catalog_apps/specter")
+        self.assertEqual(specter["artifacts"], [{"pack": "extra", "archiveFileName": "specter.fap", "targetPath": "/ext/apps/NFC/specter.fap"}])
+
     def test_registry_is_resolved_inside_the_checkout(self) -> None:
         checkout = Path(__file__).resolve().parents[1]
         self.assertTrue(REGISTRY_PATH.is_relative_to(checkout))
@@ -456,7 +465,7 @@ class ProtectedAppAuditTests(unittest.TestCase):
         result, _ = audit.audit_release(self._args())
 
         self.assertEqual(result["overallStatus"], "pending")
-        self.assertEqual(len(result["entries"]), 12)
+        self.assertEqual(len(result["entries"]), 13)
         self.assertEqual(len(result["unresolved"]), 15)
         self.assertTrue(
             any(
@@ -470,7 +479,7 @@ class ProtectedAppAuditTests(unittest.TestCase):
         )
         raw = next(app for app in result["apps"] if app["appId"] == "subghz_raw_edit")
         self.assertEqual(raw["status"], "needsReview")
-        self.assertEqual(sum(len(app["artifacts"]) for app in result["apps"]), 27)
+        self.assertEqual(sum(len(app["artifacts"]) for app in result["apps"]), 28)
         accepted = next(
             entry for entry in result["entries"]
             if entry["remotePath"].endswith("esp32_wifi_marauder.fap")
@@ -522,7 +531,7 @@ class ProtectedAppAuditTests(unittest.TestCase):
         result, _ = audit.audit_release(self._args(decisions=decisions))
 
         self.assertEqual(result["overallStatus"], "pending")
-        self.assertEqual(len(result["entries"]), 13)
+        self.assertEqual(len(result["entries"]), 14)
         self.assertEqual(len(result["unresolved"]), 14)
 
     def test_checked_in_raw_edit_decisions_accept_the_exact_live_sources(self) -> None:
@@ -778,7 +787,7 @@ class ProtectedAppAuditTests(unittest.TestCase):
         result, _ = audit.audit_release(self._args(decisions=decisions))
 
         self.assertEqual(result["overallStatus"], "verified")
-        self.assertEqual(len(result["entries"]), 27)
+        self.assertEqual(len(result["entries"]), 28)
         self.assertEqual(result["unresolved"], [])
 
     def test_category_move_derives_current_archive_and_remote_paths(self) -> None:
@@ -1278,18 +1287,18 @@ class ProtectedAppAuditTests(unittest.TestCase):
     def test_same_pack_is_reaudited_when_target_release_changes(self) -> None:
         self._set_raw_author_head("e" * 40)
         first, _ = audit.audit_release(self._args())
-        self.assertEqual(len(first["entries"]), 12)
+        self.assertEqual(len(first["entries"]), 13)
         self.assertEqual(len(first["unresolved"]), 15)
         ledger = audit.merge_ledger(None, first)
 
         self._add_totp_target_family()
         second, _ = audit.audit_release(self._args())
-        self.assertEqual(len(second["entries"]), 26)
+        self.assertEqual(len(second["entries"]), 27)
         self.assertEqual(len(second["unresolved"]), 1)
         ledger = audit.merge_ledger(ledger, second)
 
         self.assertEqual(len(ledger["audits"]), 1)
-        self.assertEqual(len(ledger["audits"][0]["entries"]), 26)
+        self.assertEqual(len(ledger["audits"][0]["entries"]), 27)
         self.assertEqual(len(ledger["audits"][0]["unresolved"]), 1)
 
     def test_semantic_identity_ignores_time_but_changes_with_target_evidence(self) -> None:
