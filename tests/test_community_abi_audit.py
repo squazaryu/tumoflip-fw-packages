@@ -42,6 +42,15 @@ def asset_fixture(files):
 
 
 class CommunityAbiAuditTests(unittest.TestCase):
+    def test_ordinary_duplicate_section_names_are_valid_elf(self):
+        from tools.community_elf import elf_sections, ElfAuditError
+        data = bytearray(elf_fixture())
+        struct.pack_into("<I", data, 52, 1)
+        self.assertEqual(elf_sections(bytes(data))[1], (88, 10, 7))
+        struct.pack_into("<I", data, 52, 11)
+        with self.assertRaisesRegex(ElfAuditError, "duplicate"):
+            elf_sections(bytes(data))
+
     def test_api_parser_keeps_only_exported_function_and_variable_symbols(self):
         api = """entry,status,name,type,params
 Version,+,88.6,,
