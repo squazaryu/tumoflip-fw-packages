@@ -18,8 +18,10 @@ The initial contract records TOTP, Metroflip and LAN Tester from Community Pack
 imports fails closed until its contract is reviewed. Do not auto-advance hashes.
 These bindings are ABI facts, **not protected-app acceptance decisions**.
 
-The schedule, LLM monitoring prompt, protected-app registry, SubBrute/Agentic Remote
-decisions and hardware acceptance are untouched. No audit ledger was published.
+The schedule, LLM monitoring prompt, SubBrute/Agentic Remote decisions and hardware
+acceptance are untouched. No audit ledger was published. The separately approved
+Specter delivery adds its protected registry route and source provenance, without
+advancing the unrelated protected-audit acceptance pins.
 
 Run:
 
@@ -36,7 +38,7 @@ Exit 0 means no missing imports/ownership findings; 1 means review findings; 2
 means the input could not be safely inspected. None proves physical behavior.
 The unchanged workflow picks up the default checked-in host contract.
 
-Validation: 277 control-plane tests pass; 13 are focused ABI tests. Python stdlib
+Validation: 279 control-plane tests pass; 13 are focused ABI tests. Python stdlib
 trace with `--count --summary --missing` reports 84% auditor and 86% bounded ELF
 parser line coverage. Exact 19sep2026 archives contain 418 binaries after expanding
 43 embedded plugins (33 bundles); 415 pass static checks. The existing Nearby
