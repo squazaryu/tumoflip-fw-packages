@@ -1,6 +1,10 @@
 import tempfile
 import hashlib
 import struct
+import contextlib
+import io
+import json
+from unittest.mock import patch
 import unittest
 import zipfile
 from pathlib import Path
@@ -10,6 +14,7 @@ from tools.community_abi_audit import (
     audit_archives,
     parse_api_symbols,
     parse_undefined_symbols,
+    parse_defined_symbols,
 )
 
 
@@ -43,6 +48,51 @@ def asset_fixture(files):
 
 
 class CommunityAbiAuditTests(unittest.TestCase):
+    def test_weak_undefined_symbols_are_not_host_definitions(self):
+        self.assertEqual(parse_defined_symbols("w optional_function\nv optional_object\n00000000 W present\n"), {"present"})
+
+    def test_cli_writes_report_and_fails_closed_on_bad_inputs(self):
+        from tools import community_abi_audit as audit
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            api = root / "api.csv"
+            api.write_text("entry,status,name,type,params\nVersion,+,88.10,,\n")
+            contract = root / "hosts.json"
+            contract.write_text('{"hosts":{},"externalPlugins":{}}')
+            for pack in ("base", "extra"):
+                with zipfile.ZipFile(root / f"{pack}.zip", "w") as z:
+                    if pack == "base":
+                        z.writestr("base_pack_build/artifacts-base/Tools/test.fap", elf_fixture())
+            argv = ["audit", "--base-archive", str(root / "base.zip"), "--extra-archive", str(root / "extra.zip"),
+                    "--api-symbols", str(api), "--host-contract", str(contract), "--output", str(root / "out.json")]
+            for symbols, expected in (("", 0), ("U absent", 1)):
+                with patch("sys.argv", argv), patch.object(audit, "_default_nm_runner", return_value=lambda _: symbols), contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(audit.main(), expected)
+                self.assertEqual(json.loads((root / "out.json").read_text())["api"], "88.10")
+            api.write_text("bad input")
+            with patch("sys.argv", argv), contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(audit.main(), 2)
+
+    def test_asset_and_elf_input_boundaries(self):
+        from tools.community_elf import bundled_files, elf_sections, ElfAuditError
+        valid = elf_fixture()
+        for size in (0, 7, 51):
+            with self.assertRaises(ElfAuditError):
+                elf_sections(valid[:size])
+        for offset in (5, 18, 40, 46, 50):
+            data = bytearray(valid)
+            data[offset] = 0xff
+            with self.assertRaises(ElfAuditError):
+                elf_sections(bytes(data))
+        for files in ((('../bad.fal', b'x'),), (('a.fal', b'x'), ('a.fal', b'y'))):
+            with self.assertRaises(ElfAuditError):
+                bundled_files(asset_fixture(files))
+        bundle = asset_fixture([("plugins/a.fal", b"a")])
+        self.assertEqual(bundled_files(bundle), {"plugins/a.fal": b"a"})
+        for data in (bundle[:20], bundle[:-1], bundle+b"junk"):
+            with self.assertRaises(ElfAuditError):
+                bundled_files(data)
+
     def test_large_but_bounded_real_section_tables(self):
         from tools.community_elf import elf_sections, ElfAuditError
         self.assertEqual(elf_sections(elf_fixture(extra_sections=512))[1], (88, 10, 7))
