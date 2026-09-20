@@ -24,6 +24,7 @@
     "flipper_xremote",
     "freq_analyzer_ext",
     "garage_door_remote",
+    "hid_ble",
     "keeloq_keystore_decryptor",
     "module_one_cockpit",
     "module_one_sensor_logger",
@@ -69,6 +70,7 @@
     "xremote"
   ],
   "protectedDataFamilies": [
+    {"prefix": "/ext/apps_data/hid_ble/", "owner": "hid_ble"},
     {"prefix": "/ext/apps_data/arf_subghz_full/", "owner": "arf_subghz_full"},
     {"prefix": "/ext/apps_data/rolljam_standalone/", "owner": "rolljam"},
     {"prefix": "/ext/apps_data/subghz/plugins/", "owner": "subghz_protocols"},
