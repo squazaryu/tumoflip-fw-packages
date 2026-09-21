@@ -311,27 +311,27 @@ class NativeReleaseTests(unittest.TestCase):
                 self.publisher_commit,
             )
 
-    def test_repository_records_exact_ble_remote_dev_018_release(self) -> None:
+    def test_repository_records_exact_ble_remote_dev_019_release(self) -> None:
         current = json.loads(
             (self.repository / "contracts/current-releases.json").read_text()
         )
         self.assertEqual(
             current["channels"]["dev"],
             {
-                "tag": "fw-packages-dev-018",
-                "revision": 18,
+                "tag": "fw-packages-dev-019",
+                "revision": 19,
                 "prerelease": True,
-                "releaseId": "b1375474052cfc013255778020628abdc56664b50724a6311578ea847e0c3947",
-                "tagCommit": "443fc89a5dc631df5086b41890ebc24f46b04168",
-                "sourceCommit": "4a61c5f6cb05c225996410b17690e2bb26de58d4",
+                "releaseId": "c941d170873908f045424411611a341aac90d3ccd1413b4c8ae9261217fe03da",
+                "tagCommit": "315a3c61dd9207d4759f588953be48eb7bf33ae5",
+                "sourceCommit": "cbcd5c07294ef3efe81bf638a05379650beb1b41",
                 "targetFirmwareTag": "t-dev-004-015",
                 "targetFirmwareCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
                 "api": "88.0",
                 "target": 7,
                 "assets": {
-                    "fw-packages-dev-018-SHA256SUMS": "1d18b4cb8f80e0c179406da6e7974741cd8dd52b0c8f4b8f28226c83efe89d52",
-                    "tumoflip-packages.json": "86345e56939635d9a39dc60087a7dbc69fd5fc5ebacf6f83e210b0590e9a4623",
-                    "tumoflip-packages.zip": "ccaebeb1fd8ab9933bb5eae7065129ada6255cc5390bcc24466b440860a15f4d"
+                    "fw-packages-dev-019-SHA256SUMS": "9496389712a99f8187ef72b7502adac702e5bb516e2faaa499bc05c7e2dfc6b3",
+                    "tumoflip-packages.json": "673818969010c23ab5ffa88ecec0d2530be2ad89c6a35bc0ee5ee0105a33a82f",
+                    "tumoflip-packages.zip": "a4c64e04f43960dd343703ede62e09c46216e92f2fc9db67fcd3699e928abb8c"
                 }
             },
         )
@@ -341,10 +341,10 @@ class NativeReleaseTests(unittest.TestCase):
         self.assertEqual(
             lineage["channels"]["dev"],
             {
-                "currentTag": "fw-packages-dev-018",
-                "currentRevision": 18,
-                "nextNativeRevision": 19,
-                "nextNativeTag": "fw-packages-dev-019",
+                "currentTag": "fw-packages-dev-019",
+                "currentRevision": 19,
+                "nextNativeRevision": 20,
+                "nextNativeTag": "fw-packages-dev-020",
                 "seededFromLegacy": False,
             },
         )
@@ -357,11 +357,11 @@ class NativeReleaseTests(unittest.TestCase):
             "apps/Sub-GHz/weather_editor.fap",
         )
         self.assertEqual(policy["overlayGroups"]["weather_editor"], "base")
-        self.assertNotIn("fw-packages-dev-018", policy["releasePlans"])
+        self.assertNotIn("fw-packages-dev-019", policy["releasePlans"])
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
-                self.repository, "dev", 18,
-                "4a61c5f6cb05c225996410b17690e2bb26de58d4",
+                self.repository, "dev", 19,
+                "cbcd5c07294ef3efe81bf638a05379650beb1b41",
                 self.publisher_commit,
             )
 
