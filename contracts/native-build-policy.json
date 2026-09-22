@@ -66,7 +66,7 @@
   },
   "releasePlans": {
     "fw-packages-dev-021": {
-      "sourceCommit": "b5f188807312e1ba73201792fad123df0fe2c70f",
+      "sourceCommit": "fa8fbb363fa1bc571ef9091f24a278c326ab62ce",
       "selectedOverlays": [
         "device_library",
         "file_history"
