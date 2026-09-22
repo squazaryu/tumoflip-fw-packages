@@ -64,5 +64,13 @@
     "totp_cli_update_plugin": "base",
     "totp_cli_version_plugin": "base"
   },
-  "releasePlans": {}
+  "releasePlans": {
+    "fw-packages-dev-021": {
+      "sourceCommit": "baca704b532a1d87e0f7ea6e00070607f0e904cd",
+      "selectedOverlays": [
+        "device_library",
+        "file_history"
+      ]
+    }
+  }
 }
