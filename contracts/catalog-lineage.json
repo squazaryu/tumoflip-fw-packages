@@ -11,10 +11,10 @@
       "seededFromLegacy": false
     },
     "dev": {
-      "currentTag": "fw-packages-dev-020",
-      "currentRevision": 20,
-      "nextNativeRevision": 21,
-      "nextNativeTag": "fw-packages-dev-021",
+      "currentTag": "fw-packages-dev-021",
+      "currentRevision": 21,
+      "nextNativeRevision": 22,
+      "nextNativeTag": "fw-packages-dev-022",
       "seededFromLegacy": false
     }
   }
