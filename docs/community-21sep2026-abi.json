@@ -1,0 +1,69 @@
+{
+  "api": "88.12",
+  "archives": [
+    {
+      "bytes": 1721018,
+      "pack": "base",
+      "path": "all-the-apps-base.zip",
+      "sha256": "044abf60b6c9fc155f72a768708fa890e609d7bdd700022c09044a0de8aa2fc1"
+    },
+    {
+      "bytes": 12769354,
+      "pack": "extra",
+      "path": "all-the-apps-extra.zip",
+      "sha256": "c5287243dcefcd0d0258489e1082bf3c074ce70e4e9955a7a8390e2e0d233da2"
+    }
+  ],
+  "findings": [
+    {
+      "archive_member": "base_pack_build/artifacts-base/GPIO/GPS/nearby_files.fap",
+      "host": null,
+      "kind": "fap",
+      "missing_symbols": [
+        "gps_request_stream",
+        "gps_set_location_callback",
+        "gps_stop_stream"
+      ],
+      "pack": "base",
+      "reasons": []
+    },
+    {
+      "archive_member": "base_pack_build/artifacts-base/Sub-GHz/subghz_wardriving.fap",
+      "host": null,
+      "kind": "fap",
+      "missing_symbols": [
+        "gps_request_stream",
+        "gps_set_location_callback",
+        "gps_stop_stream"
+      ],
+      "pack": "base",
+      "reasons": []
+    },
+    {
+      "archive_member": "extra_pack_build/artifacts-extra/Tools/gps_rpc.fap",
+      "host": null,
+      "kind": "fap",
+      "missing_symbols": [
+        "gps_request_stream",
+        "gps_set_location_callback",
+        "gps_stop_stream"
+      ],
+      "pack": "extra",
+      "reasons": []
+    }
+  ],
+  "kind": "communityPackAbiAudit",
+  "schema": 1,
+  "status": "needsReview",
+  "summary": {
+    "asset_bundles": 33,
+    "binaries": 420,
+    "compatible": 417,
+    "embedded": 43,
+    "fal": 57,
+    "fap": 363,
+    "needs_review": 3
+  },
+  "sourceCommit": "a80f75c6705bd709d0c6f922e84eb940f99730fc",
+  "firmwareCommit": "756187d03e64141cac373ec12d01875c35a12b60"
+}
