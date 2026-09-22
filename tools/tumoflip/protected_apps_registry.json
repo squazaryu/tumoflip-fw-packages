@@ -16,6 +16,7 @@
     "ble_gatt_lab",
     "claude_buddy",
     "claude_remote_ble",
+    "device_library",
     "esp32_wifi_marauder",
     "esp_flasher",
     "field_logger",
@@ -70,6 +71,7 @@
     "xremote"
   ],
   "protectedDataFamilies": [
+    {"prefix": "/ext/apps_data/device_library/", "owner": "device_library"},
     {"prefix": "/ext/apps_data/hid_ble/", "owner": "hid_ble"},
     {"prefix": "/ext/apps_data/arf_subghz_full/", "owner": "arf_subghz_full"},
     {"prefix": "/ext/apps_data/rolljam_standalone/", "owner": "rolljam"},
