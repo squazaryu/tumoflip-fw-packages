@@ -60,5 +60,12 @@
     "totp_cli_update_plugin": "base",
     "totp_cli_version_plugin": "base"
   },
-  "releasePlans": {}
+  "releasePlans": {
+    "fw-packages-dev-020": {
+      "sourceCommit": "ffe6121184471119c879467cdadf9868ac7e49e9",
+      "selectedOverlays": [
+        "specter"
+      ]
+    }
+  }
 }
