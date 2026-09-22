@@ -7,6 +7,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class DeviceLibraryReleaseTests(unittest.TestCase):
+    def test_021_plan_pins_only_the_new_pair(self):
+        policy = json.loads((ROOT / "contracts/native-build-policy.json").read_text())
+        current = json.loads((ROOT / "contracts/current-releases.json").read_text())
+        plan = policy["releasePlans"].get("fw-packages-dev-021")
+        if plan is None:
+            self.assertGreaterEqual(current["channels"]["dev"]["revision"], 21)
+            return
+        self.assertRegex(plan["sourceCommit"], r"^[0-9a-f]{40}$")
+        self.assertEqual(set(plan["selectedOverlays"]), {"device_library", "file_history"})
+
     def test_pair_has_narrow_overlay_and_protection_ownership(self):
         policy = json.loads((ROOT / "contracts/native-build-policy.json").read_text())
         registry = json.loads((ROOT / "tools/tumoflip/protected_apps_registry.json").read_text())
