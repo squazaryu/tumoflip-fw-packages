@@ -19,9 +19,12 @@ The plan selects only these source-built replacements:
 Everything else in Dev 021, including cleanup entries and user data, must remain
 byte-identical. This is an independent overlay revision, not a firmware snapshot
 or a new package baseline. `current-releases.json`, `catalog-lineage.json`, and
-`catalog-index.json` remain unchanged in this preparation PR. Publication and
-catalog activation are separate steps after the exact candidate archive has been
-built and independently verified.
+`catalog-index.json` remain unchanged in this preparation PR. The global
+`catalog-baselines.json` also remains untouched: this plan records the exact
+009-012 firmware provenance locally to Dev 022, without rebasing compatibility
+for the independent package channel. Publication and catalog activation are
+separate steps after the exact candidate archive has been built and independently
+verified.
 
 Physical-device acceptance remains pending. Dev 022 is intended to make these
 updated FAPs available for testing with Tumoflip Dev 009-012; no device test is
