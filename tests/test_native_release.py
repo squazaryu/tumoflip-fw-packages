@@ -287,6 +287,29 @@ class NativeReleaseTests(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, "exactly 2"):
             load_native_plan(control, "dev", 9, self.source_commit, self.publisher_commit)
 
+    def test_release_specific_target_firmware_override_requires_exact_fields(self) -> None:
+        policy_path = self.control / "contracts/native-build-policy.json"
+        policy = json.loads(policy_path.read_text())
+        policy["releasePlans"]["fw-packages-dev-009"]["targetFirmware"] = {
+            "firmwareTag": "t-dev-004-015",
+            "firmwareVersion": "t-dev-004-015",
+            "firmwareCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
+            "firmwareReleaseId": "5799604a854b34c1bb67c67e63733e9c396af1167dfe829c2b144791c07a2ebf",
+            "target": 7,
+        }
+        policy_path.write_text(json.dumps(policy))
+
+        with self.assertRaisesRegex(
+            ContractError, "release-specific target firmware contract is invalid"
+        ):
+            load_native_plan(
+                self.control,
+                "dev",
+                9,
+                self.source_commit,
+                self.publisher_commit,
+            )
+
     def test_repository_retains_morse_overlay_allowlist_after_publication(self) -> None:
         policy = json.loads(
             (self.repository / "contracts/native-build-policy.json").read_text()

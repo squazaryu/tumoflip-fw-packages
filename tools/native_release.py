@@ -288,27 +288,40 @@ def load_native_plan(
     ):
         raise ContractError("native base release differs from current channel lineage")
 
+    target_firmware_contract = release_policy.get("targetFirmware", baseline)
+    if not isinstance(target_firmware_contract, dict):
+        raise ContractError("target firmware contract is invalid")
+    if "targetFirmware" in release_policy and set(target_firmware_contract) != {
+        "firmwareTag",
+        "firmwareVersion",
+        "firmwareCommit",
+        "firmwareReleaseId",
+        "api",
+        "target",
+    }:
+        raise ContractError("release-specific target firmware contract is invalid")
+
     firmware_commit = _exact_commit(
-        baseline.get("firmwareCommit"), "target firmware commit"
+        target_firmware_contract.get("firmwareCommit"), "target firmware commit"
     )
-    firmware_release_id = baseline.get("firmwareReleaseId")
+    firmware_release_id = target_firmware_contract.get("firmwareReleaseId")
     if (
         not isinstance(firmware_release_id, str)
         or re.fullmatch(r"[0-9a-f]{64}", firmware_release_id) is None
     ):
         raise ContractError("target firmware release ID contract is invalid")
-    firmware_tag = baseline.get("firmwareTag")
-    firmware_version = baseline.get("firmwareVersion")
-    api = baseline.get("api")
-    target = baseline.get("target")
+    firmware_tag = target_firmware_contract.get("firmwareTag")
+    firmware_version = target_firmware_contract.get("firmwareVersion")
+    api = target_firmware_contract.get("api")
+    target = target_firmware_contract.get("target")
     if not all(isinstance(value, str) and value for value in (firmware_tag, firmware_version)):
         raise ContractError("target firmware tag/version contract is invalid")
     if not isinstance(api, str) or re.fullmatch(r"[0-9]+\.[0-9]+", api) is None:
         raise ContractError("target firmware API contract is invalid")
     if not isinstance(target, int) or isinstance(target, bool) or target < 1:
         raise ContractError("target firmware hardware target is invalid")
-    snapshot_manifest_sha = baseline.get("packageManifestSHA256")
-    snapshot_zip_sha = baseline.get("packageZipSHA256")
+    snapshot_manifest_sha = target_firmware_contract.get("packageManifestSHA256")
+    snapshot_zip_sha = target_firmware_contract.get("packageZipSHA256")
     if mode in {"baseline", "firmwareSnapshot"}:
         if source_commit != firmware_commit:
             raise ContractError(f"{mode} source differs from target firmware")
