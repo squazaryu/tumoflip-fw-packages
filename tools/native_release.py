@@ -288,27 +288,40 @@ def load_native_plan(
     ):
         raise ContractError("native base release differs from current channel lineage")
 
+    target_firmware_contract = release_policy.get("targetFirmware", baseline)
+    if not isinstance(target_firmware_contract, dict):
+        raise ContractError("target firmware contract is invalid")
+    if "targetFirmware" in release_policy and set(target_firmware_contract) != {
+        "firmwareTag",
+        "firmwareVersion",
+        "firmwareCommit",
+        "firmwareReleaseId",
+        "api",
+        "target",
+    }:
+        raise ContractError("release-specific target firmware contract is invalid")
+
     firmware_commit = _exact_commit(
-        baseline.get("firmwareCommit"), "target firmware commit"
+        target_firmware_contract.get("firmwareCommit"), "target firmware commit"
     )
-    firmware_release_id = baseline.get("firmwareReleaseId")
+    firmware_release_id = target_firmware_contract.get("firmwareReleaseId")
     if (
         not isinstance(firmware_release_id, str)
         or re.fullmatch(r"[0-9a-f]{64}", firmware_release_id) is None
     ):
         raise ContractError("target firmware release ID contract is invalid")
-    firmware_tag = baseline.get("firmwareTag")
-    firmware_version = baseline.get("firmwareVersion")
-    api = baseline.get("api")
-    target = baseline.get("target")
+    firmware_tag = target_firmware_contract.get("firmwareTag")
+    firmware_version = target_firmware_contract.get("firmwareVersion")
+    api = target_firmware_contract.get("api")
+    target = target_firmware_contract.get("target")
     if not all(isinstance(value, str) and value for value in (firmware_tag, firmware_version)):
         raise ContractError("target firmware tag/version contract is invalid")
     if not isinstance(api, str) or re.fullmatch(r"[0-9]+\.[0-9]+", api) is None:
         raise ContractError("target firmware API contract is invalid")
     if not isinstance(target, int) or isinstance(target, bool) or target < 1:
         raise ContractError("target firmware hardware target is invalid")
-    snapshot_manifest_sha = baseline.get("packageManifestSHA256")
-    snapshot_zip_sha = baseline.get("packageZipSHA256")
+    snapshot_manifest_sha = target_firmware_contract.get("packageManifestSHA256")
+    snapshot_zip_sha = target_firmware_contract.get("packageZipSHA256")
     if mode in {"baseline", "firmwareSnapshot"}:
         if source_commit != firmware_commit:
             raise ContractError(f"{mode} source differs from target firmware")
@@ -640,6 +653,18 @@ def _source_exports(source_root: Path) -> dict[str, str]:
     return source_overlay_exports(source_root)
 
 
+def _apply_target_firmware_identity(
+    manifest: dict[str, Any], plan: dict[str, Any]
+) -> None:
+    firmware = manifest.get("firmware")
+    if not isinstance(firmware, dict):
+        raise ContractError("immutable base firmware metadata is invalid")
+    target_firmware = plan["targetFirmware"]
+    firmware["version"] = target_firmware["version"]
+    firmware["api"] = target_firmware["api"]
+    firmware["target"] = target_firmware["target"]
+
+
 def _compose_data_release(
     control_root: Path,
     base_directory: Path,
@@ -719,6 +744,7 @@ def _compose_data_release(
     manifest = copy.deepcopy(base)
     manifest.pop("release_id", None)
     manifest["packages"] = packages
+    _apply_target_firmware_identity(manifest, plan)
     manifest["package_release"] = {
         "type": "package-only",
         "id": plan["tag"],
@@ -726,7 +752,7 @@ def _compose_data_release(
         "source_dirty": False,
         "source_firmware_version": plan["targetFirmware"]["version"],
         "target_release_tag": plan["targetFirmware"]["tag"],
-        "target_release_id": base_release.get("target_release_id"),
+        "target_release_id": plan["targetFirmware"]["releaseId"],
         "target_source_commit": plan["targetFirmware"]["commit"],
         "firmware_flash_unchanged": True,
         "overlay_targets": sorted(plan["dataOverlayTargets"]),
@@ -750,10 +776,6 @@ def _compose_data_release(
             base_release.get("compatible_releases", [])
         ),
     }
-    if manifest["package_release"]["target_release_id"] != plan["targetFirmware"][
-        "releaseId"
-    ]:
-        raise ContractError("immutable base target firmware release ID differs")
     manifest["release_id"] = manifest_release_id(manifest)
     _write_json(output_directory / "tumoflip-packages.json", manifest)
     archive_path = output_directory / "tumoflip-packages.zip"
@@ -880,6 +902,7 @@ def _compose_selected_release(
     modified_targets = set(base_release.get("catalog_modified_targets", []))
     if not all(isinstance(item, str) for item in modified_targets):
         raise ContractError("immutable base modified-target evidence is invalid")
+    _apply_target_firmware_identity(manifest, plan)
     manifest["package_release"] = {
         "type": "package-only",
         "id": plan["tag"],
@@ -887,7 +910,7 @@ def _compose_selected_release(
         "source_dirty": False,
         "source_firmware_version": plan["targetFirmware"]["version"],
         "target_release_tag": plan["targetFirmware"]["tag"],
-        "target_release_id": base_release.get("target_release_id"),
+        "target_release_id": plan["targetFirmware"]["releaseId"],
         "target_source_commit": plan["targetFirmware"]["commit"],
         "firmware_flash_unchanged": True,
         "overlay_targets": sorted(selected_paths),
@@ -905,10 +928,6 @@ def _compose_selected_release(
         },
         "compatible_releases": compatible_releases,
     }
-    if manifest["package_release"]["target_release_id"] != plan["targetFirmware"][
-        "releaseId"
-    ]:
-        raise ContractError("immutable base target firmware release ID differs")
     manifest["release_id"] = manifest_release_id(manifest)
     _write_json(output_directory / "tumoflip-packages.json", manifest)
     with zipfile.ZipFile(base_directory / "tumoflip-packages.zip") as base_zip:
@@ -971,7 +990,19 @@ def verify_bounded_delta(
         raise ContractError("native package delta exceeds control-owned overlay policy")
     if candidate.get("cleanup") != base.get("cleanup"):
         raise ContractError("native cleanup policy differs from immutable base")
-    if candidate.get("firmware") != base.get("firmware"):
+    base_firmware = base.get("firmware")
+    candidate_firmware = candidate.get("firmware")
+    expected_firmware = copy.deepcopy(base_firmware)
+    if not isinstance(expected_firmware, dict) or not isinstance(candidate_firmware, dict):
+        raise ContractError("native firmware compatibility is invalid")
+    expected_firmware.update(
+        {
+            "version": plan["targetFirmware"]["version"],
+            "api": plan["targetFirmware"]["api"],
+            "target": plan["targetFirmware"]["target"],
+        }
+    )
+    if candidate_firmware != expected_firmware:
         raise ContractError("native firmware compatibility differs from immutable base")
     if candidate.get("artifacts") != base.get("artifacts"):
         raise ContractError("native firmware artifact evidence differs from immutable base")
@@ -980,16 +1011,14 @@ def verify_bounded_delta(
     if (
         not isinstance(base_package_release, dict)
         or not isinstance(candidate_package_release, dict)
-        or any(
-            candidate_package_release.get(field) != base_package_release.get(field)
-            for field in (
-                "target_release_id",
-                "target_release_tag",
-                "target_source_commit",
-            )
-        )
+        or candidate_package_release.get("target_release_id")
+        != plan["targetFirmware"]["releaseId"]
+        or candidate_package_release.get("target_release_tag")
+        != plan["targetFirmware"]["tag"]
+        or candidate_package_release.get("target_source_commit")
+        != plan["targetFirmware"]["commit"]
     ):
-        raise ContractError("native target firmware release lineage differs")
+        raise ContractError("native target firmware release provenance differs")
     with zipfile.ZipFile(base_directory / "tumoflip-packages.zip") as old_zip:
         with zipfile.ZipFile(directory / "tumoflip-packages.zip") as new_zip:
             old_names = set(old_zip.namelist())

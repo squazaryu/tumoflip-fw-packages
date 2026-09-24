@@ -287,6 +287,29 @@ class NativeReleaseTests(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, "exactly 2"):
             load_native_plan(control, "dev", 9, self.source_commit, self.publisher_commit)
 
+    def test_release_specific_target_firmware_override_requires_exact_fields(self) -> None:
+        policy_path = self.control / "contracts/native-build-policy.json"
+        policy = json.loads(policy_path.read_text())
+        policy["releasePlans"]["fw-packages-dev-009"]["targetFirmware"] = {
+            "firmwareTag": "t-dev-004-015",
+            "firmwareVersion": "t-dev-004-015",
+            "firmwareCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
+            "firmwareReleaseId": "5799604a854b34c1bb67c67e63733e9c396af1167dfe829c2b144791c07a2ebf",
+            "target": 7,
+        }
+        policy_path.write_text(json.dumps(policy))
+
+        with self.assertRaisesRegex(
+            ContractError, "release-specific target firmware contract is invalid"
+        ):
+            load_native_plan(
+                self.control,
+                "dev",
+                9,
+                self.source_commit,
+                self.publisher_commit,
+            )
+
     def test_repository_retains_morse_overlay_allowlist_after_publication(self) -> None:
         policy = json.loads(
             (self.repository / "contracts/native-build-policy.json").read_text()
@@ -432,6 +455,15 @@ def package_extapp_exports():
         base, base_contract = self._base_output()
         plan = copy.deepcopy(self.plan)
         plan["baseRelease"] = base_contract
+        plan["targetFirmware"].update(
+            {
+                "tag": "t-dev-009-012",
+                "commit": "e" * 40,
+                "releaseId": "f" * 64,
+                "version": "t-dev-009-012",
+                "api": "88.14",
+            }
+        )
         plan["selectedOverlays"] = {"fixture": "apps/Module One/fixture.fap"}
         plan["overlayTargets"] = ["apps/Module One/fixture.fap"]
         plan["overlayGroups"] = {"apps/Module One/fixture.fap": "module_one"}
@@ -457,6 +489,12 @@ def package_extapp_exports():
         build_native_release(source, base, output, plan, runner=runner)
         self.assertTrue(output.is_dir())
         verify_native_release(output, plan)
+        manifest = json.loads((output / "tumoflip-packages.json").read_text())
+        self.assertEqual(manifest["firmware"]["version"], "t-dev-009-012")
+        self.assertEqual(manifest["firmware"]["api"], "88.14")
+        self.assertEqual(
+            manifest["package_release"]["target_release_id"], "f" * 64
+        )
         self.assertEqual(
             json.loads((output / "catalog-provenance.json").read_text())[
                 "changedTargets"
