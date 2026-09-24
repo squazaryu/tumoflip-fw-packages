@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import tempfile
 import unittest
 import zipfile
@@ -280,6 +281,40 @@ class CatalogContractTests(unittest.TestCase):
     def test_repository_contracts_are_consistent(self) -> None:
         repository = Path(__file__).resolve().parents[1]
         verify_contract(repository)
+
+    def _contract_snapshot(self) -> Path:
+        repository = Path(__file__).resolve().parents[1]
+        snapshot = self.root / "contract-snapshot"
+        shutil.copytree(repository / "contracts", snapshot / "contracts")
+        shutil.copy2(repository / "catalog-index.json", snapshot / "catalog-index.json")
+        return snapshot
+
+    def test_dev_overlay_can_pin_a_new_firmware_from_the_same_exact_source(self) -> None:
+        snapshot = self._contract_snapshot()
+        path = snapshot / "contracts/current-releases.json"
+        current = json.loads(path.read_text(encoding="utf-8"))
+        dev = current["channels"]["dev"]
+        dev["targetFirmwareTag"] = "t-dev-009-012"
+        dev["sourceCommit"] = "f" * 40
+        dev["targetFirmwareCommit"] = "f" * 40
+        dev["api"] = "88.14"
+        path.write_text(json.dumps(current), encoding="utf-8")
+
+        verify_contract(snapshot)
+
+    def test_dev_overlay_cannot_advance_to_a_different_unplanned_firmware(self) -> None:
+        snapshot = self._contract_snapshot()
+        path = snapshot / "contracts/current-releases.json"
+        current = json.loads(path.read_text(encoding="utf-8"))
+        current["channels"]["dev"]["targetFirmwareTag"] = "t-dev-009-012"
+        current["channels"]["dev"]["targetFirmwareCommit"] = "e" * 40
+        current["channels"]["dev"]["api"] = "88.14"
+        path.write_text(json.dumps(current), encoding="utf-8")
+
+        with self.assertRaisesRegex(
+            ContractError, "target firmware differs without snapshot plan"
+        ):
+            verify_contract(snapshot)
 
 
 class MigrationProvenanceTests(unittest.TestCase):

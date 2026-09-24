@@ -28,6 +28,7 @@ except ImportError:  # Direct script execution.
 
 
 HEX_64 = re.compile(r"^[0-9a-f]{64}$")
+FIRMWARE_DEV_TAG = re.compile(r"^t-dev-(?:\d{3}-\d{3}|\d{3}-\d{3}-\d{3})$")
 
 
 def resolve_current_release(root: Path, channel: str) -> dict[str, object]:
@@ -219,16 +220,43 @@ def verify_contract(root: Path) -> None:
             or current_channel["targetFirmwareCommit"] != baseline["firmwareCommit"]
         )
         if baseline_advanced:
-            plan = policy.get("releasePlans", {}).get(lineage_channel["nextNativeTag"])
-            if (
-                channel != "stable"
-                or not isinstance(plan, dict)
-                or plan.get("mode") not in {"firmwareSnapshot", "baseline"}
-                or plan.get("sourceCommit") != baseline["firmwareCommit"]
-                or plan.get("selectedOverlays") != []
-                or not isinstance(baseline.get("packageManifestSHA256"), str)
-                or not isinstance(baseline.get("packageZipSHA256"), str)
-            ):
+            current_api = current_channel.get("api")
+            baseline_api = baseline.get("api")
+            current_api_match = (
+                re.fullmatch(r"([0-9]+)\.[0-9]+", current_api)
+                if isinstance(current_api, str)
+                else None
+            )
+            baseline_api_match = (
+                re.fullmatch(r"([0-9]+)\.[0-9]+", baseline_api)
+                if isinstance(baseline_api, str)
+                else None
+            )
+            exact_dev_overlay_target = (
+                channel == "dev"
+                and isinstance(current_channel.get("targetFirmwareTag"), str)
+                and FIRMWARE_DEV_TAG.fullmatch(current_channel["targetFirmwareTag"])
+                is not None
+                and current_channel["sourceCommit"]
+                == current_channel["targetFirmwareCommit"]
+                and current_channel.get("target") == baseline.get("target")
+                and current_api_match is not None
+                and baseline_api_match is not None
+                and current_api_match.group(1) == baseline_api_match.group(1)
+            )
+            snapshot_plan = policy.get("releasePlans", {}).get(
+                lineage_channel["nextNativeTag"]
+            )
+            firmware_snapshot = (
+                channel == "stable"
+                and isinstance(snapshot_plan, dict)
+                and snapshot_plan.get("mode") in {"firmwareSnapshot", "baseline"}
+                and snapshot_plan.get("sourceCommit") == baseline["firmwareCommit"]
+                and snapshot_plan.get("selectedOverlays") == []
+                and isinstance(baseline.get("packageManifestSHA256"), str)
+                and isinstance(baseline.get("packageZipSHA256"), str)
+            )
+            if not exact_dev_overlay_target and not firmware_snapshot:
                 raise ContractError(f"{channel} target firmware differs without snapshot plan")
 
 
