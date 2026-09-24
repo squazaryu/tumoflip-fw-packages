@@ -455,6 +455,15 @@ def package_extapp_exports():
         base, base_contract = self._base_output()
         plan = copy.deepcopy(self.plan)
         plan["baseRelease"] = base_contract
+        plan["targetFirmware"].update(
+            {
+                "tag": "t-dev-009-012",
+                "commit": "e" * 40,
+                "releaseId": "f" * 64,
+                "version": "t-dev-009-012",
+                "api": "88.14",
+            }
+        )
         plan["selectedOverlays"] = {"fixture": "apps/Module One/fixture.fap"}
         plan["overlayTargets"] = ["apps/Module One/fixture.fap"]
         plan["overlayGroups"] = {"apps/Module One/fixture.fap": "module_one"}
@@ -480,6 +489,12 @@ def package_extapp_exports():
         build_native_release(source, base, output, plan, runner=runner)
         self.assertTrue(output.is_dir())
         verify_native_release(output, plan)
+        manifest = json.loads((output / "tumoflip-packages.json").read_text())
+        self.assertEqual(manifest["firmware"]["version"], "t-dev-009-012")
+        self.assertEqual(manifest["firmware"]["api"], "88.14")
+        self.assertEqual(
+            manifest["package_release"]["target_release_id"], "f" * 64
+        )
         self.assertEqual(
             json.loads((output / "catalog-provenance.json").read_text())[
                 "changedTargets"
