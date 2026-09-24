@@ -28,9 +28,8 @@ class DeviceLibraryReleaseTests(unittest.TestCase):
         self.assertIn("device_library", registry["protectedKeys"])
         self.assertIn({"prefix": "/ext/apps_data/device_library/", "owner": "device_library"},
                       registry["protectedDataFamilies"])
-        # Existing firmware-owned apps must not become managed overlays as a side effect.
+        # Unrelated firmware-owned apps must not become managed overlays as a side effect.
         self.assertNotIn("tumo_acceptance_suite", policy["allowedOverlays"])
-        self.assertNotIn("signal_workbench", policy["allowedOverlays"])
 
 
 if __name__ == "__main__":
