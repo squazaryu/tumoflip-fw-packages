@@ -46,10 +46,24 @@ class TumoSpectrumReleaseTests(unittest.TestCase):
         self.assertEqual(lineage["channels"]["dev"]["nextNativeRevision"], 23)
 
         index = json.loads((ROOT / "catalog-index.json").read_text())
-        self.assertEqual(index["current_revision"], 22)
-        entry = next(item for item in index["releases"] if item["revision"] == 22)
+        self.assertEqual(index["channels"]["dev"]["current_revision"], 22)
+        entry = next(
+            item
+            for item in index["channels"]["dev"]["releases"]
+            if item["revision"] == 22
+        )
         self.assertEqual(entry["tag"], "fw-packages-dev-022")
         self.assertEqual(entry["state"], "active")
+        self.assertEqual(entry["release_id"], expected_current["releaseId"])
+        self.assertEqual(
+            entry["manifest_sha256"],
+            expected_current["assets"]["tumoflip-packages.json"],
+        )
+        self.assertEqual(
+            entry["archive_sha256"],
+            expected_current["assets"]["tumoflip-packages.zip"],
+        )
+        self.assertEqual(entry["compatibility"], {"targets": [7], "api_majors": [88]})
 
     def test_global_dev_baseline_stays_independent_from_firmware_release(self):
         baselines = json.loads((ROOT / "contracts/catalog-baselines.json").read_text())
