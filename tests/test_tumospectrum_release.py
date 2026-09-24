@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 import unittest
 
+from tools.native_release import load_native_plan
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -34,18 +36,27 @@ class TumoSpectrumReleaseTests(unittest.TestCase):
         current = json.loads((ROOT / "contracts/current-releases.json").read_text())
         self.assertEqual(current["channels"]["dev"]["revision"], 21)
 
-    def test_dev022_target_firmware_contract_matches_published_release(self):
+    def test_dev022_uses_exact_firmware_provenance_without_rebasing_catalog(self):
         baselines = json.loads((ROOT / "contracts/catalog-baselines.json").read_text())
-        expected = {
-            "firmwareTag": "t-dev-009-012",
-            "firmwareVersion": "t-dev-009-012",
-            "firmwareCommit": "9531d28b88970df05423c538cefd7966bd08e8af",
-            "firmwareReleaseId": "ed024a4619b45fb21cc8e6ea39a48e135027f381a731c2d54b8ba16ff9a94912",
-            "api": "88.14",
-            "target": 7,
-        }
-        for key, value in expected.items():
-            self.assertEqual(baselines["channels"]["dev"][key], value)
+        self.assertEqual(
+            baselines["channels"]["dev"]["firmwareTag"], "t-dev-004-015"
+        )
+        source_commit = "9531d28b88970df05423c538cefd7966bd08e8af"
+        plan = load_native_plan(ROOT, "dev", 22, source_commit, "f" * 40)
+        self.assertEqual(
+            plan["targetFirmware"],
+            {
+                "repository": "squazaryu/tumoflip",
+                "tag": "t-dev-009-012",
+                "commit": source_commit,
+                "releaseId": "ed024a4619b45fb21cc8e6ea39a48e135027f381a731c2d54b8ba16ff9a94912",
+                "version": "t-dev-009-012",
+                "api": "88.14",
+                "target": 7,
+                "packageManifestSHA256": None,
+                "packageZipSHA256": None,
+            },
+        )
 
 
 if __name__ == "__main__":
