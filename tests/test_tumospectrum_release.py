@@ -34,6 +34,19 @@ class TumoSpectrumReleaseTests(unittest.TestCase):
         current = json.loads((ROOT / "contracts/current-releases.json").read_text())
         self.assertEqual(current["channels"]["dev"]["revision"], 21)
 
+    def test_dev022_target_firmware_contract_matches_published_release(self):
+        baselines = json.loads((ROOT / "contracts/catalog-baselines.json").read_text())
+        expected = {
+            "firmwareTag": "t-dev-009-012",
+            "firmwareVersion": "t-dev-009-012",
+            "firmwareCommit": "9531d28b88970df05423c538cefd7966bd08e8af",
+            "firmwareReleaseId": "ed024a4619b45fb21cc8e6ea39a48e135027f381a731c2d54b8ba16ff9a94912",
+            "api": "88.14",
+            "target": 7,
+        }
+        for key, value in expected.items():
+            self.assertEqual(baselines["channels"]["dev"][key], value)
+
 
 if __name__ == "__main__":
     unittest.main()
