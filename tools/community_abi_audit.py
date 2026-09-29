@@ -108,6 +108,20 @@ def parse_defined_symbols(output: str) -> set[str]:
     return symbols
 
 
+def _finding_disposition(kind: str, reasons: list[str], missing: list[str]) -> str:
+    """Name the first action needed to resolve an ABI finding."""
+
+    if "incompatible_api_major_or_target" in reasons:
+        return "api_or_target_mismatch"
+    if "missing_plugin_host_binding" in reasons:
+        return "plugin_host_binding_review"
+    if "unverified_host_api" in reasons or "host_api_definition_mismatch" in reasons:
+        return "host_contract_review"
+    if missing:
+        return "firmware_import_missing" if kind == "fap" else "plugin_import_missing"
+    raise AbiAuditError("ABI finding has no actionable reason")
+
+
 def _archive_member(member: str, pack: str) -> tuple[str, str] | None:
     pack_root = f"{pack}_pack_build/"
     prefix = f"{pack}_pack_build/artifacts-{pack}/"
@@ -269,6 +283,7 @@ def audit_archives(
                         "archive_member": binary["member"],
                         "kind": binary["kind"],
                         "host": binary["host"],
+                        "disposition": _finding_disposition(binary["kind"], reasons, missing),
                         "reasons": reasons,
                         "missing_symbols": missing,
                     }
@@ -278,6 +293,10 @@ def audit_archives(
 
     fap_count = sum(b["kind"] == "fap" for b in binaries)
     fal_count = sum(b["kind"] == "fal" for b in binaries)
+    by_disposition: dict[str, int] = {}
+    for finding in findings:
+        disposition = finding["disposition"]
+        by_disposition[disposition] = by_disposition.get(disposition, 0) + 1
     return {
         "schema": 1,
         "kind": "communityPackAbiAudit",
@@ -288,6 +307,7 @@ def audit_archives(
             "fal": fal_count,
             "compatible": compatible,
             "needs_review": len(findings),
+            "by_disposition": dict(sorted(by_disposition.items())),
             "embedded": sum(b["embedded"] for b in binaries),
             "asset_bundles": bundle_count,
         },
