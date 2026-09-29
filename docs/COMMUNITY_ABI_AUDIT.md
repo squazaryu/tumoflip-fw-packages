@@ -13,6 +13,12 @@ also reads each ELF's undefined symbols:
 - missing imports produce `needsReview` and a canonical review issue. The
   workflow never installs or executes a Community Pack binary.
 
+The report's `summary.by_disposition` separates missing firmware imports from
+host-contract review, missing FAL ownership, plugin imports, and API/target
+mismatches. `host_contract_review` means the host binary or its declared exports
+must be reviewed against the pinned contract; it does not assert that the FAL
+is broken. A changed host hash is never accepted automatically.
+
 The archives are checked for exact release digests before scanning, and the
 scanner bounds archive size, member size, member paths, binary count, and
 duplicate ZIP names. A report is kept as an artifact for 14 days and the

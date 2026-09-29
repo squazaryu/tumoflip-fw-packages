@@ -13,6 +13,13 @@ contract, the names are declared in its own reviewed host API, and its symbol
 table defines them. Another FAP in the same archive cannot satisfy the imports.
 Undefined weak symbols are not definitions.
 
+`summary.by_disposition` keeps review work actionable: `firmware_import_missing`
+identifies a standalone FAP that imports a symbol absent from Tumoflip,
+`plugin_import_missing` identifies an unresolved FAL import, and
+`host_contract_review` means its host must be re-reviewed and re-pinned. The
+remaining categories identify host binding or API/target mismatches. Review
+counts are not a count of proven broken applications.
+
 The initial contract records TOTP, Metroflip and LAN Tester from Community Pack
 19sep2026 / `8970b6ba0e48a9c63b4bfaf07ca121f5b08e5b34`. A changed host with private
 imports fails closed until its contract is reviewed. Do not auto-advance hashes.
