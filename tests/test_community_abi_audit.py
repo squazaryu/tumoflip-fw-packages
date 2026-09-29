@@ -154,6 +154,8 @@ Variable,+,usb_cdc_dual,FuriHalUsbInterface,
 
         self.assertEqual(report["status"], "needsReview")
         self.assertEqual(report["summary"]["needs_review"], 1)
+        self.assertEqual(report["summary"]["by_disposition"], {"firmware_import_missing": 1})
+        self.assertEqual(report["findings"][0]["disposition"], "firmware_import_missing")
         self.assertEqual(
             report["findings"][0]["missing_symbols"], ["gps_request_stream"]
         )
@@ -190,6 +192,7 @@ Variable,+,usb_cdc_dual,FuriHalUsbInterface,
 
         self.assertEqual(report["status"], "verified")
         self.assertEqual(report["summary"]["needs_review"], 0)
+        self.assertEqual(report["summary"]["by_disposition"], {})
         self.assertEqual(report["summary"]["fal"], 1)
 
     def test_unrelated_host_cannot_supply_plugin_import(self):
@@ -205,6 +208,8 @@ Variable,+,usb_cdc_dual,FuriHalUsbInterface,
                 firmware_symbols=set(), nm_runner=lambda p: "0000 T wrong_export" if "other.fap" in p.name else ("U wrong_export" if "child.fal" in p.name else ""))
         self.assertEqual(report["status"], "needsReview")
         self.assertEqual(report["summary"]["embedded"], 1)
+        self.assertEqual(report["summary"]["by_disposition"], {"host_contract_review": 1})
+        self.assertEqual(report["findings"][0]["disposition"], "host_contract_review")
         self.assertEqual(report["findings"][0]["missing_symbols"], ["wrong_export"])
 
     def test_embedded_missing_import_and_checksum_are_checked(self):
