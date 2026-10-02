@@ -334,27 +334,27 @@ class NativeReleaseTests(unittest.TestCase):
                 self.publisher_commit,
             )
 
-    def test_repository_records_exact_tumospectrum_dev_022_release(self) -> None:
+    def test_repository_records_exact_specter_dev_023_release(self) -> None:
         current = json.loads(
             (self.repository / "contracts/current-releases.json").read_text()
         )
         self.assertEqual(
             current["channels"]["dev"],
             {
-                "tag": "fw-packages-dev-022",
-                "revision": 22,
+                "tag": "fw-packages-dev-023",
+                "revision": 23,
                 "prerelease": True,
-                "releaseId": "9b2edb16ee57b09a60058d9764633398620cc0ed24fca0db08aef83906dafa8b",
-                "tagCommit": "192a6c88b9d7b1d9dfac8f15ced81261693be076",
-                "sourceCommit": "9531d28b88970df05423c538cefd7966bd08e8af",
-                "targetFirmwareTag": "t-dev-009-012",
-                "targetFirmwareCommit": "9531d28b88970df05423c538cefd7966bd08e8af",
+                "releaseId": "84160432f17fb90e4c54cf3c8c3da909084e97e4a62730bf6587b44dbff27be6",
+                "tagCommit": "dada34ef341305727a46e4bf32048a37b3ea3359",
+                "sourceCommit": "42aad5d7e16cdb430fd7bbed1c37cf5164b3a334",
+                "targetFirmwareTag": "t-dev-009-016",
+                "targetFirmwareCommit": "6d9e81f06382f7894a2209b2809ea1af16fb3fef",
                 "api": "88.14",
                 "target": 7,
                 "assets": {
-                    "fw-packages-dev-022-SHA256SUMS": "567e670c944f04c637ef497cf08bde812abe834ab15e2ecfe8f97da8da7f9f28",
-                    "tumoflip-packages.json": "2cc23946a5d34efac9b63cf9fda728f0c70dc19f32c8d082eed79c714cf8cf3e",
-                    "tumoflip-packages.zip": "b59ab74fdab578749cf36f5ca98672c282267fbf2b9a29f1b70c552b7b0a9feb"
+                    "fw-packages-dev-023-SHA256SUMS": "f19491ea7a2f335588c56be20cec0a6ac1eb347b05a5201926bc7f550cfc6598",
+                    "tumoflip-packages.json": "3a7e1b81c2f8a7e3a83a9967833fd4e4e683b2f3ebb9d8b7679d4b91117787e0",
+                    "tumoflip-packages.zip": "60cafe6a6bcd2e900e228aa5d4f17308eada0a01260d823010c3fdcbdb75eefe"
                 }
             },
         )
@@ -364,10 +364,10 @@ class NativeReleaseTests(unittest.TestCase):
         self.assertEqual(
             lineage["channels"]["dev"],
             {
-                "currentTag": "fw-packages-dev-022",
-                "currentRevision": 22,
-                "nextNativeRevision": 23,
-                "nextNativeTag": "fw-packages-dev-023",
+                "currentTag": "fw-packages-dev-023",
+                "currentRevision": 23,
+                "nextNativeRevision": 24,
+                "nextNativeTag": "fw-packages-dev-024",
                 "seededFromLegacy": False,
             },
         )
@@ -380,7 +380,7 @@ class NativeReleaseTests(unittest.TestCase):
             "apps/Sub-GHz/weather_editor.fap",
         )
         self.assertEqual(policy["overlayGroups"]["weather_editor"], "base")
-        self.assertNotIn("fw-packages-dev-022", policy["releasePlans"])
+        self.assertNotIn("fw-packages-dev-023", policy["releasePlans"])
         with self.assertRaisesRegex(ContractError, "not the next contracted release"):
             load_native_plan(
                 self.repository, "dev", 21,

@@ -316,6 +316,34 @@ class CatalogContractTests(unittest.TestCase):
         ):
             verify_contract(snapshot)
 
+    def test_post_firmware_dev_source_requires_exact_reviewed_parent(self) -> None:
+        snapshot = self._contract_snapshot()
+        verify_contract(snapshot)
+
+        policy_path = snapshot / "contracts/native-build-policy.json"
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        policy["reviewedDevSourceAncestry"]["fw-packages-dev-023"][
+            "firstParentCommit"
+        ] = "e" * 40
+        policy_path.write_text(json.dumps(policy), encoding="utf-8")
+
+        with self.assertRaisesRegex(
+            ContractError, "target firmware differs without snapshot plan"
+        ):
+            verify_contract(snapshot)
+
+    def test_post_firmware_dev_source_rejects_unreviewed_source(self) -> None:
+        snapshot = self._contract_snapshot()
+        path = snapshot / "contracts/current-releases.json"
+        current = json.loads(path.read_text(encoding="utf-8"))
+        current["channels"]["dev"]["sourceCommit"] = "f" * 40
+        path.write_text(json.dumps(current), encoding="utf-8")
+
+        with self.assertRaisesRegex(
+            ContractError, "target firmware differs without snapshot plan"
+        ):
+            verify_contract(snapshot)
+
 
 class MigrationProvenanceTests(unittest.TestCase):
     publisher_repository = "squazaryu/tumoflip-fw-packages"
