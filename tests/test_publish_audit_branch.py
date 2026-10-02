@@ -37,7 +37,10 @@ class RawMirrorCatchupTests(unittest.TestCase):
             changed = self.prepare(root)
             self.assertIn("latest.json", changed)
             self.assertEqual((root / "latest.json").read_bytes(), (root / "released.json").read_bytes())
-            self.assertEqual(len(list((root / "history").glob("*.json"))), len(released["audits"]))
+            snapshots = [json.loads(path.read_text()) for path in (root / "history").glob("*.json")]
+            self.assertIn(released["audits"][-1], snapshots)
+            self.assertIn(current, snapshots)
+            self.assertEqual(self.prepare(root), [])
 
     def test_superseded_raw_snapshot_is_preserved_without_overwriting_history(self) -> None:
         current = self.ledger["audits"][-1]
@@ -111,6 +114,36 @@ class RawMirrorCatchupTests(unittest.TestCase):
             (root / "history/broken.json").write_text("not JSON")
             original = (root / "latest.json").read_bytes()
             with self.assertRaises(BranchError):
+                self.prepare(root)
+            self.assertEqual((root / "latest.json").read_bytes(), original)
+
+    def test_symlink_history_is_rejected_before_mutation(self) -> None:
+        current = self.ledger["audits"][-1]
+        released = audit_tool.merge_ledger(self.ledger, current)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.stage(root, self.ledger, released, current)
+            original = (root / "latest.json").read_bytes()
+            (root / "history/link.json").symlink_to(root / "audit.json")
+            with self.assertRaisesRegex(BranchError, "symlink"):
+                self.prepare(root)
+            self.assertEqual((root / "latest.json").read_bytes(), original)
+
+    def test_history_collision_is_rejected_before_mutation(self) -> None:
+        current = self.ledger["audits"][-1]
+        released = audit_tool.merge_ledger(self.ledger, current)
+        archives = {item["pack"]: item["sha256"] for item in current["archives"]}
+        semantic = audit_tool.semantic_audit_sha256(current)
+        name = (
+            f"{current['sequence']}-{current['sourceTag']}-{archives['base'][:12]}-"
+            f"{archives['extra'][:12]}-{semantic}.json"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.stage(root, self.ledger, released, current)
+            audit_tool.write_json(root / "history" / name, self.ledger["audits"][0])
+            original = (root / "latest.json").read_bytes()
+            with self.assertRaisesRegex(BranchError, "collision"):
                 self.prepare(root)
             self.assertEqual((root / "latest.json").read_bytes(), original)
 
