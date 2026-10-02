@@ -16,7 +16,7 @@ class SpecterDev023Tests(unittest.TestCase):
         self.assertIsNotNone(plan)
         self.assertEqual(plan["mode"], "overlay")
         self.assertEqual(plan["selectedOverlays"], ["specter"])
-        self.assertRegex(plan["sourceCommit"], r"^[0-9a-f]{40}$")
+        self.assertEqual(plan["sourceCommit"], "42aad5d7e16cdb430fd7bbed1c37cf5164b3a334")
         self.assertEqual(
             plan["targetFirmware"],
             {
