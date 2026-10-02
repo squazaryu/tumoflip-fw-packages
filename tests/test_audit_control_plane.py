@@ -142,6 +142,30 @@ class AuditControlPlaneTests(unittest.TestCase):
         with self.assertRaisesRegex(InputError, "duplicated"):
             validate_targets(contract)
 
+    def test_active_catalogs_have_exact_published_audit_evidence(self) -> None:
+        contract = validate_targets(
+            json.loads((self.root / "contracts/protected-audit-targets.json").read_text())
+        )
+        current = json.loads((self.root / "contracts/current-releases.json").read_text())
+        packages = {item["releaseTag"]: item for item in contract["packages"]}
+        for channel, release in current["channels"].items():
+            with self.subTest(channel=channel, release=release["tag"]):
+                self.assertIn(
+                    release["tag"], set(packages),
+                    "Published active catalog is missing from audit inputs; package-only "
+                    "apps would incorrectly be reported as absent",
+                )
+                target = packages[release["tag"]]
+                self.assertEqual(target["tagCommit"], release["tagCommit"])
+                self.assertEqual(target["manifestSourceCommit"], release["sourceCommit"])
+                self.assertEqual(target["manifestReleaseId"], release["releaseId"])
+                self.assertEqual(target["prerelease"], release["prerelease"])
+                for asset in target["assets"].values():
+                    if asset["name"] in release["assets"]:
+                        self.assertEqual(asset["sha256"], release["assets"][asset["name"]])
+                self.assertEqual(target["assets"]["manifest"]["name"], "tumoflip-packages.json")
+                self.assertEqual(target["assets"]["archive"]["name"], "tumoflip-packages.zip")
+
     def test_target_contract_rejects_duplicate_rolling_firmware_channel(self) -> None:
         contract = json.loads((self.root / "contracts/protected-audit-targets.json").read_text())
         contract["rollingFirmware"][1]["channel"] = "stable"
