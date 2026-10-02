@@ -85,6 +85,8 @@ class AuditControlPlaneTests(unittest.TestCase):
                 371276208,
                 375940307,
                 385465323,
+                387825651,
+                401571085,
             },
         )
         for tag, item in packages.items():
@@ -95,7 +97,10 @@ class AuditControlPlaneTests(unittest.TestCase):
                     item["manifestSourceCommit"],
                     "8ab2ccdf7a34bbf3e07f2d4cbd459de1c6de8758",
                 )
-            elif tag in {"fw-packages-stable-004", "fw-packages-dev-015"}:
+            elif tag in {
+                "fw-packages-stable-004", "fw-packages-dev-015",
+                "fw-packages-stable-006", "fw-packages-dev-023",
+            }:
                 self.assertIn("catalogProvenance", item["assets"])
                 self.assertNotIn("migrationProvenance", item["assets"])
                 if tag == "fw-packages-stable-004":
@@ -103,7 +108,7 @@ class AuditControlPlaneTests(unittest.TestCase):
                         item["manifestSourceCommit"],
                         "eba1cfd8cfb022d788433bd540a82cc2e4e25245",
                     )
-                else:
+                elif tag == "fw-packages-dev-015":
                     self.assertEqual(
                         item["manifestSourceCommit"],
                         "e2d03acda01a8f71f9b80719fc788f2cf6a42f6a",
@@ -116,7 +121,7 @@ class AuditControlPlaneTests(unittest.TestCase):
         )
         self.assertEqual(
             contract["implementations"]["dev"]["commit"],
-            "d06858658012eeed48880f70f8e10b44fe09f341",
+            "e43ebd461c37e91b06d8fdacfe28bac186d6819d",
         )
         self.assertEqual(contract["implementation"], contract["implementations"]["dev"])
         firmware = {item["releaseTag"]: item for item in contract["firmware"]}
@@ -141,6 +146,30 @@ class AuditControlPlaneTests(unittest.TestCase):
         contract["packages"].append(copy.deepcopy(contract["packages"][0]))
         with self.assertRaisesRegex(InputError, "duplicated"):
             validate_targets(contract)
+
+    def test_active_catalogs_have_exact_published_audit_evidence(self) -> None:
+        contract = validate_targets(
+            json.loads((self.root / "contracts/protected-audit-targets.json").read_text())
+        )
+        current = json.loads((self.root / "contracts/current-releases.json").read_text())
+        packages = {item["releaseTag"]: item for item in contract["packages"]}
+        for channel, release in current["channels"].items():
+            with self.subTest(channel=channel, release=release["tag"]):
+                self.assertIn(
+                    release["tag"], set(packages),
+                    "Published active catalog is missing from audit inputs; package-only "
+                    "apps would incorrectly be reported as absent",
+                )
+                target = packages[release["tag"]]
+                self.assertEqual(target["tagCommit"], release["tagCommit"])
+                self.assertEqual(target["manifestSourceCommit"], release["sourceCommit"])
+                self.assertEqual(target["manifestReleaseId"], release["releaseId"])
+                self.assertEqual(target["prerelease"], release["prerelease"])
+                for asset in target["assets"].values():
+                    if asset["name"] in release["assets"]:
+                        self.assertEqual(asset["sha256"], release["assets"][asset["name"]])
+                self.assertEqual(target["assets"]["manifest"]["name"], "tumoflip-packages.json")
+                self.assertEqual(target["assets"]["archive"]["name"], "tumoflip-packages.zip")
 
     def test_target_contract_rejects_duplicate_rolling_firmware_channel(self) -> None:
         contract = json.loads((self.root / "contracts/protected-audit-targets.json").read_text())
