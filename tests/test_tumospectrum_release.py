@@ -16,12 +16,12 @@ class TumoSpectrumReleaseTests(unittest.TestCase):
         self.assertEqual(policy["allowedOverlays"].get("signal_workbench"), target)
         self.assertEqual(policy["overlayGroups"].get("signal_workbench"), "module_one")
 
-    def test_dev022_is_active_with_exact_firmware_and_asset_identity(self):
+    def test_dev022_remains_in_history_with_exact_asset_identity(self):
         policy = json.loads(
             (ROOT / "contracts/native-build-policy.json").read_text()
         )
         current = json.loads((ROOT / "contracts/current-releases.json").read_text())
-        expected_current = {
+        expected_history = {
             "tag": "fw-packages-dev-022",
             "revision": 22,
             "prerelease": True,
@@ -38,15 +38,15 @@ class TumoSpectrumReleaseTests(unittest.TestCase):
                 "tumoflip-packages.zip": "b59ab74fdab578749cf36f5ca98672c282267fbf2b9a29f1b70c552b7b0a9feb",
             },
         }
-        self.assertEqual(current["channels"]["dev"], expected_current)
+        self.assertEqual(current["channels"]["dev"]["revision"], 23)
         self.assertNotIn("fw-packages-dev-022", policy["releasePlans"])
 
         lineage = json.loads((ROOT / "contracts/catalog-lineage.json").read_text())
-        self.assertEqual(lineage["channels"]["dev"]["currentRevision"], 22)
-        self.assertEqual(lineage["channels"]["dev"]["nextNativeRevision"], 23)
+        self.assertEqual(lineage["channels"]["dev"]["currentRevision"], 23)
+        self.assertEqual(lineage["channels"]["dev"]["nextNativeRevision"], 24)
 
         index = json.loads((ROOT / "catalog-index.json").read_text())
-        self.assertEqual(index["channels"]["dev"]["current_revision"], 22)
+        self.assertEqual(index["channels"]["dev"]["current_revision"], 23)
         entry = next(
             item
             for item in index["channels"]["dev"]["releases"]
@@ -54,14 +54,14 @@ class TumoSpectrumReleaseTests(unittest.TestCase):
         )
         self.assertEqual(entry["tag"], "fw-packages-dev-022")
         self.assertEqual(entry["state"], "active")
-        self.assertEqual(entry["release_id"], expected_current["releaseId"])
+        self.assertEqual(entry["release_id"], expected_history["releaseId"])
         self.assertEqual(
             entry["manifest_sha256"],
-            expected_current["assets"]["tumoflip-packages.json"],
+            expected_history["assets"]["tumoflip-packages.json"],
         )
         self.assertEqual(
             entry["archive_sha256"],
-            expected_current["assets"]["tumoflip-packages.zip"],
+            expected_history["assets"]["tumoflip-packages.zip"],
         )
         self.assertEqual(entry["compatibility"], {"targets": [7], "api_majors": [88]})
 

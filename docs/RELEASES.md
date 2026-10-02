@@ -29,9 +29,13 @@ firmware-source repository and commit.
   retained compatible build hashes.
 - A Dev overlay may record a newer exact Tumoflip firmware release as source
   provenance without rebasing the independent catalog baseline, but only when
-  the overlay source commit equals that Dev firmware commit and its F7 target
-  and API major remain compatible with the baseline. Stable firmware changes
-  still require the separate reviewed snapshot/baseline path.
+  the overlay source commit equals that Dev firmware commit, or an exact
+  post-firmware source/first-parent pair has been reviewed and pinned in
+  `reviewedDevSourceAncestry`. In either case its F7 target and API major must
+  remain compatible with the baseline. The reviewed pair is not a general
+  permission to use later source commits: each package tag needs its own exact
+  source and parent evidence. Stable firmware changes still require the
+  separate reviewed snapshot/baseline path.
 - A tag, revision, or release ID collision with different bytes is fatal.
 - `stable-002` and `stable-003` are historical firmware snapshots. `stable-004`
   is the first independent stable baseline. `dev-008` is the migrated legacy

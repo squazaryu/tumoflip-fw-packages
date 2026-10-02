@@ -97,6 +97,7 @@ def verify_contract(root: Path) -> None:
     checkouts = load_json(root / "contracts/source-checkouts.json")
     clients = load_json(root / "contracts/client-sources.json")
     policy = load_json(root / "contracts/native-build-policy.json")
+    reviewed_dev_source_ancestry = policy.get("reviewedDevSourceAncestry", {})
     index = load_json(root / "catalog-index.json")
     lifecycle = load_json(root / "contracts/catalog-index-policy.json")
     esp_installer = load_json(root / "contracts/esp-installer-audit.json")
@@ -176,6 +177,20 @@ def verify_contract(root: Path) -> None:
         if "malformedPrimary" not in terminal or "digestMismatch" not in terminal:
             raise ContractError(f"client {label} must reject malformed primary data")
     commit_pattern = re.compile(checkouts.get("commitPattern", ""))
+    if not isinstance(reviewed_dev_source_ancestry, dict) or any(
+        not isinstance(tag, str)
+        or PACKAGE_TAG.fullmatch(tag) is None
+        or not tag.startswith("fw-packages-dev-")
+        or not isinstance(evidence, dict)
+        or set(evidence) != {"sourceCommit", "firstParentCommit"}
+        or any(
+            not isinstance(value, str) or commit_pattern.fullmatch(value) is None
+            for value in evidence.values()
+        )
+        or evidence["sourceCommit"] == evidence["firstParentCommit"]
+        for tag, evidence in reviewed_dev_source_ancestry.items()
+    ):
+        raise ContractError("reviewed Dev source ancestry is invalid")
     for channel in ("stable", "dev"):
         legacy_channel = legacy["channels"][channel]
         current_channel = current["channels"][channel]
@@ -232,13 +247,21 @@ def verify_contract(root: Path) -> None:
                 if isinstance(baseline_api, str)
                 else None
             )
+            source_commit = current_channel["sourceCommit"]
+            firmware_commit = current_channel["targetFirmwareCommit"]
+            reviewed_source = reviewed_dev_source_ancestry.get(current_channel["tag"])
             exact_dev_overlay_target = (
                 channel == "dev"
                 and isinstance(current_channel.get("targetFirmwareTag"), str)
                 and FIRMWARE_DEV_TAG.fullmatch(current_channel["targetFirmwareTag"])
                 is not None
-                and current_channel["sourceCommit"]
-                == current_channel["targetFirmwareCommit"]
+                and (
+                    source_commit == firmware_commit
+                    or reviewed_source == {
+                        "sourceCommit": source_commit,
+                        "firstParentCommit": firmware_commit,
+                    }
+                )
                 and current_channel.get("target") == baseline.get("target")
                 and current_api_match is not None
                 and baseline_api_match is not None
