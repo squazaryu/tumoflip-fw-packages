@@ -546,15 +546,27 @@ jobs:
             > "$RUNNER_TEMP/remote-latest.json"
           cmp "$RUNNER_TEMP/remote-latest.json" \
             ../publication/release-assets/protected-app-audit-ledger.json
+      - name: Select requested audit after immutable and raw verification
+        working-directory: control
+        env:
+          EXPECTED_ISSUE_URL: ${{ needs.resolve-issue.outputs.issue_url }}
+        run: |
+          set -euo pipefail
+          python3 tools/audit_release.py select-audit \
+            --root ../publication/release-assets \
+            --verified-record "$RUNNER_TEMP/release-bound.json" \
+            --requested-audit ../publication/audit.json \
+            --expected-issue-url "$EXPECTED_ISSUE_URL" \
+            > "$RUNNER_TEMP/requested-audit.json"
       - name: Reconcile canonical issue only after publication proof
         env:
           GH_TOKEN: ${{ github.token }}
           RAW_COMMIT: ${{ needs.publish.outputs.raw_commit }}
         run: |
           set -euo pipefail
-          ISSUE_URL="$(jq -r .audit.auditIssue "$RUNNER_TEMP/release-bound.json")"
+          ISSUE_URL="$(jq -r .audit.auditIssue "$RUNNER_TEMP/requested-audit.json")"
           ISSUE_NUMBER="${ISSUE_URL##*/}"
-          STATUS="$(jq -r .audit.overallStatus "$RUNNER_TEMP/release-bound.json")"
+          STATUS="$(jq -r .audit.overallStatus "$RUNNER_TEMP/requested-audit.json")"
           AUDIT_TAG="$(jq -r .auditTag publication/publication.json)"
           [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
           [[ "$STATUS" == verified || "$STATUS" == pending ]]

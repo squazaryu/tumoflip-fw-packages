@@ -445,6 +445,43 @@ def verify_release(
     }
 
 
+def select_requested_audit(
+    *, root: Path, verified: dict[str, Any], requested: dict[str, Any], expected_issue_url: str
+) -> dict[str, Any]:
+    """Select an exact requested row after immutable release verification.
+
+    A semantic no-op may reuse a head whose publication evidence binds another
+    pack. Reconciliation must use the requested row of that verified cumulative
+    ledger, never substitute the head's neighboring release-bound audit.
+    """
+    ledger_path = root / LEDGER_ASSET
+    if sha256(ledger_path) != verified.get("ledgerSHA256"):
+        raise AuditReleaseError("cumulative ledger differs from verified release bytes")
+    ledger = load_object(ledger_path)
+    try:
+        audit_tool.validate_ledger(ledger)
+        audit_tool.validate_audit(requested)
+    except audit_tool.AuditError as error:
+        raise AuditReleaseError(str(error)) from error
+    if requested.get("auditIssue") != expected_issue_url:
+        raise AuditReleaseError("requested canonical issue differs")
+    archives = {item["pack"]: item["sha256"] for item in requested["archives"]}
+    matches = [
+        item for item in ledger["audits"]
+        if item["sourceTag"] == requested["sourceTag"]
+        and item["sourceCommit"] == requested["sourceCommit"]
+        and {entry["pack"]: entry["sha256"] for entry in item["archives"]} == archives
+    ]
+    if len(matches) != 1:
+        raise AuditReleaseError("requested exact audit is not in verified cumulative ledger")
+    selected = matches[0]
+    if selected.get("auditIssue") != expected_issue_url:
+        raise AuditReleaseError("verified canonical issue differs")
+    if audit_tool.semantic_audit_sha256(selected) != audit_tool.semantic_audit_sha256(requested):
+        raise AuditReleaseError("requested result differs from verified cumulative audit")
+    return selected
+
+
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -462,6 +499,11 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     verify.add_argument("--tag", required=True)
     verify.add_argument("--publisher-repository", required=True)
     verify.add_argument("--publisher-commit", required=True)
+    select = subparsers.add_parser("select-audit")
+    select.add_argument("--root", type=Path, required=True)
+    select.add_argument("--verified-record", type=Path, required=True)
+    select.add_argument("--requested-audit", type=Path, required=True)
+    select.add_argument("--expected-issue-url", required=True)
     return parser.parse_args(list(argv))
 
 
@@ -479,7 +521,7 @@ def main(argv: Iterable[str] | None = None) -> int:
                 publisher_repository=args.publisher_repository,
                 publisher_commit=args.publisher_commit,
             )
-        else:
+        elif args.command == "verify":
             verified = verify_release(
                 root=args.root,
                 tag=args.tag,
@@ -487,6 +529,22 @@ def main(argv: Iterable[str] | None = None) -> int:
                 publisher_commit=args.publisher_commit,
             )
             print(json.dumps(verified, separators=(",", ":"), ensure_ascii=False))
+        else:
+            verified = load_object(args.verified_record)
+            selected = select_requested_audit(
+                root=args.root,
+                verified=verified,
+                requested=load_object(args.requested_audit),
+                expected_issue_url=args.expected_issue_url,
+            )
+            print(json.dumps({
+                "schema": 1,
+                "kind": "verifiedProtectedAppAuditSelection",
+                "auditReleaseTag": verified["auditReleaseTag"],
+                "ledgerSHA256": verified["ledgerSHA256"],
+                "releaseBoundSourceTag": verified["audit"]["sourceTag"],
+                "audit": selected,
+            }, separators=(",", ":"), ensure_ascii=False))
     except (AuditReleaseError, OSError) as error:
         print(f"audit release validation failed: {error}", file=sys.stderr)
         return 1
