@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -67,23 +66,31 @@ def _remote_head(repository: str) -> str | None:
     return rows[0][0]
 
 
-def _semantic_history_exists(history: Path, audit: dict[str, Any]) -> bool:
-    expected = audit_tool.semantic_audit_sha256(audit)
+def _history_semantics(history: Path) -> set[str]:
+    identities: set[str] = set()
     for path in history.glob("*.json"):
+        if path.is_symlink():
+            raise BranchError(f"audit history must not be a symlink: {path.name}")
         try:
             existing = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError) as error:
             raise BranchError(f"invalid audit history file {path.name}: {error}") from error
         if not isinstance(existing, dict):
             raise BranchError(f"invalid audit history root: {path.name}")
-        if audit_tool.semantic_audit_sha256(existing) == expected:
-            return True
-    return False
+        identities.add(audit_tool.semantic_audit_sha256(existing))
+    return identities
+
+
+def _audit_identity(audit: dict[str, Any]) -> tuple[str, str, str]:
+    archives = {item["pack"]: item["sha256"] for item in audit["archives"]}
+    return audit["sourceTag"], archives["base"], archives["extra"]
 
 
 def prepare_tree(*, root: Path, audit_path: Path, released_ledger: Path) -> list[str]:
     latest = root / "latest.json"
     history = root / "history"
+    if latest.is_symlink() or history.is_symlink():
+        raise BranchError("raw audit latest/history must not be symlinks")
     if not latest.is_file() or not history.is_dir():
         raise BranchError("raw audit branch lacks cumulative latest/history")
     try:
@@ -91,32 +98,57 @@ def prepare_tree(*, root: Path, audit_path: Path, released_ledger: Path) -> list
         audit = audit_tool.read_json(audit_path)
         audit_tool.validate_ledger(existing, allow_client_duplicate_provenance=True)
         audit_tool.validate_audit(audit)
-        merged = audit_tool.merge_ledger(existing, audit)
+        released = audit_tool.read_json(released_ledger)
+        audit_tool.validate_ledger(released)
     except audit_tool.AuditError as error:
-        raise BranchError(str(error)) from error
+        raise BranchError(f"raw cumulative ledger differs from immutable release ledger: {error}") from error
     released_bytes = released_ledger.read_bytes()
-    generated = root / ".generated-latest.json"
-    audit_tool.write_json(generated, merged)
-    generated_bytes = generated.read_bytes()
-    generated.unlink()
-    if generated_bytes != released_bytes:
-        raise BranchError("raw cumulative ledger differs from immutable release ledger")
-    changed: list[str] = []
-    if latest.read_bytes() != released_bytes:
-        latest.write_bytes(released_bytes)
-        changed.append("latest.json")
-    if not _semantic_history_exists(history, audit):
-        archives = {item["pack"]: item["sha256"] for item in audit["archives"]}
-        semantic = audit_tool.semantic_audit_sha256(audit)
+    released_by_id = {_audit_identity(item): item for item in released["audits"]}
+    existing_by_id = {_audit_identity(item): item for item in existing["audits"]}
+    bound = released_by_id.get(_audit_identity(audit))
+    if bound is None or audit_tool.semantic_audit_sha256(bound) != audit_tool.semantic_audit_sha256(audit):
+        raise BranchError("current audit differs from immutable release snapshot")
+
+    # The raw branch is a transitional mirror, not the publication predecessor.
+    # A failed mirror push must not permanently block later verified releases.
+    # Preserve superseded raw snapshots in history; never drop an unknown pack
+    # identity or let a mutable mirror rewrite immutable source identity fields.
+    candidates = [bound]
+    for identity, old in existing_by_id.items():
+        target = released_by_id.get(identity)
+        if target is None:
+            raise BranchError(f"raw audit identity is absent from released snapshot: {old['sourceTag']}")
+        if any(old.get(key) != target.get(key) for key in ("sourceCommit", "sourceURL", "publishedAt", "sequence")):
+            raise BranchError(f"raw audit source identity differs: {old['sourceTag']}")
+        if audit_tool.semantic_audit_sha256(old) != audit_tool.semantic_audit_sha256(target):
+            candidates.extend((old, target))
+    candidates.extend(item for identity, item in released_by_id.items() if identity not in existing_by_id)
+
+    # Validate all history and collisions before changing either latest or history.
+    known = _history_semantics(history)
+    planned: list[tuple[Path, dict[str, Any]]] = []
+    for item in candidates:
+        semantic = audit_tool.semantic_audit_sha256(item)
+        if semantic in known:
+            continue
+        archives = {entry["pack"]: entry["sha256"] for entry in item["archives"]}
         filename = (
-            f"{audit['sequence']}-{audit['sourceTag']}-{archives['base'][:12]}-"
+            f"{item['sequence']}-{item['sourceTag']}-{archives['base'][:12]}-"
             f"{archives['extra'][:12]}-{semantic}.json"
         )
         destination = history / filename
-        if destination.exists():
+        if destination.exists() or destination.is_symlink():
             raise BranchError(f"audit history filename collision: {filename}")
-        shutil.copyfile(audit_path, destination)
-        changed.append(f"history/{filename}")
+        planned.append((destination, item))
+        known.add(semantic)
+
+    changed: list[str] = []
+    for destination, item in planned:
+        audit_tool.write_json(destination, item)
+        changed.append(destination.relative_to(root).as_posix())
+    if latest.read_bytes() != released_bytes:
+        latest.write_bytes(released_bytes)
+        changed.append("latest.json")
     return changed
 
 

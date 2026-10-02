@@ -36,6 +36,28 @@ catalog again. No schedule, watcher expansion or firmware API change is involved
 This corrects target-byte evidence only. Specter 3.3 NFC behavior, settings,
 logs, navigation and BLE coexistence still require owner device acceptance.
 
+## Transitional mirror catch-up
+
+The October publication failure was not caused by unresolved apps: immutable
+publication succeeded, but the raw mirror contained only 33 of the 40 released
+audit identities and one superseded 22sep2026p2 snapshot. Re-merging only the
+latest audit could never reproduce the authoritative cumulative release.
+
+The mirror publisher now validates the current audit against the independently
+verified released snapshot, rejects missing/raw-unknown pack identities and
+source identity changes, preserves superseded snapshots and all existing history
+files, and writes the released ledger byte-for-byte. History corruption/collisions
+are checked before any mutation. The branch still advances by normal Git push;
+no force-push or immutable-release rewrite is permitted. Raw history is retained
+for provenance, not promoted to current accepted device evidence.
+
+Regression tests cover missed publications, updated older audits, no-op reruns,
+unknown identities, changed source commits, mismatched current audits, corrupt
+history, symlinks and filename collisions. A local probe using the real raw
+branch and independently verified audit-ledger-20261001-002 preserved all 104
+existing history files, added eight missing/superseded snapshots and reproduced
+the exact immutable ledger SHA256; its second run was a no-op.
+
 ## Remaining source decisions
 
 | App | Finding and action |
