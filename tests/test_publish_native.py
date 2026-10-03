@@ -152,6 +152,12 @@ class NativePublicationTests(unittest.TestCase):
         self.repository = Path(__file__).resolve().parents[1]
         self.control = self.root / "control"
         shutil.copytree(self.repository / "contracts", self.control / "contracts")
+        baseline_path = self.control / "contracts/catalog-baselines.json"
+        baselines = json.loads(baseline_path.read_text())
+        baselines["channels"]["dev"] = json.loads(
+            (self.repository / "tests/fixtures/native/dev-baseline.json").read_text()
+        )
+        baseline_path.write_text(json.dumps(baselines))
         current_path = self.control / "contracts/current-releases.json"
         current = json.loads(current_path.read_text())
         current["channels"]["dev"]["tag"] = "fw-packages-dev-008"
