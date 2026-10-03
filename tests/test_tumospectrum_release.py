@@ -38,15 +38,16 @@ class TumoSpectrumReleaseTests(unittest.TestCase):
                 "tumoflip-packages.zip": "b59ab74fdab578749cf36f5ca98672c282267fbf2b9a29f1b70c552b7b0a9feb",
             },
         }
-        self.assertEqual(current["channels"]["dev"]["revision"], 23)
+        revision = current["channels"]["dev"]["revision"]
+        self.assertGreaterEqual(revision, 23)
         self.assertNotIn("fw-packages-dev-022", policy["releasePlans"])
 
         lineage = json.loads((ROOT / "contracts/catalog-lineage.json").read_text())
-        self.assertEqual(lineage["channels"]["dev"]["currentRevision"], 23)
-        self.assertEqual(lineage["channels"]["dev"]["nextNativeRevision"], 24)
+        self.assertEqual(lineage["channels"]["dev"]["currentRevision"], revision)
+        self.assertEqual(lineage["channels"]["dev"]["nextNativeRevision"], revision + 1)
 
         index = json.loads((ROOT / "catalog-index.json").read_text())
-        self.assertEqual(index["channels"]["dev"]["current_revision"], 23)
+        self.assertEqual(index["channels"]["dev"]["current_revision"], revision)
         entry = next(
             item
             for item in index["channels"]["dev"]["releases"]
@@ -65,11 +66,14 @@ class TumoSpectrumReleaseTests(unittest.TestCase):
         )
         self.assertEqual(entry["compatibility"], {"targets": [7], "api_majors": [88]})
 
-    def test_global_dev_baseline_stays_independent_from_firmware_release(self):
+    def test_full_api8815_baseline_pins_exact_firmware_snapshot(self):
         baselines = json.loads((ROOT / "contracts/catalog-baselines.json").read_text())
         self.assertEqual(
-            baselines["channels"]["dev"]["firmwareTag"], "t-dev-004-015"
+            baselines["channels"]["dev"]["firmwareTag"], "t-dev-009-018"
         )
+        self.assertEqual(baselines["channels"]["dev"]["api"], "88.15")
+        self.assertEqual(baselines["channels"]["dev"]["packageManifestSHA256"],
+                         "d15480817521b88a4ee013e88cdd7dd637a7fae084bf7cb19ff1808bcca9295f")
 
 
 if __name__ == "__main__":

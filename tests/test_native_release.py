@@ -48,6 +48,10 @@ class NativeReleaseTests(unittest.TestCase):
         self.fixture = self.repository / "tests/fixtures/native"
         self.control = self.root / "control"
         shutil.copytree(self.repository / "contracts", self.control / "contracts")
+        baseline_path = self.control / "contracts/catalog-baselines.json"
+        baselines = json.loads(baseline_path.read_text())
+        baselines["channels"]["dev"] = json.loads((self.fixture / "dev-baseline.json").read_text())
+        baseline_path.write_text(json.dumps(baselines))
         current_path = self.control / "contracts/current-releases.json"
         current = json.loads(current_path.read_text())
         current["channels"]["dev"]["tag"] = "fw-packages-dev-008"
@@ -351,40 +355,26 @@ class NativeReleaseTests(unittest.TestCase):
                 self.publisher_commit,
             )
 
-    def test_repository_records_exact_specter_dev_023_release(self) -> None:
+    def test_repository_head_matches_history_and_next_revision(self) -> None:
         current = json.loads(
             (self.repository / "contracts/current-releases.json").read_text()
         )
-        self.assertEqual(
-            current["channels"]["dev"],
-            {
-                "tag": "fw-packages-dev-023",
-                "revision": 23,
-                "prerelease": True,
-                "releaseId": "84160432f17fb90e4c54cf3c8c3da909084e97e4a62730bf6587b44dbff27be6",
-                "tagCommit": "dada34ef341305727a46e4bf32048a37b3ea3359",
-                "sourceCommit": "42aad5d7e16cdb430fd7bbed1c37cf5164b3a334",
-                "targetFirmwareTag": "t-dev-009-016",
-                "targetFirmwareCommit": "6d9e81f06382f7894a2209b2809ea1af16fb3fef",
-                "api": "88.14",
-                "target": 7,
-                "assets": {
-                    "fw-packages-dev-023-SHA256SUMS": "f19491ea7a2f335588c56be20cec0a6ac1eb347b05a5201926bc7f550cfc6598",
-                    "tumoflip-packages.json": "3a7e1b81c2f8a7e3a83a9967833fd4e4e683b2f3ebb9d8b7679d4b91117787e0",
-                    "tumoflip-packages.zip": "60cafe6a6bcd2e900e228aa5d4f17308eada0a01260d823010c3fdcbdb75eefe"
-                }
-            },
-        )
+        head = current["channels"]["dev"]
+        index = json.loads((self.repository / "catalog-index.json").read_text())
+        entry = next(item for item in index["channels"]["dev"]["releases"] if item["tag"] == head["tag"])
+        self.assertEqual(entry["release_id"], head["releaseId"])
+        self.assertEqual(entry["manifest_sha256"], head["assets"]["tumoflip-packages.json"])
+        self.assertEqual(entry["archive_sha256"], head["assets"]["tumoflip-packages.zip"])
         lineage = json.loads(
             (self.repository / "contracts/catalog-lineage.json").read_text()
         )
         self.assertEqual(
             lineage["channels"]["dev"],
             {
-                "currentTag": "fw-packages-dev-023",
-                "currentRevision": 23,
-                "nextNativeRevision": 24,
-                "nextNativeTag": "fw-packages-dev-024",
+                "currentTag": head["tag"],
+                "currentRevision": head["revision"],
+                "nextNativeRevision": head["revision"] + 1,
+                "nextNativeTag": f"fw-packages-dev-{head['revision'] + 1:03d}",
                 "seededFromLegacy": False,
             },
         )

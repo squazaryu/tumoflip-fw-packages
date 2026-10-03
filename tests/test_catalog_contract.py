@@ -317,12 +317,13 @@ class CatalogContractTests(unittest.TestCase):
             verify_contract(snapshot)
 
     def test_post_firmware_dev_source_requires_exact_reviewed_parent(self) -> None:
-        snapshot = self._contract_snapshot()
+        snapshot = self._post_firmware_snapshot()
         verify_contract(snapshot)
 
         policy_path = snapshot / "contracts/native-build-policy.json"
         policy = json.loads(policy_path.read_text(encoding="utf-8"))
-        policy["reviewedDevSourceAncestry"]["fw-packages-dev-023"][
+        current = json.loads((snapshot / "contracts/current-releases.json").read_text())
+        policy["reviewedDevSourceAncestry"][current["channels"]["dev"]["tag"]][
             "firstParentCommit"
         ] = "e" * 40
         policy_path.write_text(json.dumps(policy), encoding="utf-8")
@@ -333,7 +334,7 @@ class CatalogContractTests(unittest.TestCase):
             verify_contract(snapshot)
 
     def test_post_firmware_dev_source_rejects_unreviewed_source(self) -> None:
-        snapshot = self._contract_snapshot()
+        snapshot = self._post_firmware_snapshot()
         path = snapshot / "contracts/current-releases.json"
         current = json.loads(path.read_text(encoding="utf-8"))
         current["channels"]["dev"]["sourceCommit"] = "f" * 40
@@ -343,6 +344,23 @@ class CatalogContractTests(unittest.TestCase):
             ContractError, "target firmware differs without snapshot plan"
         ):
             verify_contract(snapshot)
+
+    def _post_firmware_snapshot(self) -> Path:
+        snapshot = self._contract_snapshot()
+        current_path = snapshot / "contracts/current-releases.json"
+        current = json.loads(current_path.read_text())
+        dev = current["channels"]["dev"]
+        # Exercise a post-firmware overlay independently of the live baseline.
+        dev.update(sourceCommit="a" * 40, targetFirmwareCommit="b" * 40,
+                   targetFirmwareTag="t-dev-090-001")
+        current_path.write_text(json.dumps(current))
+        policy_path = snapshot / "contracts/native-build-policy.json"
+        policy = json.loads(policy_path.read_text())
+        policy["reviewedDevSourceAncestry"][dev["tag"]] = {
+            "sourceCommit": "a" * 40, "firstParentCommit": "b" * 40,
+        }
+        policy_path.write_text(json.dumps(policy))
+        return snapshot
 
 
 class MigrationProvenanceTests(unittest.TestCase):
