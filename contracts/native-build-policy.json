@@ -75,6 +75,8 @@
         "firmwareVersion": "t-dev-009-018",
         "firmwareCommit": "9adb4fe71dd962811aea92de030c1c4bd35a4b15",
         "firmwareReleaseId": "8973c4269deeb3e2695bc263145e843125d622a8a85cc45520eec71133246ae8",
+        "packageManifestSHA256": "3baaca8a4c476f0409a1bf78c8246b6e83a72b6de0235aadca4b470e878e81e4",
+        "packageZipSHA256": "898e2241edd146f6569e5f9c71f71061999f1b866fa97fc326a1b555a5871360",
         "api": "88.15",
         "target": 7
       }
