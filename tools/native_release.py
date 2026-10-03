@@ -291,14 +291,17 @@ def load_native_plan(
     target_firmware_contract = release_policy.get("targetFirmware", baseline)
     if not isinstance(target_firmware_contract, dict):
         raise ContractError("target firmware contract is invalid")
-    if "targetFirmware" in release_policy and set(target_firmware_contract) != {
+    target_keys = {
         "firmwareTag",
         "firmwareVersion",
         "firmwareCommit",
         "firmwareReleaseId",
         "api",
         "target",
-    }:
+    }
+    if mode in {"baseline", "firmwareSnapshot"}:
+        target_keys.update({"packageManifestSHA256", "packageZipSHA256"})
+    if "targetFirmware" in release_policy and set(target_firmware_contract) != target_keys:
         raise ContractError("release-specific target firmware contract is invalid")
 
     firmware_commit = _exact_commit(
@@ -325,7 +328,7 @@ def load_native_plan(
     if mode in {"baseline", "firmwareSnapshot"}:
         if source_commit != firmware_commit:
             raise ContractError(f"{mode} source differs from target firmware")
-    if mode == "firmwareSnapshot":
+    if mode in {"baseline", "firmwareSnapshot"}:
         for value, label in (
             (snapshot_manifest_sha, "snapshot manifest SHA-256"),
             (snapshot_zip_sha, "snapshot ZIP SHA-256"),

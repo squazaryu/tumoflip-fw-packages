@@ -19,6 +19,23 @@ from tools.native_release import (
 
 
 class NativeReleaseTests(unittest.TestCase):
+    def test_baseline_can_pin_exact_snapshot_digests(self) -> None:
+        path = self.control / "contracts/native-build-policy.json"
+        policy = json.loads(path.read_text())
+        policy["releasePlans"]["fw-packages-dev-009"] = {
+            "mode": "baseline", "sourceCommit": self.source_commit,
+            "targetFirmware": {
+                "firmwareTag": "t-dev-009-018", "firmwareVersion": "t-dev-009-018",
+                "firmwareCommit": self.source_commit, "firmwareReleaseId": "a" * 64,
+                "api": "88.15", "target": 7,
+                "packageManifestSHA256": "b" * 64, "packageZipSHA256": "c" * 64,
+            },
+        }
+        path.write_text(json.dumps(policy))
+        plan = load_native_plan(self.control, "dev", 9, self.source_commit, self.publisher_commit)
+        self.assertEqual(plan["targetFirmware"]["packageManifestSHA256"], "b" * 64)
+        self.assertEqual(plan["targetFirmware"]["packageZipSHA256"], "c" * 64)
+
     source_commit = "a6bb38f027f5f17f2752d5dfca157478472b5c10"
     quac_source_commit = "9598136346b8b691dd3eefa85623e53dcf1eacb2"
     quac_010_source_commit = "f3ad1896fb1ea893e2530dcb836d376e8a20ff00"
