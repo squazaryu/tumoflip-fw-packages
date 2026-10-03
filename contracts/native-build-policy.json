@@ -69,13 +69,13 @@
   "releasePlans": {
     "fw-packages-dev-024": {
       "mode": "baseline",
-      "sourceCommit": "9adb4fe71dd962811aea92de030c1c4bd35a4b15",
+      "sourceCommit": "1c99acf242fee7d9e30b3b7ee0a61d15599e5790",
       "targetFirmware": {
         "firmwareTag": "t-dev-009-018",
         "firmwareVersion": "t-dev-009-018",
-        "firmwareCommit": "9adb4fe71dd962811aea92de030c1c4bd35a4b15",
-        "firmwareReleaseId": "8973c4269deeb3e2695bc263145e843125d622a8a85cc45520eec71133246ae8",
-        "packageManifestSHA256": "3baaca8a4c476f0409a1bf78c8246b6e83a72b6de0235aadca4b470e878e81e4",
+        "firmwareCommit": "1c99acf242fee7d9e30b3b7ee0a61d15599e5790",
+        "firmwareReleaseId": "1ea7131459db6995f846820f6008d1c11c435f0c9de75a012c2ac50171ccb997",
+        "packageManifestSHA256": "d15480817521b88a4ee013e88cdd7dd637a7fae084bf7cb19ff1808bcca9295f",
         "packageZipSHA256": "898e2241edd146f6569e5f9c71f71061999f1b866fa97fc326a1b555a5871360",
         "api": "88.15",
         "target": 7
