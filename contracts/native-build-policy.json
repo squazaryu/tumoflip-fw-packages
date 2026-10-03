@@ -66,7 +66,20 @@
     "totp_cli_update_plugin": "base",
     "totp_cli_version_plugin": "base"
   },
-  "releasePlans": {},
+  "releasePlans": {
+    "fw-packages-dev-024": {
+      "mode": "baseline",
+      "sourceCommit": "9adb4fe71dd962811aea92de030c1c4bd35a4b15",
+      "targetFirmware": {
+        "firmwareTag": "t-dev-009-018",
+        "firmwareVersion": "t-dev-009-018",
+        "firmwareCommit": "9adb4fe71dd962811aea92de030c1c4bd35a4b15",
+        "firmwareReleaseId": "8973c4269deeb3e2695bc263145e843125d622a8a85cc45520eec71133246ae8",
+        "api": "88.15",
+        "target": 7
+      }
+    }
+  },
   "reviewedDevSourceAncestry": {
     "fw-packages-dev-023": {
       "sourceCommit": "42aad5d7e16cdb430fd7bbed1c37cf5164b3a334",
