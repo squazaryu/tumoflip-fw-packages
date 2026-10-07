@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "sourceRepository": "xMasterX/all-the-plugins",
-  "generatedAt": "2026-10-06T21:04:34+00:00",
+  "generatedAt": "2026-10-07T06:35:12+00:00",
   "audits": [
     {
       "sequence": 20260809193105,
@@ -144070,6 +144070,18 @@
           ],
           "targetProvenance": [
             {
+              "targetMD5": "dcb550e8400f08092590ddb4801ca26e",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "0610b44187e3142cd8708242dff4199e",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -144080,18 +144092,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "dcb550e8400f08092590ddb4801ca26e",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "d268dad4a92be3e6ad566eb609436938",
@@ -144314,6 +144314,18 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
+              "targetMD5": "70cf0d1c27d1f9be164b6b026d295170",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "ac9d4fab62499e8ea35ee20efa52063a",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -144324,18 +144336,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "70cf0d1c27d1f9be164b6b026d295170",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "19221ada96599cab415b860c8d5f67d6",
@@ -144504,6 +144504,18 @@
           ],
           "targetProvenance": [
             {
+              "targetMD5": "07fb327911691a42fd1252f02e5f43b2",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "40b56f7de3724b1bb295126166297ef5",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -144514,18 +144526,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "07fb327911691a42fd1252f02e5f43b2",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "af8626c22c7f2581cb72194acf6dc9f6",
@@ -144694,6 +144694,18 @@
           ],
           "targetProvenance": [
             {
+              "targetMD5": "a041e5f4135b25f5ed140a24e5a42baa",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "c9761825f7105047741cf6f38f9622bc",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -144704,18 +144716,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "a041e5f4135b25f5ed140a24e5a42baa",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "fc8d3a46afbfa684e5a23cf49e2787c6",
@@ -144897,6 +144897,18 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
+              "targetMD5": "217b9aa8a5349592e4522773bc477e31",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "21f5d592948ed9af6c8013a39055a6cc",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -144907,18 +144919,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "217b9aa8a5349592e4522773bc477e31",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "57ade96d3f84ab04880a6f46ae91e84b",
@@ -145090,6 +145090,18 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
+              "targetMD5": "71fa45fc7d7dcc8f990aec3607227a4d",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "a5ec96d81d3edd83914672953078f733",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -145100,18 +145112,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "71fa45fc7d7dcc8f990aec3607227a4d",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "e5a5a07a81d08dd175196015ef759732",
@@ -145282,6 +145282,18 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
+              "targetMD5": "5fb2fe9dd32e5db24af93f907897fd11",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "f41acac1ef30ae6aa79f4bd9fd0e28bc",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -145292,18 +145304,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "5fb2fe9dd32e5db24af93f907897fd11",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "ef15c8633e12ba7297cc9a40db6ec253",
@@ -145475,6 +145475,18 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
+              "targetMD5": "3e47aaaaf444492f2f0eda895c0a7d04",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "6c5eebdbb27265d401313bb2721630d3",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -145485,18 +145497,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "3e47aaaaf444492f2f0eda895c0a7d04",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "603ad8fed9a5f092a2f7945f6b7d34ab",
@@ -145667,6 +145667,18 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
+              "targetMD5": "8946903b322b1f04b3231d5ba2aa012c",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "dff3c643192d16608f853f4dc408cb77",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -145677,18 +145689,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "8946903b322b1f04b3231d5ba2aa012c",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "720188bc7c3f54b2d63396a63f3b1128",
@@ -145859,6 +145859,18 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
+              "targetMD5": "f668021d870abd1fc2166357e77ec8c8",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "0a9a45120a03c65707491d31039fb654",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -145869,18 +145881,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "f668021d870abd1fc2166357e77ec8c8",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "733684ca50dadff15e2dc36da35ac85b",
@@ -146052,6 +146052,18 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
+              "targetMD5": "0a07da7acf9a89071d2a690cd5ae59c6",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "ea1c90e469781b018f6d109229b69791",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -146062,18 +146074,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "0a07da7acf9a89071d2a690cd5ae59c6",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "7413ba6bbb9db0f9ad87faa5c968ea8e",
@@ -146245,6 +146245,18 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
+              "targetMD5": "26ffd8cb5d2d76187c4117358f9a0723",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "5385e81d62d4d8262269be726c43e9fa",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -146255,18 +146267,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "26ffd8cb5d2d76187c4117358f9a0723",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "e530e48007793e0e84eb73e1dc745b26",
@@ -146438,6 +146438,18 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
+              "targetMD5": "6a8c8f0b28ae95a415ce8ce56d26c3eb",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "2a7fbd57dccae2731bba462c63fc7062",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -146448,18 +146460,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "6a8c8f0b28ae95a415ce8ce56d26c3eb",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "0c6e03c8d5af14c0a2194d29b419b755",
@@ -146630,6 +146630,18 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
+              "targetMD5": "d6b6a91fda379ebba074da42f3cfc3cf",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "96f9c2343bcb41e30884319476cee41b",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -146640,18 +146652,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "d6b6a91fda379ebba074da42f3cfc3cf",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "0acfe5054c06d0f5428c2463c6f88f2c",
@@ -146823,6 +146823,18 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
+              "targetMD5": "1829342cf2c14ce3640407e65ca959e8",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "6c595c2b03b89bc7eb6a61ec64c89353",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -146833,18 +146845,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "1829342cf2c14ce3640407e65ca959e8",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "a2300bce0aa3fb7447578ac0d8433e3e",
@@ -147015,6 +147015,18 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
+              "targetMD5": "847ee28c25f79837df89eda6ee5a121a",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "8225d84c410395ecf71256ec7e5c4626",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -147025,18 +147037,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "847ee28c25f79837df89eda6ee5a121a",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "027d901f85a11e03922fcdd3d805721e",
@@ -147208,6 +147208,18 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
+              "targetMD5": "aae9f9866d72da9dbb5ab03c489544fa",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "10f4fc37c0e94b302ab0973a8261cbcd",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -147218,18 +147230,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "aae9f9866d72da9dbb5ab03c489544fa",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "de0104434aa1c14e515338e9741a0dcf",
@@ -147400,6 +147400,18 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
+              "targetMD5": "4c97b22d614d8e26c3ac984074ce4d3b",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-020",
+              "manifestSHA256": "02e95d2fd63ec9bd9cd9b3aec7bc64f6a886925b00d527233f914eacf63f14f5",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "527c0dbc556b69c550b239ae91e3722a11e15b547c1c9088a43e61111e9bc5f5",
+              "targetReleaseTag": "t-dev-009-020",
+              "targetSourceCommit": "af3b51b460a06ec87b4fb8d3cb995b760b6ed366",
+              "firmwareVersion": "t-dev-009-020",
+              "resourcesSHA256": "939ff5a70c92c022d3524f8415b0c04259d053cf2e0cbc9a560f7af1a6a29ff7"
+            },
+            {
               "targetMD5": "baa1969dd4432b44cb65cad0ba43da39",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -147410,18 +147422,6 @@
               "targetSourceCommit": "2906aad680e5468a9b4adb88cf4f356850d61c8d",
               "firmwareVersion": "t-dev-004-015",
               "resourcesSHA256": "ed6532ae775a63efa56c4847719821b93b7f01c28100530b304400bb368d3386"
-            },
-            {
-              "targetMD5": "4c97b22d614d8e26c3ac984074ce4d3b",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-019",
-              "manifestSHA256": "b8aacbf90849a7f6366f8ddcde769b6183610a3779c2e653ce90b8259dc5803c",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "5d7cd0b0b83cc3550ff109bf61f1900c8cfb97ab5e020d08f105377e877b97ba",
-              "targetReleaseTag": "t-dev-009-019",
-              "targetSourceCommit": "300269c78aa3f594a2190116886d199c99878a82",
-              "firmwareVersion": "t-dev-009-019",
-              "resourcesSHA256": "fb3023991ae9729f9f5590101846cc25deace2b5be62d50631dcbf2325c7970d"
             },
             {
               "targetMD5": "05d9b41ecaa3932aee3d1cf9ad2ac4cd",
@@ -148096,7 +148096,7 @@
         "quac:/ext/apps/Tools/quac.fap: author source changed or unavailable",
         "claude_buddy:/ext/apps/Bluetooth/claude_remote_ble.fap: author source changed or unavailable"
       ],
-      "generatedAt": "2026-10-06T21:04:34+00:00"
+      "generatedAt": "2026-10-07T06:35:12+00:00"
     }
   ]
 }
