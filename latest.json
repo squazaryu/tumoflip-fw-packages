@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "sourceRepository": "xMasterX/all-the-plugins",
-  "generatedAt": "2026-10-08T06:13:33+00:00",
+  "generatedAt": "2026-10-08T19:30:31+00:00",
   "audits": [
     {
       "sequence": 20260809193105,
@@ -147954,7 +147954,7 @@
             "repository": "https://github.com/D4C1-Labs/Flipper-ARF.git",
             "ref": "refs/heads/main",
             "previousCommit": "56701a815b54121a4b4d102e361add5468ffa92b",
-            "currentCommit": "6d714e62356ef876ca674b762767fba88b833a28",
+            "currentCommit": "e900243fe5cd42ed2be838bd7b9b58000e4377cc",
             "changed": true,
             "license": "replacement-by-design"
           },
@@ -148096,7 +148096,7 @@
         "quac:/ext/apps/Tools/quac.fap: author source changed or unavailable",
         "claude_buddy:/ext/apps/Bluetooth/claude_remote_ble.fap: author source changed or unavailable"
       ],
-      "generatedAt": "2026-10-08T06:13:33+00:00"
+      "generatedAt": "2026-10-08T19:30:31+00:00"
     }
   ]
 }
