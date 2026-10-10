@@ -109,6 +109,21 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertNotIn("git push", text)
         self.assertNotIn("gh release", text)
 
+    def test_source_matrix_reopens_a_closed_issue_when_review_is_required(self) -> None:
+        text = (self.root / ".github/workflows/source-matrix-watcher.yml").read_text(
+            encoding="utf-8"
+        )
+        review_branch = text[text.index('if [[ "$STATUS" == needsReview ]]'):]
+
+        self.assertIn('ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"', review_branch)
+        self.assertIn('if [[ "$ISSUE_STATE" == closed ]]; then', review_branch)
+        self.assertIn('gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"', review_branch)
+        self.assertIn('[[ "$ISSUE_STATE" == open ]]', review_branch)
+        self.assertLess(
+            review_branch.index('gh issue reopen "$ISSUE_NUMBER"'),
+            review_branch.index('gh issue edit "$ISSUE_NUMBER"'),
+        )
+
     def test_esp_installer_audit_is_fail_closed_after_issue_reconciliation(self) -> None:
         text = (self.root / ".github/workflows/esp-installer-audit.yml").read_text(
             encoding="utf-8"

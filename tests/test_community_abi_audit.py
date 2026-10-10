@@ -160,6 +160,156 @@ Variable,+,usb_cdc_dual,FuriHalUsbInterface,
             report["findings"][0]["missing_symbols"], ["gps_request_stream"]
         )
 
+    def test_known_gps_rpc_imports_are_explicitly_classified_but_still_block(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            archive = root / "base.zip"
+            extra = root / "extra.zip"
+            with zipfile.ZipFile(archive, "w") as zf:
+                zf.writestr(
+                    "base_pack_build/artifacts-base/GPIO/GPS/nearby_files.fap",
+                    elf_fixture(),
+                )
+            with zipfile.ZipFile(extra, "w"):
+                pass
+
+            policy = {
+                "schema": 1,
+                "entries": [
+                    {
+                        "id": "deferred-gps-rpc",
+                        "issue": "https://github.com/squazaryu/tumoflip/issues/21",
+                        "members": ["base/GPIO/GPS/nearby_files.fap"],
+                        "missingSymbols": [
+                            "gps_request_stream",
+                            "gps_set_location_callback",
+                            "gps_stop_stream",
+                        ],
+                    }
+                ],
+            }
+            imports = """         U gps_request_stream
+         U gps_set_location_callback
+         U gps_stop_stream
+"""
+            report = audit_archives(
+                [("base", archive), ("extra", extra)],
+                firmware_symbols=set(),
+                nm_runner=lambda _: imports,
+                known_unsupported_policy=policy,
+            )
+
+        self.assertEqual(report["status"], "needsReview")
+        self.assertEqual(report["summary"]["known_unsupported"], 1)
+        self.assertEqual(
+            report["summary"]["by_disposition"], {"intentionally_unsupported": 1}
+        )
+        self.assertEqual(report["findings"][0]["policy_id"], "deferred-gps-rpc")
+        self.assertEqual(
+            report["findings"][0]["missing_symbols"],
+            ["gps_request_stream", "gps_set_location_callback", "gps_stop_stream"],
+        )
+
+    def test_known_gps_policy_does_not_hide_new_imports_or_other_apps(self):
+        policy = {
+            "schema": 1,
+            "entries": [
+                {
+                    "id": "deferred-gps-rpc",
+                    "issue": "https://github.com/squazaryu/tumoflip/issues/21",
+                    "members": ["base/GPIO/GPS/nearby_files.fap"],
+                    "missingSymbols": [
+                        "gps_request_stream",
+                        "gps_set_location_callback",
+                        "gps_stop_stream",
+                    ],
+                }
+            ],
+        }
+
+        for member in (
+            "base_pack_build/artifacts-base/GPIO/GPS/nearby_files.fap",
+            "base_pack_build/artifacts-base/GPIO/GPS/other_app.fap",
+        ):
+            with self.subTest(member=member), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                with zipfile.ZipFile(root / "base.zip", "w") as zf:
+                    zf.writestr(member, elf_fixture())
+                with zipfile.ZipFile(root / "extra.zip", "w"):
+                    pass
+                imports = """         U gps_request_stream
+         U gps_set_location_callback
+         U gps_stop_stream
+         U new_unreviewed_symbol
+"""
+                report = audit_archives(
+                    [("base", root / "base.zip"), ("extra", root / "extra.zip")],
+                    firmware_symbols=set(),
+                    nm_runner=lambda _: imports,
+                    known_unsupported_policy=policy,
+                )
+                finding = report["findings"][0]
+                self.assertEqual(report["status"], "needsReview")
+                self.assertEqual(finding["disposition"], "firmware_import_missing")
+                self.assertNotIn("policy_id", finding)
+                self.assertIn("new_unreviewed_symbol", finding["missing_symbols"])
+
+    def test_verified_host_build_digest_is_bound_to_exact_community_commit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            host_data = elf_fixture()
+            for pack in ("base", "extra"):
+                with zipfile.ZipFile(root / f"{pack}.zip", "w") as zf:
+                    if pack == "base":
+                        zf.writestr("base_pack_build/artifacts-base/Tools/host.fap", host_data)
+                        zf.writestr("base_pack_build/artifacts-base/apps/plugin.fal", elf_fixture())
+            contract = {
+                "hosts": {
+                    "base/Tools/host.fap": {
+                        "sha256": "f" * 64,
+                        "exports": ["host_export"],
+                        "verifiedArtifacts": [
+                            {
+                                "tag": "9oct2026",
+                                "communityCommit": "a" * 40,
+                                "sha256": hashlib.sha256(host_data).hexdigest(),
+                            }
+                        ],
+                    }
+                },
+                "externalPlugins": {
+                    "base/apps/plugin.fal": "base/Tools/host.fap"
+                },
+            }
+            symbols = lambda path: (
+                "00000000 T host_export\n"
+                if path.name.endswith("host.fap")
+                else "         U host_export\n"
+            )
+            archives = [(pack, root / f"{pack}.zip") for pack in ("base", "extra")]
+
+            matching = audit_archives(
+                archives,
+                firmware_symbols=set(),
+                nm_runner=symbols,
+                host_contract=contract,
+                community_commit="a" * 40,
+            )
+            mismatched = audit_archives(
+                archives,
+                firmware_symbols=set(),
+                nm_runner=symbols,
+                host_contract=contract,
+                community_commit="b" * 40,
+            )
+
+        self.assertEqual(matching["status"], "verified")
+        self.assertEqual(matching["summary"]["needs_review"], 0)
+        self.assertEqual(mismatched["status"], "needsReview")
+        self.assertEqual(
+            mismatched["summary"]["by_disposition"], {"host_contract_review": 1}
+        )
+
     def test_fal_host_exports_are_not_mistaken_for_firmware_imports(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
