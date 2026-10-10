@@ -95,6 +95,8 @@ jobs:
             --base-archive "$RUNNER_TEMP/community/all-the-apps-base.zip" \
             --extra-archive "$RUNNER_TEMP/community/all-the-apps-extra.zip" \
             --api-symbols ../firmware/targets/f7/api_symbols.csv \
+            --known-unsupported-imports contracts/known-community-abi-limitations.json \
+            --community-commit "$COMMUNITY_COMMIT" \
             --nm "$NM_COMMAND" \
             --output "$RUNNER_TEMP/community-abi-audit.json"
           status=$?
@@ -155,8 +157,13 @@ jobs:
               --comment "Community Pack $COMMUNITY_TAG has no unresolved Tumoflip API imports."
           fi
 
-      - name: Fail closed when Community Pack imports are unavailable
+      - name: Fail closed when Community Pack ABI findings remain
         if: steps.audit.outputs.status == '1'
         run: |
-          echo "Community Pack contains FAP imports unavailable in the current Tumoflip API; see the canonical ABI review issue." >&2
+          report="$RUNNER_TEMP/community-abi-audit.json"
+          known="$(jq -r '.summary.known_unsupported // 0' "$report")"
+          missing="$(jq -r '.summary.by_disposition.firmware_import_missing // 0' "$report")"
+          plugins="$(jq -r '.summary.by_disposition.plugin_import_missing // 0' "$report")"
+          hosts="$(jq -r '.summary.by_disposition.host_contract_review // 0' "$report")"
+          echo "Community Pack ABI audit needs review: $known intentionally unsupported, $missing missing firmware imports, $plugins missing plugin imports, $hosts unverified host contracts; see the canonical ABI issue." >&2
           exit 1
