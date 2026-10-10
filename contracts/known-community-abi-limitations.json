@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "kind": "knownUnsupportedCommunityImports",
+  "description": "Known intentional Tumoflip API exclusions. These entries remain blocking compatibility findings; they are not approvals or compatibility waivers.",
+  "entries": [
+    {
+      "id": "deferred-nearby-files-gps-rpc",
+      "issue": "https://github.com/squazaryu/tumoflip/issues/21",
+      "reason": "The full upstream GPS RPC service is deferred. Tumoflip Nearby Files uses the Companion one-shot location contract instead.",
+      "members": {
+        "base/GPIO/GPS/nearby_files.fap": [
+          "gps_request_stream",
+          "gps_set_location_callback",
+          "gps_stop_stream"
+        ]
+      }
+    },
+    {
+      "id": "deferred-wardriving-companion-gps-rpc",
+      "issue": "https://github.com/squazaryu/tumoflip/issues/134",
+      "reason": "Wardriving keeps GPS Off/NMEA/U-blox modes; Companion GPS RPC was explicitly omitted.",
+      "members": {
+        "base/Sub-GHz/subghz_wardriving.fap": [
+          "gps_request_stream",
+          "gps_set_location_callback",
+          "gps_stop_stream"
+        ]
+      }
+    },
+    {
+      "id": "deferred-gps-rpc-community-app",
+      "issue": "https://github.com/squazaryu/tumoflip/issues/21",
+      "reason": "The standalone Community Pack GPS RPC app depends on services intentionally absent from Tumoflip.",
+      "members": {
+        "extra/Tools/gps_rpc.fap": [
+          "gps_request_stream",
+          "gps_set_location_callback",
+          "gps_stop_stream"
+        ]
+      }
+    }
+  ]
+}

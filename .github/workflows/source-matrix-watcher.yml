@@ -90,12 +90,20 @@ jobs:
             if [[ -z "$ISSUE_NUMBER" ]]; then
               ISSUE_URL="$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body-file "$REPORT")"
               ISSUE_NUMBER="${ISSUE_URL##*/}"
-              verify_issue
-            else
-              verify_issue
-              gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$REPORT"
-              verify_issue
             fi
+            verify_issue
+            ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
+            [[ "$ISSUE_STATE" == open || "$ISSUE_STATE" == closed ]]
+            if [[ "$ISSUE_STATE" == closed ]]; then
+              gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
+              verify_issue
+              ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
+            fi
+            [[ "$ISSUE_STATE" == open ]]
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$REPORT"
+            verify_issue
+            ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
+            [[ "$ISSUE_STATE" == open ]]
           elif [[ -n "$ISSUE_NUMBER" ]]; then
             verify_issue
             gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$REPORT"

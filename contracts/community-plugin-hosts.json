@@ -5,6 +5,13 @@
   "hosts": {
     "base/Tools/Crypto/totp.fap": {
       "sha256": "3a27bf5fbcab8dad177f163bf5297e1c23d9e296aafadd8f40dbeb05811387a7",
+      "verifiedArtifacts": [
+        {
+          "communityTag": "9oct2026",
+          "communityCommit": "84a0cdce9602f82de99990a9bd44d4555644b7df",
+          "sha256": "1dd1a4ec178699a139fea7cdae19ccd364c372f41c5307e61548519743168ec9"
+        }
+      ],
       "sourcePath": "base_pack/totp/app_api_table_i.h",
       "sourceSHA256": "1a9dcb4c9b166de7caa925718f5edc1ae4b7c79aacd11d6ab0e1c715fcd1fb0a",
       "exports": [
@@ -44,6 +51,13 @@
     },
     "extra/NFC/metroflip.fap": {
       "sha256": "ba9b77fae586fcf550c4f963c411863f17dd5c43d8050865533ee21bc3c6bb28",
+      "verifiedArtifacts": [
+        {
+          "communityTag": "9oct2026",
+          "communityCommit": "84a0cdce9602f82de99990a9bd44d4555644b7df",
+          "sha256": "0815c86260a4cdadd6fc3041d900f5a6128a2070e4477e58816857e3cda68c3d"
+        }
+      ],
       "sourcePath": "non_catalog_apps/metroflip/api/metroflip/metroflip_api_table_i.h",
       "sourceSHA256": "8b0d778c544d642beb149192829be6f568fb76508818f22530bd8b4584ab725a",
       "exports": [
@@ -249,6 +263,13 @@
     },
     "extra/GPIO/lan_tester.fap": {
       "sha256": "dd7cdb03e58c7def453bfd6e5eabb0cc6d0b25d856df9e30545ec64d63a6a92b",
+      "verifiedArtifacts": [
+        {
+          "communityTag": "9oct2026",
+          "communityCommit": "84a0cdce9602f82de99990a9bd44d4555644b7df",
+          "sha256": "bc10d22c2107cadfc39cc5ffa2fa174a5d0c967b6c82327d416e6006844cdb8f"
+        }
+      ],
       "sourcePath": "non_catalog_apps/w5500_lan_analyse/api/lan_tester_api_table_i.h",
       "sourceSHA256": "a18524ea710531945efcc6f05f0ac86cc234e4a16b56f14255cf6417edf7f6b9",
       "exports": [

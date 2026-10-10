@@ -175,16 +175,19 @@ Variable,+,usb_cdc_dual,FuriHalUsbInterface,
 
             policy = {
                 "schema": 1,
+                "kind": "knownUnsupportedCommunityImports",
                 "entries": [
                     {
                         "id": "deferred-gps-rpc",
                         "issue": "https://github.com/squazaryu/tumoflip/issues/21",
-                        "members": ["base/GPIO/GPS/nearby_files.fap"],
-                        "missingSymbols": [
-                            "gps_request_stream",
-                            "gps_set_location_callback",
-                            "gps_stop_stream",
-                        ],
+                        "reason": "GPS RPC services are intentionally deferred.",
+                        "members": {
+                            "base/GPIO/GPS/nearby_files.fap": [
+                                "gps_request_stream",
+                                "gps_set_location_callback",
+                                "gps_stop_stream",
+                            ]
+                        },
                     }
                 ],
             }
@@ -206,6 +209,10 @@ Variable,+,usb_cdc_dual,FuriHalUsbInterface,
         )
         self.assertEqual(report["findings"][0]["policy_id"], "deferred-gps-rpc")
         self.assertEqual(
+            report["findings"][0]["policy_reason"],
+            "GPS RPC services are intentionally deferred.",
+        )
+        self.assertEqual(
             report["findings"][0]["missing_symbols"],
             ["gps_request_stream", "gps_set_location_callback", "gps_stop_stream"],
         )
@@ -213,16 +220,19 @@ Variable,+,usb_cdc_dual,FuriHalUsbInterface,
     def test_known_gps_policy_does_not_hide_new_imports_or_other_apps(self):
         policy = {
             "schema": 1,
+            "kind": "knownUnsupportedCommunityImports",
             "entries": [
                 {
                     "id": "deferred-gps-rpc",
                     "issue": "https://github.com/squazaryu/tumoflip/issues/21",
-                    "members": ["base/GPIO/GPS/nearby_files.fap"],
-                    "missingSymbols": [
-                        "gps_request_stream",
-                        "gps_set_location_callback",
-                        "gps_stop_stream",
-                    ],
+                    "reason": "GPS RPC services are intentionally deferred.",
+                    "members": {
+                        "base/GPIO/GPS/nearby_files.fap": [
+                            "gps_request_stream",
+                            "gps_set_location_callback",
+                            "gps_stop_stream",
+                        ]
+                    },
                 }
             ],
         }
@@ -253,6 +263,50 @@ Variable,+,usb_cdc_dual,FuriHalUsbInterface,
                 self.assertEqual(finding["disposition"], "firmware_import_missing")
                 self.assertNotIn("policy_id", finding)
                 self.assertIn("new_unreviewed_symbol", finding["missing_symbols"])
+
+    def test_known_gps_policy_does_not_hide_api_major_mismatch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with zipfile.ZipFile(root / "base.zip", "w") as zf:
+                zf.writestr(
+                    "base_pack_build/artifacts-base/GPIO/GPS/nearby_files.fap",
+                    elf_fixture(),
+                )
+            with zipfile.ZipFile(root / "extra.zip", "w"):
+                pass
+            policy = {
+                "schema": 1,
+                "kind": "knownUnsupportedCommunityImports",
+                "entries": [
+                    {
+                        "id": "deferred-gps-rpc",
+                        "issue": "https://github.com/squazaryu/tumoflip/issues/21",
+                        "reason": "GPS RPC services are intentionally deferred.",
+                        "members": {
+                            "base/GPIO/GPS/nearby_files.fap": [
+                                "gps_request_stream",
+                                "gps_set_location_callback",
+                                "gps_stop_stream",
+                            ]
+                        },
+                    }
+                ],
+            }
+            report = audit_archives(
+                [("base", root / "base.zip"), ("extra", root / "extra.zip")],
+                firmware_symbols=set(),
+                firmware_api_major=89,
+                nm_runner=lambda _: """         U gps_request_stream
+         U gps_set_location_callback
+         U gps_stop_stream
+""",
+                known_unsupported_policy=policy,
+            )
+
+        self.assertEqual(
+            report["findings"][0]["disposition"], "api_or_target_mismatch"
+        )
+        self.assertNotIn("policy_id", report["findings"][0])
 
     def test_verified_host_build_digest_is_bound_to_exact_community_commit(self):
         with tempfile.TemporaryDirectory() as directory:

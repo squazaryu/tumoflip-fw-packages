@@ -7,6 +7,8 @@ this control-plane check inspects the actual undefined ELF imports as well.  A
 standalone FAP may only import the firmware API; a FAL is allowed to import a
 symbol exported by its exact, content-pinned host API. Embedded .fapassets are
 inspected recursively; unknown ownership or changed host contracts fail closed.
+Known intentionally unsupported imports stay blocking but are distinguished from
+new firmware API gaps so the report explains the policy decision.
 """
 
 from __future__ import annotations
@@ -122,6 +124,87 @@ def _finding_disposition(kind: str, reasons: list[str], missing: list[str]) -> s
     raise AbiAuditError("ABI finding has no actionable reason")
 
 
+def _validate_known_unsupported_policy(policy: dict | None) -> list[dict]:
+    if policy is None:
+        return []
+    if (
+        policy.get("schema") != 1
+        or policy.get("kind") != "knownUnsupportedCommunityImports"
+    ):
+        raise AbiAuditError("known unsupported import policy schema is invalid")
+    entries = policy.get("entries")
+    if not isinstance(entries, list):
+        raise AbiAuditError("known unsupported import policy entries are invalid")
+
+    ids: set[str] = set()
+    members: set[str] = set()
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise AbiAuditError("known unsupported import policy entry is invalid")
+        entry_id = entry.get("id")
+        issue = entry.get("issue")
+        reason = entry.get("reason")
+        member_map = entry.get("members")
+        if (
+            not isinstance(entry_id, str)
+            or not entry_id
+            or entry_id in ids
+            or not isinstance(issue, str)
+            or not issue.startswith("https://github.com/")
+            or not isinstance(reason, str)
+            or not reason
+            or not isinstance(member_map, dict)
+            or not member_map
+        ):
+            raise AbiAuditError("known unsupported import policy identity is invalid")
+        ids.add(entry_id)
+        for member, symbols in member_map.items():
+            path = PurePosixPath(member) if isinstance(member, str) else PurePosixPath("")
+            if (
+                not isinstance(member, str)
+                or not member.startswith(("base/", "extra/"))
+                or path.is_absolute()
+                or any(part in {"", ".", ".."} for part in path.parts)
+                or member in members
+                or not isinstance(symbols, list)
+                or not symbols
+                or any(not isinstance(symbol, str) or not symbol for symbol in symbols)
+                or len(symbols) != len(set(symbols))
+            ):
+                raise AbiAuditError("known unsupported import policy member is invalid")
+            members.add(member)
+    return entries
+
+
+def _known_unsupported_entry(
+    entries: list[dict], member: str, missing_symbols: list[str]
+) -> dict | None:
+    actual = set(missing_symbols)
+    for entry in entries:
+        expected = entry["members"].get(member)
+        if expected is not None and actual == set(expected):
+            return entry
+    return None
+
+
+def _host_artifact_is_verified(
+    declaration: dict, digest: str, community_commit: str | None
+) -> bool:
+    if declaration.get("sha256") == digest:
+        return True
+    if not community_commit:
+        return False
+    artifacts = declaration.get("verifiedArtifacts", [])
+    if not isinstance(artifacts, list):
+        return False
+    return any(
+        isinstance(artifact, dict)
+        and artifact.get("communityCommit") == community_commit
+        and artifact.get("sha256") == digest
+        for artifact in artifacts
+    )
+
+
 def _archive_member(member: str, pack: str) -> tuple[str, str] | None:
     pack_root = f"{pack}_pack_build/"
     prefix = f"{pack}_pack_build/artifacts-{pack}/"
@@ -166,6 +249,8 @@ def audit_archives(
     firmware_symbols: set[str],
     nm_runner: NMOutput,
     host_contract: dict | None = None,
+    known_unsupported_policy: dict | None = None,
+    community_commit: str | None = None,
     firmware_api_major: int = 88,
 ) -> dict[str, object]:
     """Inspect all FAP/FAL members in the supplied base and extra archives."""
@@ -175,6 +260,9 @@ def audit_archives(
     contract = host_contract or {}
     hosts = contract.get("hosts", {})
     external_plugins = contract.get("externalPlugins", {})
+    known_unsupported_entries = _validate_known_unsupported_policy(
+        known_unsupported_policy
+    )
     total_bytes = 0
     bundle_count = 0
 
@@ -266,7 +354,10 @@ def audit_archives(
                     reasons.append("missing_plugin_host_binding")
                 elif imports - allowed:
                     declaration = hosts.get(parent["key"], {})
-                    if declaration.get("sha256") != hashlib.sha256(parent["data"]).hexdigest():
+                    host_digest = hashlib.sha256(parent["data"]).hexdigest()
+                    if not _host_artifact_is_verified(
+                        declaration, host_digest, community_commit
+                    ):
                         reasons.append("unverified_host_api")
                     else:
                         declared = set(declaration.get("exports", []))
@@ -277,17 +368,28 @@ def audit_archives(
                             allowed.update(declared)
             missing = sorted(imports - allowed)
             if missing or reasons:
-                findings.append(
-                    {
-                        "pack": binary["pack"],
-                        "archive_member": binary["member"],
-                        "kind": binary["kind"],
-                        "host": binary["host"],
-                        "disposition": _finding_disposition(binary["kind"], reasons, missing),
-                        "reasons": reasons,
-                        "missing_symbols": missing,
-                    }
+                finding = {
+                    "pack": binary["pack"],
+                    "archive_member": binary["member"],
+                    "kind": binary["kind"],
+                    "host": binary["host"],
+                    "disposition": _finding_disposition(binary["kind"], reasons, missing),
+                    "reasons": reasons,
+                    "missing_symbols": missing,
+                }
+                policy_entry = (
+                    _known_unsupported_entry(
+                        known_unsupported_entries, binary["key"], missing
+                    )
+                    if binary["kind"] == "fap" and missing and not reasons
+                    else None
                 )
+                if policy_entry:
+                    finding["disposition"] = "intentionally_unsupported"
+                    finding["policy_id"] = policy_entry["id"]
+                    finding["policy_issue"] = policy_entry["issue"]
+                    finding["policy_reason"] = policy_entry["reason"]
+                findings.append(finding)
             else:
                 compatible += 1
 
@@ -308,6 +410,10 @@ def audit_archives(
             "compatible": compatible,
             "needs_review": len(findings),
             "by_disposition": dict(sorted(by_disposition.items())),
+            "known_unsupported": sum(
+                finding["disposition"] == "intentionally_unsupported"
+                for finding in findings
+            ),
             "embedded": sum(b["embedded"] for b in binaries),
             "asset_bundles": bundle_count,
         },
@@ -341,6 +447,13 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--host-contract", type=Path,
                         default=Path(__file__).resolve().parents[1] / "contracts/community-plugin-hosts.json")
+    parser.add_argument(
+        "--known-unsupported-imports",
+        type=Path,
+        default=Path(__file__).resolve().parents[1]
+        / "contracts/known-community-abi-limitations.json",
+    )
+    parser.add_argument("--community-commit")
     args = parser.parse_args()
 
     try:
@@ -350,6 +463,10 @@ def main() -> int:
             firmware_symbols=parse_api_symbols(api_text),
             firmware_api_major=int(parse_api_version(api_text).split(".")[0]),
             host_contract=json.loads(args.host_contract.read_text()),
+            known_unsupported_policy=json.loads(
+                args.known_unsupported_imports.read_text(encoding="utf-8")
+            ),
+            community_commit=args.community_commit,
             nm_runner=_default_nm_runner(
                 args.nm_command
                 or shutil.which("arm-none-eabi-nm")

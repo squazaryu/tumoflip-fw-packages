@@ -124,6 +124,18 @@ class WorkflowSecurityTests(unittest.TestCase):
             review_branch.index('gh issue edit "$ISSUE_NUMBER"'),
         )
 
+    def test_community_abi_audit_binds_policy_to_exact_source_and_fails_closed(self) -> None:
+        text = (self.root / ".github/workflows/community-abi-audit.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("contracts/known-community-abi-limitations.json", text)
+        self.assertIn('--community-commit "$COMMUNITY_COMMIT"', text)
+        self.assertIn(".summary.known_unsupported", text)
+        self.assertIn("intentionally unsupported", text)
+        self.assertIn("Fail closed when Community Pack ABI findings remain", text)
+        self.assertIn("exit 1", text)
+
     def test_esp_installer_audit_is_fail_closed_after_issue_reconciliation(self) -> None:
         text = (self.root / ".github/workflows/esp-installer-audit.yml").read_text(
             encoding="utf-8"
