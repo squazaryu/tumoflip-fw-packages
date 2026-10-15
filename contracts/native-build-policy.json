@@ -66,21 +66,7 @@
     "totp_cli_update_plugin": "base",
     "totp_cli_version_plugin": "base"
   },
-  "releasePlans": {
-    "fw-packages-dev-025": {
-      "mode": "overlay",
-      "selectedOverlays": ["quac", "weather_editor"],
-      "sourceCommit": "69eb0bd34a69630eec76cabeb638da31c09fa0df",
-      "targetFirmware": {
-        "firmwareTag": "t-dev-009-025",
-        "firmwareVersion": "t-dev-009-025",
-        "firmwareCommit": "69eb0bd34a69630eec76cabeb638da31c09fa0df",
-        "firmwareReleaseId": "0dda1e53111d24dfef00bdfeb5cecaa5802fa8c35fac0911d67f6cf142411fcc",
-        "api": "88.20",
-        "target": 7
-      }
-    }
-  },
+  "releasePlans": {},
   "reviewedDevSourceAncestry": {
     "fw-packages-dev-023": {
       "sourceCommit": "42aad5d7e16cdb430fd7bbed1c37cf5164b3a334",
