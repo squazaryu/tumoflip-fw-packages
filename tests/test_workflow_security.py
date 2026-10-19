@@ -86,10 +86,9 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("contracts/protected-surface.json", text)
         self.assertIn("--audit-targets contracts/protected-audit-targets.json", text)
         self.assertIn("issues: write", text)
-        self.assertIn("Fail closed when implementation review is required", text)
-        self.assertIn('.user.login == "github-actions[bot]"', text)
-        self.assertIn("verify_issue()", text)
-        self.assertIn('gh issue reopen "$ISSUE_NUMBER"', text)
+        self.assertIn("tools/audit_notifications.py", text)
+        self.assertIn("--mode drift", text)
+        self.assertIn('SCAN_EXIT: ${{ steps.scan.outputs.status }}', text)
         self.assertNotIn("contents: write", text)
         self.assertNotIn("git push", text)
         self.assertNotIn("gh pr merge", text)
@@ -101,28 +100,32 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("contracts/source-watchers.json", text)
         self.assertIn("tools/watch_sources.py scan", text)
         self.assertIn("issues: write", text)
-        self.assertIn("Fail closed when source review is required", text)
-        self.assertIn('.user.login == "github-actions[bot]"', text)
-        self.assertIn("verify_issue()", text)
+        self.assertIn("tools/audit_notifications.py", text)
+        self.assertIn("--mode source", text)
+        self.assertIn('SCAN_EXIT: ${{ steps.scan.outputs.status }}', text)
         self.assertIn("GH_TOKEN: ${{ github.token }}", text)
         self.assertNotIn("contents: write", text)
         self.assertNotIn("git push", text)
         self.assertNotIn("gh release", text)
 
     def test_source_matrix_reopens_a_closed_issue_when_review_is_required(self) -> None:
-        text = (self.root / ".github/workflows/source-matrix-watcher.yml").read_text(
-            encoding="utf-8"
-        )
-        review_branch = text[text.index('if [[ "$STATUS" == needsReview ]]'):]
-
-        self.assertIn('ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"', review_branch)
-        self.assertIn('if [[ "$ISSUE_STATE" == closed ]]; then', review_branch)
-        self.assertIn('gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"', review_branch)
-        self.assertIn('[[ "$ISSUE_STATE" == open ]]', review_branch)
-        self.assertLess(
-            review_branch.index('gh issue reopen "$ISSUE_NUMBER"'),
-            review_branch.index('gh issue edit "$ISSUE_NUMBER"'),
-        )
+        from tools.audit_notifications import BOT, CONFIGS, reconcile
+        issue = {"number": 69, "state": "closed", "title": CONFIGS["source"][0],
+                 "body": "<!-- source-matrix-watch -->\nold", "user": {"login": BOT}}
+        writes = []
+        def github(path, *, method="GET", payload=None, pages=False):
+            if method == "GET":
+                return [dict(issue)] if pages else dict(issue)
+            writes.append(payload)
+            issue.update(payload)
+            return dict(issue)
+        report = {"schema": 1, "kind": "sourceWatchReport", "status": "needsReview"}
+        result = reconcile("source", report, "<!-- source-matrix-watch -->\nnew", scan_exit=1, call=github)
+        self.assertTrue(result["failure"])
+        self.assertEqual(issue["state"], "open")
+        self.assertEqual(len(writes), 1)
+        self.assertEqual(writes[0]["state"], "open")
+        self.assertIn("new", writes[0]["body"])
 
     def test_community_abi_audit_binds_policy_to_exact_source_and_fails_closed(self) -> None:
         text = (self.root / ".github/workflows/community-abi-audit.yml").read_text(
@@ -131,10 +134,10 @@ class WorkflowSecurityTests(unittest.TestCase):
 
         self.assertIn("contracts/known-community-abi-limitations.json", text)
         self.assertIn('--community-commit "$COMMUNITY_COMMIT"', text)
-        self.assertIn(".summary.known_unsupported", text)
-        self.assertIn("intentionally unsupported", text)
-        self.assertIn("Fail closed when Community Pack ABI findings remain", text)
-        self.assertIn("exit 1", text)
+        self.assertIn("tools/audit_notifications.py", text)
+        self.assertIn("--mode abi", text)
+        self.assertIn('SCAN_EXIT: ${{ steps.audit.outputs.status }}', text)
+        self.assertIn("{id,name,size,digest,updated_at}", text)
 
     def test_esp_installer_audit_is_fail_closed_after_issue_reconciliation(self) -> None:
         text = (self.root / ".github/workflows/esp-installer-audit.yml").read_text(
@@ -145,16 +148,14 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("scan-github", text)
         self.assertIn("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a", text)
         self.assertIn("actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c", text)
-        self.assertIn("Reconcile hardware-acceptance issue", text)
-        self.assertIn("trackingIssue.repository", text)
+        self.assertIn("Reconcile review findings without repeated failure alerts", text)
+        self.assertIn('--tracking-contract contracts/esp-installer-audit.json', text)
         self.assertIn("issues: write", text)
-        self.assertIn('.user.login == "github-actions[bot]"', text)
-        self.assertIn("startswith", text)
-        self.assertLess(
-            text.index("Reconcile hardware-acceptance issue"),
-            text.index("Fail closed when review is required"),
-        )
-        self.assertIn("Fail closed when review is required", text)
+        self.assertIn("tools/audit_notifications.py", text)
+        self.assertIn("--mode esp", text)
+        self.assertIn('SCAN_EXIT: ${{ needs.audit.outputs.status }}', text)
+        self.assertIn('outputs.status', text)
+        self.assertIn('status: ${{ steps.scan.outputs.status }}', text)
         self.assertNotIn("contents: write", text)
         self.assertNotIn("gh release", text)
         self.assertNotIn("git push", text)
@@ -173,14 +174,9 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("--implementation-checkout-commit", text)
         self.assertIn("path: community", text)
         self.assertIn("--community-repo ../community", text)
-        self.assertIn("Reconcile one canonical review issue", text)
-        self.assertIn("Fail closed when an import needs review", text)
-        self.assertIn('gh issue reopen "$ISSUE_NUMBER"', text)
-        self.assertEqual(text.count('gh issue edit "$ISSUE_NUMBER"'), 2)
-        self.assertLess(
-            text.rindex('gh issue edit "$ISSUE_NUMBER"'),
-            text.index('gh issue close "$ISSUE_NUMBER"'),
-        )
+        self.assertIn("tools/audit_notifications.py", text)
+        self.assertIn("--mode parity", text)
+        self.assertIn('SCAN_EXIT: ${{ steps.parity.outputs.status }}', text)
         self.assertNotIn("contents: write", text)
         self.assertNotIn("git push", text)
         self.assertNotIn("gh release", text)
@@ -202,10 +198,9 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("tools/protected_source_history.py", text)
         self.assertIn("releases?per_page=100", text)
         self.assertIn("fetch-depth: 0", text)
-        self.assertIn("Reconcile one canonical history review issue", text)
-        self.assertIn("Fail closed when historical source review is required", text)
-        self.assertIn('.user.login == "github-actions[bot]"', text)
-        self.assertIn('gh issue reopen "$ISSUE_NUMBER"', text)
+        self.assertIn("tools/audit_notifications.py", text)
+        self.assertIn("--mode history", text)
+        self.assertIn('SCAN_EXIT: ${{ steps.scan.outputs.status }}', text)
         self.assertNotIn("contents: write", text)
         self.assertNotIn("git push", text)
         self.assertNotIn("gh release", text)
