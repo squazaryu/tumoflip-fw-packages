@@ -87,6 +87,7 @@ class NotificationTests(unittest.TestCase):
         from tools import protected_source_parity as parity
         cases = [(0, "", parity.ParityError),
                  (128, "remote: Repository not found.", parity.ParityError),
+                 (128, "fatal: could not read Username for 'https://github.com': No such device or address", parity.ParityError),
                  (128, "TLS connection failed", parity.OperationalSourceError)]
         for code, stderr, expected in cases:
             with patch.object(parity.subprocess, "run", return_value=subprocess.CompletedProcess([], code, "", stderr)):
