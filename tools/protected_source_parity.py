@@ -26,6 +26,10 @@ class ParityError(RuntimeError):
     pass
 
 
+class OperationalSourceError(ParityError):
+    """A transport/runtime failure, not a stable missing-ref review finding."""
+
+
 def read_json(path: Path) -> dict[str, Any]:
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
@@ -159,9 +163,14 @@ def fetch_head(repository: str, ref: str, fixtures: dict[str, str]) -> str:
             check=False,
         )
     except (OSError, subprocess.TimeoutExpired) as error:
-        raise ParityError(f"unable to resolve {repository} {ref}: {error}") from error
+        raise OperationalSourceError(f"unable to resolve {repository} {ref}: {error}") from error
+    if result.returncode:
+        detail = result.stderr.strip()
+        if "Repository not found" in detail:
+            raise ParityError(f"upstream repository not found or inaccessible: {repository} {ref}")
+        raise OperationalSourceError(f"unable to resolve {repository} {ref}: {detail or 'git ls-remote failed'}")
     rows = [line.split() for line in result.stdout.splitlines() if line.strip()]
-    if result.returncode or len(rows) != 1 or len(rows[0]) < 2:
+    if len(rows) != 1 or len(rows[0]) < 2:
         raise ParityError(f"missing or ambiguous upstream ref: {repository} {ref}")
     return require_commit(rows[0][0], f"upstream {repository} {ref}")
 
@@ -215,6 +224,7 @@ def scan(
         author = app["author"]
         item = contract["imports"][app_id]
         errors: list[str] = []
+        operational_error: str | None = None
         notes: list[str] = []
         if item["localSourcePath"] != app["localSourcePath"]:
             errors.append("local source path differs from protected registry")
@@ -262,6 +272,8 @@ def scan(
             except ParityError as error:
                 current_commit = None
                 errors.append(str(error))
+                if isinstance(error, OperationalSourceError):
+                    operational_error = str(error)
         if current_commit and current_commit != item["upstreamCommit"] and author["ref"] != "release-source":
             errors.append(
                 f"upstream changed: reviewed={item['upstreamCommit']} current={current_commit}"
@@ -283,6 +295,7 @@ def scan(
                 },
                 "errors": errors,
                 "notes": notes,
+                **({"error": operational_error} if operational_error else {}),
             }
         )
     return {

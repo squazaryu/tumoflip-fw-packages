@@ -130,53 +130,16 @@ jobs:
               raise SystemExit("ESP installer tracking repository differs")
           PY
 
-      - name: Reconcile hardware-acceptance issue
+      - name: Reconcile review findings without repeated failure alerts
+        working-directory: control
         env:
           GH_TOKEN: ${{ github.token }}
+          SCAN_EXIT: ${{ needs.audit.outputs.status }}
         run: |
           set -euo pipefail
-          CONTRACT=control/contracts/esp-installer-audit.json
-          STATE=report/esp-installer-audit.json
-          REPORT=report/esp-installer-audit.md
-          ISSUE_REPOSITORY="$(jq -r .trackingIssue.repository "$CONTRACT")"
-          ISSUE_NUMBER="$(jq -r .trackingIssue.number "$CONTRACT")"
-          [[ "$ISSUE_REPOSITORY" == "$GITHUB_REPOSITORY" ]]
-          [[ "$ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]
-          STATUS="$(jq -r .status "$STATE")"
-          [[ "$STATUS" == verified || "$STATUS" == needsReview || "$STATUS" == rejected ]]
-
-          gh api "repos/$ISSUE_REPOSITORY/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/issue.json"
-          [[ "$(jq -r .number "$RUNNER_TEMP/issue.json")" == "$ISSUE_NUMBER" ]]
-          ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
-          [[ "$ISSUE_STATE" == open || "$ISSUE_STATE" == closed ]]
-
-          gh api "repos/$ISSUE_REPOSITORY/issues/$ISSUE_NUMBER/comments?per_page=100" \
-            --paginate --slurp > "$RUNNER_TEMP/comment-pages.json"
-          jq '[.[][] | select(.user.login == "github-actions[bot]") | select(.body | startswith("<!-- esp-installer-audit -->"))]' \
-            "$RUNNER_TEMP/comment-pages.json" > "$RUNNER_TEMP/comments.json"
-          COMMENT_COUNT="$(jq length "$RUNNER_TEMP/comments.json")"
-          [[ "$COMMENT_COUNT" == 0 || "$COMMENT_COUNT" == 1 ]]
-          if [[ "$COMMENT_COUNT" == 0 ]]; then
-            gh api "repos/$ISSUE_REPOSITORY/issues/$ISSUE_NUMBER/comments" \
-              --method POST --field body=@"$REPORT" > "$RUNNER_TEMP/comment.json"
-          else
-            COMMENT_ID="$(jq -r '.[0].id' "$RUNNER_TEMP/comments.json")"
-            [[ "$COMMENT_ID" =~ ^[1-9][0-9]*$ ]]
-            gh api "repos/$ISSUE_REPOSITORY/issues/comments/$COMMENT_ID" \
-              --method PATCH --field body=@"$REPORT" > "$RUNNER_TEMP/comment.json"
-          fi
-          [[ "$(jq -r '.user.login' "$RUNNER_TEMP/comment.json")" == "github-actions[bot]" ]]
-          jq -e '.body | startswith("<!-- esp-installer-audit -->")' "$RUNNER_TEMP/comment.json" > /dev/null
-
-          if [[ "$STATUS" == verified && "$ISSUE_STATE" == open ]]; then
-            gh issue close "$ISSUE_NUMBER" --repo "$ISSUE_REPOSITORY" \
-              --comment "All reviewed ESP installer profiles now carry complete hardware evidence."
-          elif [[ "$STATUS" != verified && "$ISSUE_STATE" == closed ]]; then
-            gh issue reopen "$ISSUE_NUMBER" --repo "$ISSUE_REPOSITORY"
-          fi
-
-      - name: Fail closed when review is required
-        if: needs.audit.outputs.status != '0'
-        run: |
-          echo "ESP installer manifest evidence is not authorized for Flash Package publication; issue state and evidence were synchronized first." >&2
-          exit 1
+          python3 tools/audit_notifications.py \
+            --mode esp \
+            --scan-exit "$SCAN_EXIT" \
+            --report "../report/esp-installer-audit.json" \
+            --markdown "../report/esp-installer-audit.md" \
+            --tracking-contract contracts/esp-installer-audit.json

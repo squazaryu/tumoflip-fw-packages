@@ -64,56 +64,14 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Reconcile one canonical source review issue
+      - name: Reconcile review findings without repeated failure alerts
         env:
           GH_TOKEN: ${{ github.token }}
+          SCAN_EXIT: ${{ steps.scan.outputs.status }}
         run: |
           set -euo pipefail
-          REPORT="$RUNNER_TEMP/source-matrix.md"
-          STATE="$RUNNER_TEMP/source-matrix.json"
-          MARKER='<!-- source-matrix-watch -->'
-          TITLE='Watch ARF and ProtoPirate source changes'
-          STATUS="$(jq -r .status "$STATE")"
-          [[ "$STATUS" == verified || "$STATUS" == needsReview ]]
-          gh api "repos/$GITHUB_REPOSITORY/issues?state=all&per_page=100" \
-            --paginate --slurp > "$RUNNER_TEMP/issue-pages.json"
-          ISSUE_NUMBER="$(jq -r --arg marker "$MARKER" --arg title "$TITLE" \
-            '[.[][] | select(.pull_request == null) | select(.user.login == "github-actions[bot]") | select(.title == $title and ((.body // "") | startswith($marker)))][0].number // empty' \
-            "$RUNNER_TEMP/issue-pages.json")"
-          verify_issue() {
-            gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/issue.json"
-            jq -e --arg marker "$MARKER" --arg title "$TITLE" \
-              '.pull_request == null and .user.login == "github-actions[bot]" and .title == $title and ((.body // "") | startswith($marker))' \
-              "$RUNNER_TEMP/issue.json" >/dev/null
-          }
-          if [[ "$STATUS" == needsReview ]]; then
-            if [[ -z "$ISSUE_NUMBER" ]]; then
-              ISSUE_URL="$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body-file "$REPORT")"
-              ISSUE_NUMBER="${ISSUE_URL##*/}"
-            fi
-            verify_issue
-            ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
-            [[ "$ISSUE_STATE" == open || "$ISSUE_STATE" == closed ]]
-            if [[ "$ISSUE_STATE" == closed ]]; then
-              gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
-              verify_issue
-              ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
-            fi
-            [[ "$ISSUE_STATE" == open ]]
-            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$REPORT"
-            verify_issue
-            ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
-            [[ "$ISSUE_STATE" == open ]]
-          elif [[ -n "$ISSUE_NUMBER" ]]; then
-            verify_issue
-            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$REPORT"
-            verify_issue
-            gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-              --comment "ARF and ProtoPirate sources match the reviewed commits."
-          fi
-
-      - name: Fail closed when source review is required
-        if: steps.scan.outputs.status == '1'
-        run: |
-          echo "An ARF or ProtoPirate source changed or is unavailable; review is required." >&2
-          exit 1
+          python3 tools/audit_notifications.py \
+            --mode source \
+            --scan-exit "$SCAN_EXIT" \
+            --report "$RUNNER_TEMP/source-matrix.json" \
+            --markdown "$RUNNER_TEMP/source-matrix.md"
