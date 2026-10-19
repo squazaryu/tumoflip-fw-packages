@@ -125,54 +125,15 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Reconcile one canonical review issue
+      - name: Reconcile review findings without repeated failure alerts
+        working-directory: control
         env:
           GH_TOKEN: ${{ github.token }}
-          STATUS: ${{ steps.parity.outputs.status }}
+          SCAN_EXIT: ${{ steps.parity.outputs.status }}
         run: |
           set -euo pipefail
-          REPORT="$RUNNER_TEMP/protected-source-parity.md"
-          MARKER='<!-- protected-source-parity -->'
-          TITLE='Review protected app source imports'
-          BODY="$(printf '%s\n' "$MARKER"; cat "$REPORT")"
-          gh api "repos/$GITHUB_REPOSITORY/issues?state=all&per_page=100" \
-            --paginate --slurp > "$RUNNER_TEMP/issues.json"
-          ISSUE_NUMBER="$(jq -r --arg marker "$MARKER" --arg title "$TITLE" \
-            '[.[][] | select(.pull_request == null) | select(.user.login == "github-actions[bot]") | select(.title == $title and ((.body // "") | startswith($marker)))][0].number // empty' \
-            "$RUNNER_TEMP/issues.json")"
-          verify_issue() {
-            gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/issue.json"
-            jq -e --arg marker "$MARKER" --arg title "$TITLE" \
-              '.pull_request == null and .user.login == "github-actions[bot]" and .title == $title and ((.body // "") | startswith($marker))' \
-              "$RUNNER_TEMP/issue.json" >/dev/null
-          }
-          if [[ "$STATUS" == 1 ]]; then
-            if [[ -z "$ISSUE_NUMBER" ]]; then
-              ISSUE_URL="$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$BODY")"
-              ISSUE_NUMBER="${ISSUE_URL##*/}"
-              verify_issue
-            else
-              verify_issue
-              ISSUE_STATE="$(jq -r .state "$RUNNER_TEMP/issue.json")"
-              [[ "$ISSUE_STATE" == open || "$ISSUE_STATE" == closed ]]
-              if [[ "$ISSUE_STATE" == closed ]]; then
-                gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
-                verify_issue
-                [[ "$(jq -r .state "$RUNNER_TEMP/issue.json")" == open ]]
-              fi
-              gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "$BODY"
-              verify_issue
-            fi
-          elif [[ -n "$ISSUE_NUMBER" ]]; then
-            verify_issue
-            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body "$BODY"
-            verify_issue
-            gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --comment \
-              "Protected source parity is verified at the latest scheduled scan."
-          fi
-
-      - name: Fail closed when an import needs review
-        if: steps.parity.outputs.status == '1'
-        run: |
-          echo "Protected source parity requires review; see the canonical issue and uploaded report." >&2
-          exit 1
+          python3 tools/audit_notifications.py \
+            --mode parity \
+            --scan-exit "$SCAN_EXIT" \
+            --report "$RUNNER_TEMP/protected-source-parity.json" \
+            --markdown "$RUNNER_TEMP/protected-source-parity.md"

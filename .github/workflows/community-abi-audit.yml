@@ -104,7 +104,10 @@ jobs:
           [[ "$status" == 0 || "$status" == 1 ]]
           jq --arg tag "$COMMUNITY_TAG" --arg commit "$COMMUNITY_COMMIT" \
              --arg firmware "$FIRMWARE_COMMIT" \
-             '.community = {tag:$tag, commit:$commit} | .firmware = {commit:$firmware}' \
+             --slurpfile release "$RUNNER_TEMP/community/release.json" \
+             '.community = {tag:$tag, commit:$commit, assets:[$release[0].assets[] |
+                select(.name == "all-the-apps-base.zip" or .name == "all-the-apps-extra.zip") |
+                {id,name,size,digest,updated_at}]} | .firmware = {commit:$firmware}' \
              "$RUNNER_TEMP/community-abi-audit.json" > "$RUNNER_TEMP/community-abi-audit.normalized.json"
           mv "$RUNNER_TEMP/community-abi-audit.normalized.json" "$RUNNER_TEMP/community-abi-audit.json"
           echo "status=$status" >> "$GITHUB_OUTPUT"
@@ -117,53 +120,14 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Reconcile one canonical ABI review issue
+      - name: Reconcile review findings without repeated failure alerts
+        working-directory: control
         env:
           GH_TOKEN: ${{ github.token }}
-          STATUS: ${{ steps.audit.outputs.status }}
-          COMMUNITY_TAG: ${{ steps.source.outputs.community_tag }}
+          SCAN_EXIT: ${{ steps.audit.outputs.status }}
         run: |
           set -euo pipefail
-          report="$RUNNER_TEMP/community-abi-audit.json"
-          marker='<!-- community-pack-abi-audit -->'
-          title='Review Community Pack ABI compatibility'
-          body="$(printf '%s\n' "$marker"; cat "$report")"
-          gh api "repos/$GITHUB_REPOSITORY/issues?state=all&per_page=100" \
-            --paginate --slurp > "$RUNNER_TEMP/issues.json"
-          issue="$(jq -r --arg marker "$marker" --arg title "$title" \
-            '[.[][] | select(.pull_request == null) | select(.user.login == "github-actions[bot]") | select(.title == $title and ((.body // "") | startswith($marker)))][0].number // empty' \
-            "$RUNNER_TEMP/issues.json")"
-          verify_issue() {
-            gh api "repos/$GITHUB_REPOSITORY/issues/$issue" > "$RUNNER_TEMP/issue.json"
-            jq -e --arg marker "$marker" --arg title "$title" \
-              '.pull_request == null and .user.login == "github-actions[bot]" and .title == $title and ((.body // "") | startswith($marker))' \
-              "$RUNNER_TEMP/issue.json" >/dev/null
-          }
-          if [[ "$STATUS" == 1 ]]; then
-            if [[ -z "$issue" ]]; then
-              issue_url="$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body")"
-              issue="${issue_url##*/}"
-              verify_issue
-            else
-              verify_issue
-              gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --body "$body"
-              verify_issue
-            fi
-          elif [[ -n "$issue" ]]; then
-            verify_issue
-            gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --body "$body"
-            verify_issue
-            gh issue close "$issue" --repo "$GITHUB_REPOSITORY" \
-              --comment "Community Pack $COMMUNITY_TAG has no unresolved Tumoflip API imports."
-          fi
-
-      - name: Fail closed when Community Pack ABI findings remain
-        if: steps.audit.outputs.status == '1'
-        run: |
-          report="$RUNNER_TEMP/community-abi-audit.json"
-          known="$(jq -r '.summary.known_unsupported // 0' "$report")"
-          missing="$(jq -r '.summary.by_disposition.firmware_import_missing // 0' "$report")"
-          plugins="$(jq -r '.summary.by_disposition.plugin_import_missing // 0' "$report")"
-          hosts="$(jq -r '.summary.by_disposition.host_contract_review // 0' "$report")"
-          echo "Community Pack ABI audit needs review: $known intentionally unsupported, $missing missing firmware imports, $plugins missing plugin imports, $hosts unverified host contracts; see the canonical ABI issue." >&2
-          exit 1
+          python3 tools/audit_notifications.py \
+            --mode abi \
+            --scan-exit "$SCAN_EXIT" \
+            --report "$RUNNER_TEMP/community-abi-audit.json"
