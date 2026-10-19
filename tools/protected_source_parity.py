@@ -166,7 +166,9 @@ def fetch_head(repository: str, ref: str, fixtures: dict[str, str]) -> str:
         raise OperationalSourceError(f"unable to resolve {repository} {ref}: {error}") from error
     if result.returncode:
         detail = result.stderr.strip()
-        if "Repository not found" in detail:
+        # Public-source scans deliberately have no interactive Git credentials.
+        # GitHub may challenge an inaccessible repository instead of printing404.
+        if "Repository not found" in detail or "could not read Username for 'https://github.com'" in detail:
             raise ParityError(f"upstream repository not found or inaccessible: {repository} {ref}")
         raise OperationalSourceError(f"unable to resolve {repository} {ref}: {detail or 'git ls-remote failed'}")
     rows = [line.split() for line in result.stdout.splitlines() if line.strip()]

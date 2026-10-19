@@ -254,8 +254,9 @@ def main() -> int:
             tracking_issue = positive_id(contract["trackingIssue"]["number"])
         result = reconcile(args.mode, report, body, scan_exit=args.scan_exit,
                            dry_run=args.dry_run, tracking_issue=tracking_issue)
-        text = (f"Audit {args.mode}: {result['status']}; "
-                f"{'unchanged findings, no repeated alert' if result['unchanged'] else 'new/changed result'}. "
+        detail = ("unchanged operational failure" if result["unchanged"] and result["failure"]
+                  else "unchanged findings, no repeated alert" if result["unchanged"] else "new/changed result")
+        text = (f"Audit {args.mode}: {result['status']}; {detail}. "
                 "Notification status does not authorize publication or clear findings.")
         print(f"::{'error' if result['failure'] else 'notice'}::{text}")
         summary = os.environ.get("GITHUB_STEP_SUMMARY")
