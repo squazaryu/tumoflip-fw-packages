@@ -24,6 +24,12 @@ target firmware release is public and its downloaded bytes have been verified.
   Ubuntu 24.04 / toolchain 39 dry-run, then use the explicit native publisher
   only after re-verifying the artifact and predecessor. Verify remote bytes
   before and after publication, and activate through a separate reviewed PR.
+- Replace the affected Pillow 12.3.0 build pin with **13.0.0**, retaining an
+  exact CPython 3.12 Linux x86_64 wheel hash from PyPI. This addresses the five
+  critical Pillow advisories reported on the old pin, including FPX/JPEG,
+  multi-frame storage, TIFF writing and Ghostscript argument handling. The
+  dependency is build tooling, not code shipped on Flipper. A regression rejects
+  a return to the affected versions; existing unrelated alerts are not waived.
 
 The paired firmware passed 1174 host tests, actual native FAT/FDX-B/Remote/Quac
 regressions and the strict physical4096-byte C2 reserve gate. Those results are
