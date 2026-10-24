@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "sourceRepository": "xMasterX/all-the-plugins",
-  "generatedAt": "2026-10-24T14:36:58+00:00",
+  "generatedAt": "2026-10-24T22:31:50+00:00",
   "audits": [
     {
       "sequence": 20260809193105,
@@ -159814,6 +159814,16 @@
               "targetSourceCommit": "89905fa8da20f1ad165b6b2615578d5b66326e75"
             },
             {
+              "targetMD5": "33a1027b4494c131a56f7b5f068487e4",
+              "channel": "dev",
+              "releaseTag": "fw-packages-dev-027",
+              "manifestSHA256": "77a9d43a617a03c839bfa23401c68b91e4217aeabe884e993fa51363e86f9d6d",
+              "containerKind": "fwPackagesZip",
+              "containerSHA256": "eb3c182d138689c053bc0c7584a6d4bc8506cd698d675484ee7e20dd0360478a",
+              "targetReleaseTag": "t-dev-009-030",
+              "targetSourceCommit": "6c07f477ea651541d9fcfa7f06c23d8a8ff43c85"
+            },
+            {
               "targetMD5": "9b19a8412ecc5fadc2a6b574c272ae5a",
               "channel": "stable",
               "releaseTag": "fw-packages-stable-006",
@@ -159927,6 +159937,16 @@
               "targetSourceCommit": "1c99acf242fee7d9e30b3b7ee0a61d15599e5790"
             },
             {
+              "targetMD5": "169a3744875fb45beb4e4b5392c3cbcf",
+              "channel": "dev",
+              "releaseTag": "fw-packages-dev-027",
+              "manifestSHA256": "77a9d43a617a03c839bfa23401c68b91e4217aeabe884e993fa51363e86f9d6d",
+              "containerKind": "fwPackagesZip",
+              "containerSHA256": "eb3c182d138689c053bc0c7584a6d4bc8506cd698d675484ee7e20dd0360478a",
+              "targetReleaseTag": "t-dev-009-030",
+              "targetSourceCommit": "6c07f477ea651541d9fcfa7f06c23d8a8ff43c85"
+            },
+            {
               "targetMD5": "e45970244d066173838f58e7b5df595c",
               "channel": "stable",
               "releaseTag": "fw-packages-stable-006",
@@ -159988,6 +160008,16 @@
               "containerSHA256": "898e2241edd146f6569e5f9c71f71061999f1b866fa97fc326a1b555a5871360",
               "targetReleaseTag": "t-dev-009-018",
               "targetSourceCommit": "1c99acf242fee7d9e30b3b7ee0a61d15599e5790"
+            },
+            {
+              "targetMD5": "e86f4cf1d01d3b354ca218ce5957b431",
+              "channel": "dev",
+              "releaseTag": "fw-packages-dev-027",
+              "manifestSHA256": "77a9d43a617a03c839bfa23401c68b91e4217aeabe884e993fa51363e86f9d6d",
+              "containerKind": "fwPackagesZip",
+              "containerSHA256": "eb3c182d138689c053bc0c7584a6d4bc8506cd698d675484ee7e20dd0360478a",
+              "targetReleaseTag": "t-dev-009-030",
+              "targetSourceCommit": "6c07f477ea651541d9fcfa7f06c23d8a8ff43c85"
             }
           ]
         },
@@ -160030,18 +160060,6 @@
               "compatibilityCatalogTag": "fw-packages-dev-008"
             },
             {
-              "targetMD5": "b84ab3d9dff6b3fc47876f78d5725276",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-029",
-              "manifestSHA256": "3518174a6ba5e0bd05c86a9f7d0d41e30aa6403d8b88d57114b4a349269c2f3a",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "15b7153739a5e3ff567603b6138520c7a4694520a23197fbc0a1edb915abdea0",
-              "targetReleaseTag": "t-dev-009-029",
-              "targetSourceCommit": "fa3b71d8518a182909ea7c5834613752687bbb12",
-              "firmwareVersion": "t-dev-009-029",
-              "resourcesSHA256": "b6203609b3a759da732e43501cabb8e113e44442be1b86e67778905d818c4d4d"
-            },
-            {
               "targetMD5": "ac9d4fab62499e8ea35ee20efa52063a",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -160064,6 +160082,18 @@
               "targetSourceCommit": "adf7431acdd735dcd3d714fa339d76cef71df0a3",
               "firmwareVersion": "t-dev-007-001",
               "resourcesSHA256": "fd9976ff1ff455982392a8d251ab35f6c48f453c60ba72659ec127b6f2a57577"
+            },
+            {
+              "targetMD5": "b84ab3d9dff6b3fc47876f78d5725276",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-030",
+              "manifestSHA256": "f91d01f0681e7f909a26bae60808a13b94db7f2ea49659d56268dd3be1e34b87",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "dadbd1abdd0dd1d79370c799ab58980f3e7dfa75888b9b47fad749397a751dd6",
+              "targetReleaseTag": "t-dev-009-030",
+              "targetSourceCommit": "6c07f477ea651541d9fcfa7f06c23d8a8ff43c85",
+              "firmwareVersion": "t-dev-009-030",
+              "resourcesSHA256": "61bef5f36db79da66867aa58c7a0e17533b4ad684eef78baf84c6ee275e429c9"
             },
             {
               "targetMD5": "1872c1cc6ebcbc045118213d2d7860b5",
@@ -160144,6 +160174,16 @@
               "containerSHA256": "8d0d08d4728d9ace2b3fae62c7e5b903d8e1296cc176fb924025cb0148c0aed0",
               "targetReleaseTag": "t-dev-004-015",
               "targetSourceCommit": "89905fa8da20f1ad165b6b2615578d5b66326e75"
+            },
+            {
+              "targetMD5": "70cf0d1c27d1f9be164b6b026d295170",
+              "channel": "dev",
+              "releaseTag": "fw-packages-dev-027",
+              "manifestSHA256": "77a9d43a617a03c839bfa23401c68b91e4217aeabe884e993fa51363e86f9d6d",
+              "containerKind": "fwPackagesZip",
+              "containerSHA256": "eb3c182d138689c053bc0c7584a6d4bc8506cd698d675484ee7e20dd0360478a",
+              "targetReleaseTag": "t-dev-009-030",
+              "targetSourceCommit": "6c07f477ea651541d9fcfa7f06c23d8a8ff43c85"
             },
             {
               "targetMD5": "b077a6bbcb9fc00fa094c00decfb3dd8",
@@ -160241,18 +160281,6 @@
           ],
           "targetProvenance": [
             {
-              "targetMD5": "d51a9dfe2a6faceccb7bd6fb9850437b",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-029",
-              "manifestSHA256": "3518174a6ba5e0bd05c86a9f7d0d41e30aa6403d8b88d57114b4a349269c2f3a",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "15b7153739a5e3ff567603b6138520c7a4694520a23197fbc0a1edb915abdea0",
-              "targetReleaseTag": "t-dev-009-029",
-              "targetSourceCommit": "fa3b71d8518a182909ea7c5834613752687bbb12",
-              "firmwareVersion": "t-dev-009-029",
-              "resourcesSHA256": "b6203609b3a759da732e43501cabb8e113e44442be1b86e67778905d818c4d4d"
-            },
-            {
               "targetMD5": "40b56f7de3724b1bb295126166297ef5",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -160275,6 +160303,18 @@
               "targetSourceCommit": "adf7431acdd735dcd3d714fa339d76cef71df0a3",
               "firmwareVersion": "t-dev-007-001",
               "resourcesSHA256": "fd9976ff1ff455982392a8d251ab35f6c48f453c60ba72659ec127b6f2a57577"
+            },
+            {
+              "targetMD5": "d51a9dfe2a6faceccb7bd6fb9850437b",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-030",
+              "manifestSHA256": "f91d01f0681e7f909a26bae60808a13b94db7f2ea49659d56268dd3be1e34b87",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "dadbd1abdd0dd1d79370c799ab58980f3e7dfa75888b9b47fad749397a751dd6",
+              "targetReleaseTag": "t-dev-009-030",
+              "targetSourceCommit": "6c07f477ea651541d9fcfa7f06c23d8a8ff43c85",
+              "firmwareVersion": "t-dev-009-030",
+              "resourcesSHA256": "61bef5f36db79da66867aa58c7a0e17533b4ad684eef78baf84c6ee275e429c9"
             },
             {
               "targetMD5": "40b56f7de3724b1bb295126166297ef5",
@@ -160355,6 +160395,16 @@
               "containerSHA256": "8d0d08d4728d9ace2b3fae62c7e5b903d8e1296cc176fb924025cb0148c0aed0",
               "targetReleaseTag": "t-dev-004-015",
               "targetSourceCommit": "89905fa8da20f1ad165b6b2615578d5b66326e75"
+            },
+            {
+              "targetMD5": "07fb327911691a42fd1252f02e5f43b2",
+              "channel": "dev",
+              "releaseTag": "fw-packages-dev-027",
+              "manifestSHA256": "77a9d43a617a03c839bfa23401c68b91e4217aeabe884e993fa51363e86f9d6d",
+              "containerKind": "fwPackagesZip",
+              "containerSHA256": "eb3c182d138689c053bc0c7584a6d4bc8506cd698d675484ee7e20dd0360478a",
+              "targetReleaseTag": "t-dev-009-030",
+              "targetSourceCommit": "6c07f477ea651541d9fcfa7f06c23d8a8ff43c85"
             },
             {
               "targetMD5": "c799645afc1de026bdae64f452438023",
@@ -160984,7 +161034,7 @@
         "claude_buddy:/ext/apps/Bluetooth/claude_remote_ble.fap: author source changed or unavailable",
         "flipper_xremote:/ext/apps/Infrared/flipper_xremote.fap: author source changed or unavailable"
       ],
-      "generatedAt": "2026-10-24T14:36:58+00:00"
+      "generatedAt": "2026-10-24T22:31:50+00:00"
     }
   ]
 }
