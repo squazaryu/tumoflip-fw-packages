@@ -1,6 +1,6 @@
 # GitHub Actions uses CPython 3.12 on ubuntu-latest. Keep both build inputs
 # hash-pinned so native package bytes cannot depend on resolver drift.
-Pillow==12.3.0 \
-    --hash=sha256:78cb2c6865a35ab8ff8b75fd122f6033b92a62c82801110e48ddd6c936a45d91
+Pillow==13.0.0 \
+    --hash=sha256:42d63be3af4f9b951b199b0a9d23365d37ab14687e6d77b74940432c8515c4ca
 heatshrink2==0.13.0 \
     --hash=sha256:5aa93c102ba9c4e6e4fb01974cb5b03194e10fa01bfda8bda233c632b22d3b4a
