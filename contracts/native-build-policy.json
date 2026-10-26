@@ -2,6 +2,8 @@
   "schema": 1,
   "allowedOverlays": {
     "device_library": "apps/Tools/device_library.fap",
+    "field_tools": "apps/Tools/field_tools.fap",
+    "tumo_nfc_sniffer": "apps/NFC/tumo_nfc_sniffer.fap",
     "file_history": "apps_data/device_library/plugins/file_history.fal",
     "esp_flasher": "apps/Module One/ESP32 Wi-Fi/esp_flasher.fap",
     "subghz_raw_edit": "apps/ARF Tools/subghz_raw_edit.fap",
@@ -39,6 +41,8 @@
   },
   "overlayGroups": {
     "device_library": "base",
+    "field_tools": "base",
+    "tumo_nfc_sniffer": "base",
     "file_history": "base",
     "esp_flasher": "module_one",
     "subghz_raw_edit": "arf",
