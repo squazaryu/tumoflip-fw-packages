@@ -92,37 +92,7 @@
     "totp_cli_update_plugin": "base",
     "totp_cli_version_plugin": "base"
   },
-  "releasePlans": {
-    "fw-packages-dev-028": {
-      "mode": "overlay",
-      "sourceCommit": "2b50979c50a896dce367d17de72e6364818b940f",
-      "selectedOverlays": [
-        "arf_status",
-        "device_library",
-        "field_tools",
-        "protocol_rx_bmw",
-        "protocol_rx_gm0",
-        "protocol_rx_gm1",
-        "protocol_rx_mb0",
-        "protocol_rx_mb1",
-        "protocol_rx_mz2",
-        "protocol_rx_op1",
-        "protocol_rx_ty0",
-        "protocol_rx_urmet",
-        "protocol_rx_x10",
-        "signal_workbench",
-        "tumo_nfc_sniffer"
-      ],
-      "targetFirmware": {
-        "firmwareTag": "t-dev-009-032",
-        "firmwareVersion": "t-dev-009-032",
-        "firmwareCommit": "2b50979c50a896dce367d17de72e6364818b940f",
-        "firmwareReleaseId": "63447e734783f57d52ab6f65c39df3492c29f2013833dfb9a4e3fcdfe0c62162",
-        "api": "88.23",
-        "target": 7
-      }
-    }
-  },
+  "releasePlans": {},
   "reviewedDevSourceAncestry": {
     "fw-packages-dev-023": {
       "sourceCommit": "42aad5d7e16cdb430fd7bbed1c37cf5164b3a334",

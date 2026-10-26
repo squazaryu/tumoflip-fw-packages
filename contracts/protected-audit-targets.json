@@ -458,6 +458,41 @@
           "sha256": "f58ab339b71b81c5a83a671921451376183756535c2cdd2fb2439874216946ec"
         }
       }
+    },
+    {
+      "repository": "squazaryu/tumoflip-fw-packages",
+      "releaseTag": "fw-packages-dev-028",
+      "githubReleaseId": 424478848,
+      "tagCommit": "3e431d18901ba40c650da5b34926e9fe498b8a0d",
+      "prerelease": true,
+      "manifestSourceCommit": "2b50979c50a896dce367d17de72e6364818b940f",
+      "manifestReleaseId": "e85214ff44953881965bbccec5ae06386d5f5dc38b09d064d842ece8c50dd979",
+      "assets": {
+        "manifest": {
+          "id": 678713861,
+          "name": "tumoflip-packages.json",
+          "bytes": 55562,
+          "sha256": "f88c28cfd75d2be766f1b1772847644c514583516203e293db9db438d4885aaf"
+        },
+        "archive": {
+          "id": 678713903,
+          "name": "tumoflip-packages.zip",
+          "bytes": 5818074,
+          "sha256": "4b61892c4545b5d5c4a0c2e2191738f60caaf22a8ee9b0af13e0d09a491799db"
+        },
+        "checksums": {
+          "id": 678713788,
+          "name": "fw-packages-dev-028-SHA256SUMS",
+          "bytes": 177,
+          "sha256": "cdd669c5676dcc818e4a3be207a9496ece29591d021ebfb1438818ee5c6c2dea"
+        },
+        "catalogProvenance": {
+          "id": 678713729,
+          "name": "catalog-provenance.json",
+          "bytes": 7645,
+          "sha256": "a20afbae73449e0b54fc7e5083c422e67fc0a55d9873cf9ea8da55136a700df3"
+        }
+      }
     }
   ],
   "firmware": [
