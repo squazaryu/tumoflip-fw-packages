@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "sourceRepository": "xMasterX/all-the-plugins",
-  "generatedAt": "2026-10-27T05:11:00+00:00",
+  "generatedAt": "2026-10-27T10:40:25+00:00",
   "audits": [
     {
       "sequence": 20260809193105,
@@ -161746,9 +161746,10 @@
             "repository": "https://protopirate.net/ProtoPirate/ProtoPirate.git",
             "ref": "refs/heads/main",
             "previousCommit": "4b039064a02d95c9bc23d390caacee1d40efe790",
-            "currentCommit": "dc3446b99f0174302c3d83c73b2dce0868024d39",
+            "currentCommit": null,
             "changed": true,
-            "license": "GPL-3.0"
+            "license": "GPL-3.0",
+            "error": "author source fetch failed for https://protopirate.net/ProtoPirate/ProtoPirate.git refs/heads/main"
           },
           "status": "needsReview",
           "disposition": "needsReview",
@@ -162200,7 +162201,7 @@
         "flipper_xremote:/ext/apps/Infrared/flipper_xremote.fap: author source changed or unavailable",
         "subghz_raw_edit:/ext/apps/Sub-GHz/subghz_raw_edit.fap: author source changed or unavailable"
       ],
-      "generatedAt": "2026-10-27T05:11:00+00:00"
+      "generatedAt": "2026-10-27T10:40:25+00:00"
     }
   ]
 }
