@@ -1,4 +1,7 @@
-# Field-batch content plan — not activation
+# Initial field-batch content plan — historical preparation
+
+Dev030 is now published; see [release and activation record](releases/fw-packages-dev-030.md).
+The text below records the pre-publication boundary, not the current catalog head.
 
 The firmware implementation branch `feat/field-batch-20261028` prepares five
 new Base binary overlays: `servo_tester_plus`, `power_journal`, `sensor_watch`,
