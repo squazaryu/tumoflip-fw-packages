@@ -102,7 +102,29 @@
     "totp_cli_update_plugin": "base",
     "totp_cli_version_plugin": "base"
   },
-  "releasePlans": {},
+  "releasePlans": {
+    "fw-packages-dev-030": {
+      "mode": "overlay",
+      "sourceCommit": "513a55a3615f5d80e2ecb029a92f8e3c08d26e1a",
+      "selectedOverlays": [
+        "device_library",
+        "power_journal",
+        "sensor_watch",
+        "servo_tester_plus",
+        "signal_workbench",
+        "tumo_uhf_inventory",
+        "tumo_varta"
+      ],
+      "targetFirmware": {
+        "firmwareTag": "t-dev-009-033",
+        "firmwareVersion": "t-dev-009-033",
+        "firmwareCommit": "513a55a3615f5d80e2ecb029a92f8e3c08d26e1a",
+        "firmwareReleaseId": "de00b93f2267bfd1ef6e731c98ae0322e0dc4b318d9fdf0c1ac74ea4c2651e0b",
+        "api": "88.23",
+        "target": 7
+      }
+    }
+  },
   "reviewedDevSourceAncestry": {
     "fw-packages-dev-023": {
       "sourceCommit": "42aad5d7e16cdb430fd7bbed1c37cf5164b3a334",
