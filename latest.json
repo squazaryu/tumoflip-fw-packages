@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "sourceRepository": "xMasterX/all-the-plugins",
-  "generatedAt": "2026-10-27T20:45:58+00:00",
+  "generatedAt": "2026-10-28T11:43:16+00:00",
   "audits": [
     {
       "sequence": 20260809193105,
@@ -162341,6 +162341,16 @@
             {
               "targetMD5": "33a1027b4494c131a56f7b5f068487e4",
               "channel": "dev",
+              "releaseTag": "fw-packages-dev-030",
+              "manifestSHA256": "a00fa7c82f0422e55f4eb7aa9989acded013301c6501cb2572d2703a1ed57774",
+              "containerKind": "fwPackagesZip",
+              "containerSHA256": "8287a940e0c41966f88df8fbbb1a441bb129b386ff2657a461f84c795b3fa878",
+              "targetReleaseTag": "t-dev-009-033",
+              "targetSourceCommit": "513a55a3615f5d80e2ecb029a92f8e3c08d26e1a"
+            },
+            {
+              "targetMD5": "33a1027b4494c131a56f7b5f068487e4",
+              "channel": "dev",
               "releaseTag": "fw-packages-dev-024",
               "manifestSHA256": "112f51a0e1eacdc37d580a7efe03aa83066c1dd4ba1912c585f399390c9bd8c3",
               "containerKind": "fwPackagesZip",
@@ -162494,6 +162504,16 @@
             {
               "targetMD5": "169a3744875fb45beb4e4b5392c3cbcf",
               "channel": "dev",
+              "releaseTag": "fw-packages-dev-030",
+              "manifestSHA256": "a00fa7c82f0422e55f4eb7aa9989acded013301c6501cb2572d2703a1ed57774",
+              "containerKind": "fwPackagesZip",
+              "containerSHA256": "8287a940e0c41966f88df8fbbb1a441bb129b386ff2657a461f84c795b3fa878",
+              "targetReleaseTag": "t-dev-009-033",
+              "targetSourceCommit": "513a55a3615f5d80e2ecb029a92f8e3c08d26e1a"
+            },
+            {
+              "targetMD5": "169a3744875fb45beb4e4b5392c3cbcf",
+              "channel": "dev",
               "releaseTag": "fw-packages-dev-024",
               "manifestSHA256": "112f51a0e1eacdc37d580a7efe03aa83066c1dd4ba1912c585f399390c9bd8c3",
               "containerKind": "fwPackagesZip",
@@ -162587,6 +162607,16 @@
             {
               "targetMD5": "e86f4cf1d01d3b354ca218ce5957b431",
               "channel": "dev",
+              "releaseTag": "fw-packages-dev-030",
+              "manifestSHA256": "a00fa7c82f0422e55f4eb7aa9989acded013301c6501cb2572d2703a1ed57774",
+              "containerKind": "fwPackagesZip",
+              "containerSHA256": "8287a940e0c41966f88df8fbbb1a441bb129b386ff2657a461f84c795b3fa878",
+              "targetReleaseTag": "t-dev-009-033",
+              "targetSourceCommit": "513a55a3615f5d80e2ecb029a92f8e3c08d26e1a"
+            },
+            {
+              "targetMD5": "e86f4cf1d01d3b354ca218ce5957b431",
+              "channel": "dev",
               "releaseTag": "fw-packages-dev-024",
               "manifestSHA256": "112f51a0e1eacdc37d580a7efe03aa83066c1dd4ba1912c585f399390c9bd8c3",
               "containerKind": "fwPackagesZip",
@@ -162633,18 +162663,6 @@
           ],
           "targetProvenance": [
             {
-              "targetMD5": "4b03b0ad1d046be7da307482d25010db",
-              "channel": "dev",
-              "releaseTag": "t-dev-009-032",
-              "manifestSHA256": "716ecb3cf53c3d16399b1b0e1160410cc239662e3ace825c00ffe5359706c077",
-              "containerKind": "firmwareUpdaterBundle",
-              "containerSHA256": "2770306789df9978464aeb996a4192f33d698f3e7c15d357be5287df5a97161d",
-              "targetReleaseTag": "t-dev-009-032",
-              "targetSourceCommit": "2b50979c50a896dce367d17de72e6364818b940f",
-              "firmwareVersion": "t-dev-009-032",
-              "resourcesSHA256": "ffb76e45e55283391b719626dbc1aad7bb7da483c3cd02c012d36245b941b8f8"
-            },
-            {
               "targetMD5": "40b56f7de3724b1bb295126166297ef5",
               "channel": "dev",
               "releaseTag": "t-dev-004-015",
@@ -162667,6 +162685,18 @@
               "targetSourceCommit": "adf7431acdd735dcd3d714fa339d76cef71df0a3",
               "firmwareVersion": "t-dev-007-001",
               "resourcesSHA256": "fd9976ff1ff455982392a8d251ab35f6c48f453c60ba72659ec127b6f2a57577"
+            },
+            {
+              "targetMD5": "4b03b0ad1d046be7da307482d25010db",
+              "channel": "dev",
+              "releaseTag": "t-dev-009-033",
+              "manifestSHA256": "1744d4de93a4183c2f935d026e2669d6dff54416bd9abca260575bde53a6efa9",
+              "containerKind": "firmwareUpdaterBundle",
+              "containerSHA256": "f88c058f03855323a92a974043788899c3048a22e69b7a4777b5893f58b7a795",
+              "targetReleaseTag": "t-dev-009-033",
+              "targetSourceCommit": "513a55a3615f5d80e2ecb029a92f8e3c08d26e1a",
+              "firmwareVersion": "t-dev-009-033",
+              "resourcesSHA256": "bdf69d465a437222e03fc95cce67846c319a11a5daf15b7d595ceb233b8362ee"
             },
             {
               "targetMD5": "07fb327911691a42fd1252f02e5f43b2",
@@ -162747,6 +162777,16 @@
               "containerSHA256": "7e66feae8a2431172b2e30894905c37a25893a14b2ba073ac72fe3d556a2592f",
               "targetReleaseTag": "t-dev-004-015",
               "targetSourceCommit": "cf5f27221bf42d3dd98a5634c62feaabf305e34b"
+            },
+            {
+              "targetMD5": "07fb327911691a42fd1252f02e5f43b2",
+              "channel": "dev",
+              "releaseTag": "fw-packages-dev-030",
+              "manifestSHA256": "a00fa7c82f0422e55f4eb7aa9989acded013301c6501cb2572d2703a1ed57774",
+              "containerKind": "fwPackagesZip",
+              "containerSHA256": "8287a940e0c41966f88df8fbbb1a441bb129b386ff2657a461f84c795b3fa878",
+              "targetReleaseTag": "t-dev-009-033",
+              "targetSourceCommit": "513a55a3615f5d80e2ecb029a92f8e3c08d26e1a"
             },
             {
               "targetMD5": "07fb327911691a42fd1252f02e5f43b2",
@@ -163408,7 +163448,7 @@
         "flipper_xremote:/ext/apps/Infrared/flipper_xremote.fap: author source changed or unavailable",
         "subghz_raw_edit:/ext/apps/Sub-GHz/subghz_raw_edit.fap: author source changed or unavailable"
       ],
-      "generatedAt": "2026-10-27T20:45:58+00:00"
+      "generatedAt": "2026-10-28T11:43:16+00:00"
     }
   ]
 }
