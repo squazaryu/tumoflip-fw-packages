@@ -1,13 +1,26 @@
 # FW Packages Dev030 — Field Apps
 
+Published: https://github.com/squazaryu/tumoflip-fw-packages/releases/tag/fw-packages-dev-030
+
+Immutable prerelease426496425, published2026-10-28T09:58:46Z. Publisher/tag commit
+`f41ce964f76f228e9b684cb45fb402e9f095414b` (plan PR186). Exact read-only native
+Ubuntu24.04/toolchain39 CI40667508271 passed; artifact12807300262 was verified
+again at the manual publication boundary. All4 public assets were downloaded
+and byte-compared with that artifact after publication.
+
+Manifest ID `ed2139c11f8c223284daef8f7aa4723e1164e217082d4d0ef661db6208d6370a`.
+The separate activation consumes the030 plan and advances only the Dev catalog
+to030/next031. Stable006, prior rollback history and protected acceptance pins
+remain unchanged. Source history/report directories are never overlays.
+
 Exact source: `513a55a3615f5d80e2ecb029a92f8e3c08d26e1a`, the merged Dev009-033 release source.
 F7 / API88.23. Target firmware manifest ID:
 `de00b93f2267bfd1ef6e731c98ae0322e0dc4b318d9fdf0c1ac74ea4c2651e0b`.
 
-This plan authorizes the existing read-only native build and, after successful
-verification, the user-requested manual publication transaction. It does not
-activate the catalog or mark any pending protected audit accepted. Automatic
-publication remains disabled; no workflow permissions or release policies change.
+The plan authorized the existing read-only native build and the user-requested
+verified manual publication transaction. Automatic publication remains disabled;
+no workflow permissions or pending protected-app verdicts were changed. Catalog
+activation is separate from publication and does not claim hardware acceptance.
 
 ## Exact bounded content
 
