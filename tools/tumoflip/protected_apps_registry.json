@@ -4,6 +4,7 @@
   "protectedKeys": [
     "ai_dashboard",
     "app_bridge_terminal",
+    "archive_favorites",
     "arf_car_emulate",
     "arf_counter_bf",
     "arf_frequency_analyzer",
@@ -72,6 +73,7 @@
     "tumovgm_bridge",
     "tumovm_peripherals",
     "tumovm_poc",
+    "usb_cdrom",
     "usb_sd_mode",
     "wifi_map",
     "wifi_mapper",
@@ -79,6 +81,8 @@
     "xremote"
   ],
   "protectedDataFamilies": [
+    {"prefix": "/ext/apps_data/archive/plugins/", "owner": "archive_favorites"},
+    {"prefix": "/ext/apps_data/usb_cdrom/", "owner": "usb_cdrom"},
     {"prefix": "/ext/apps_data/device_library/", "owner": "device_library"},
     {"prefix": "/ext/apps_data/hid_ble/", "owner": "hid_ble"},
     {"prefix": "/ext/apps_data/arf_subghz_full/", "owner": "arf_subghz_full"},

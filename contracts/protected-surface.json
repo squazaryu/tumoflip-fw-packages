@@ -56,7 +56,8 @@
   "ownedSourcePathsByImplementation": {
     "dev": [
       "applications_user/morse_player",
-      "applications_user/servo_tester_plus"
+      "applications_user/servo_tester_plus",
+      "applications_user/usb_cdrom"
     ],
     "main": []
   },
