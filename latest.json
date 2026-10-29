@@ -1,7 +1,7 @@
 {
   "schema": 2,
   "sourceRepository": "xMasterX/all-the-plugins",
-  "generatedAt": "2026-10-29T01:51:19+00:00",
+  "generatedAt": "2026-10-29T20:41:13+00:00",
   "audits": [
     {
       "sequence": 20260809193105,
@@ -165430,7 +165430,7 @@
             "repository": "https://github.com/0xchocolate/flipperzero-wifi-marauder.git",
             "ref": "refs/heads/feature_wifi_marauder_app",
             "previousCommit": "8f8b79e4a97b283faac41dda4e4da8d260ddc459",
-            "currentCommit": "b39a2cb6c8ec13670ee0268fb803f747a1757482",
+            "currentCommit": "13e93181f0d515fcb858cdec555cedc5364c45ea",
             "changed": true,
             "license": "GPL-3.0"
           },
@@ -165940,7 +165940,7 @@
         "flipper_xremote:/ext/apps/Infrared/flipper_xremote.fap: author source changed or unavailable",
         "subghz_raw_edit:/ext/apps/Sub-GHz/subghz_raw_edit.fap: author source changed or unavailable"
       ],
-      "generatedAt": "2026-10-29T01:51:19+00:00"
+      "generatedAt": "2026-10-29T20:41:13+00:00"
     }
   ]
 }
