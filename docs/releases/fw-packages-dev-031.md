@@ -1,7 +1,17 @@
 # FW Packages Dev031 — USB CD-ROM
 
-Preparation record: **not published or catalog-active yet**. Dev030 and
-Stable006 remain current until verified publication and a separate activation.
+Published: https://github.com/squazaryu/tumoflip-fw-packages/releases/tag/fw-packages-dev-031
+
+Immutable prerelease **431194924**, published2026-11-02T07:57:26Z. Exact native
+Ubuntu24.04/toolchain39 CI **41408555131** succeeded; artifact **13123994612**
+was reverified at the manual publication boundary. All four public assets were
+downloaded anonymously and byte-compared. Manifest ID:
+`daab1695fbe787bef743bed50b4fc13ac3524863cda5ae4b19b72c3a5ba08968`.
+
+The separate activation consumes the031 plan and advances only Dev to031/next032.
+It must merge before the app selects031 automatically. Hold activation until
+the prepared iOS protection release is publicly available. Stable006, old
+rollback identities and protected acceptance/implementation pins are unchanged.
 
 The exact overlay plan selects only `usb_cdrom` → `apps/USB/usb_cdrom.fap`
 in Base, built from merged firmware source
@@ -13,7 +23,7 @@ target F7 / API88.23. No provisional source ref or public API bump is used.
 ## Bounded content
 
 - Add protected USB CD-ROM0.2: explicitly chosen ISO, read-only SCSI/BOT handling, USB ownership/teardown and embedded GPL notice. Menu: Apps → USB → USB CD-ROM.
-- Inherit every Dev030 member byte-identically. No other package rebuild, removal, data/dictionary overlay, ISO image, settings/history/capture replacement or cleanup-list change is authorized.
+- Verified complete catalog:138 payloads,137 inherited byte-identically and one new USB CD-ROM FAP. No other package rebuild, removal, data/dictionary overlay, ISO image, settings/history/capture replacement or cleanup-list change.
 - ARF, Wardriving and the archive favorites writer are native Dev009-034 firmware resources. They are not converted to independent overlays; old reference entries outside the cumulative modified-target allowlist are not installed by a delta catalog.
 - Keep old rollback entries, Stable006 and protected acceptance/implementation pins unchanged. The plan is not an audit acceptance verdict.
 
