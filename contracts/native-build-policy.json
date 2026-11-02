@@ -104,7 +104,23 @@
     "totp_cli_update_plugin": "base",
     "totp_cli_version_plugin": "base"
   },
-  "releasePlans": {},
+  "releasePlans": {
+    "fw-packages-dev-031": {
+      "mode": "overlay",
+      "sourceCommit": "dba75d725d5cca882758150d9b0dc0041f8e7d0b",
+      "selectedOverlays": [
+        "usb_cdrom"
+      ],
+      "targetFirmware": {
+        "firmwareTag": "t-dev-009-034",
+        "firmwareVersion": "t-dev-009-034",
+        "firmwareCommit": "dba75d725d5cca882758150d9b0dc0041f8e7d0b",
+        "firmwareReleaseId": "015efe04b54a01093a8338a04323d2421eeb5283fb91fea66bb1bf61531141cd",
+        "api": "88.23",
+        "target": 7
+      }
+    }
+  },
   "reviewedDevSourceAncestry": {
     "fw-packages-dev-023": {
       "sourceCommit": "42aad5d7e16cdb430fd7bbed1c37cf5164b3a334",
