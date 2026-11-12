@@ -236,6 +236,15 @@ def load_native_plan(
     if not isinstance(release_policy, dict):
         raise ContractError(f"native release {tag} has no exact non-empty overlay plan")
     mode = release_policy.get("mode", "overlay")
+    preserved_names = release_policy.get("preserveDataOverlays", [])
+    if (
+        not isinstance(preserved_names, list)
+        or any(name not in allowed_data_overlays for name in preserved_names if isinstance(name, str))
+        or any(not isinstance(name, str) for name in preserved_names)
+        or len(set(preserved_names)) != len(preserved_names)
+        or (preserved_names and mode != "firmwareSnapshot")
+    ):
+        raise ContractError("firmware snapshot data preservation policy is invalid")
     selected_names = release_policy.get("selectedOverlays", [])
     selected_data_names = release_policy.get("selectedDataOverlays", [])
     if mode not in {"overlay", "data", "baseline", "firmwareSnapshot"}:
@@ -349,6 +358,10 @@ def load_native_plan(
         "baseRelease": base_release,
         "selectedOverlays": selected_overlays,
         "selectedDataOverlays": selected_data_overlays,
+        "preservedDataSources": {
+            allowed_data_overlays[name]: data_overlay_groups[name]
+            for name in sorted(preserved_names)
+        },
         "overlayTargets": overlay_targets,
         "dataOverlayTargets": sorted(selected_data_overlays.values()),
         "overlayGroups": overlay_groups_by_target,
@@ -1161,6 +1174,23 @@ def _snapshot_package_release(
 ) -> dict[str, Any]:
     manifest = copy.deepcopy(snapshot)
     manifest.pop("release_id", None)
+    previous = _entries_by_source(base)
+    target = _entries_by_source(snapshot)
+    for source, expected_group in plan.get("preservedDataSources", {}).items():
+        _data_source(source, "preserved data source")
+        if source not in previous:
+            raise ContractError(f"preserved data is missing from predecessor: {source}")
+        group, entry = previous[source]
+        if (group != expected_group or entry.get("kind") != "dictionary"
+                or entry.get("preserve_existing") is not True
+                or entry.get("target") != "/ext/" + source):
+            raise ContractError(f"preserved data predecessor contract differs: {source}")
+        if source in target:
+            if target[source] != previous[source]:
+                raise ContractError(f"preserved data collides with firmware snapshot: {source}")
+        else:
+            manifest["packages"][group].append(copy.deepcopy(entry))
+            manifest["packages"][group].sort(key=lambda item: item["source"])
     manifest["package_release"] = {
         "type": "package-only",
         "id": plan["tag"],
@@ -1188,8 +1218,30 @@ def _snapshot_package_release(
         },
         "compatible_releases": [],
     }
+    if plan.get("preservedDataSources"):
+        manifest["package_release"]["preserved_data_sources"] = sorted(plan["preservedDataSources"])
     manifest["release_id"] = manifest_release_id(manifest)
     return manifest
+
+
+def _write_snapshot_archive(
+    manifest: dict[str, Any], target_directory: Path, base_directory: Path, output: Path
+) -> None:
+    """Keep native bytes exact and append only hash-pinned predecessor data."""
+    shutil.copyfile(target_directory / "tumoflip-packages.zip", output)
+    with zipfile.ZipFile(output) as archive:
+        present = set(archive.namelist())
+    missing = set(_entries_by_source(manifest)) - present
+    if missing:
+        allowed = set(manifest["package_release"].get("preserved_data_sources", []))
+        if not missing <= allowed:
+            raise ContractError("snapshot archive is missing a native payload")
+        with zipfile.ZipFile(base_directory / "tumoflip-packages.zip") as previous:
+            with zipfile.ZipFile(output, "a", compression=zipfile.ZIP_DEFLATED) as archive:
+                for source in sorted(missing):
+                    archive.writestr(source, previous.read(source))
+        _canonicalize_archive(manifest, output)
+    verify_archive(manifest, output)
 
 
 def build_firmware_snapshot_release(
@@ -1212,13 +1264,10 @@ def build_firmware_snapshot_release(
     try:
         manifest = _snapshot_package_release(snapshot, base, base_directory, plan)
         _write_json(staging / "tumoflip-packages.json", manifest)
-        shutil.copyfile(
-            target_directory / "tumoflip-packages.zip",
-            staging / "tumoflip-packages.zip",
-        )
+        _write_snapshot_archive(manifest, target_directory, base_directory, staging / "tumoflip-packages.zip")
         verify_archive(manifest, staging / "tumoflip-packages.zip")
         checksum_path = _checksums(staging, plan["tag"])
-        changed_sources = _snapshot_changed_sources(base, snapshot)
+        changed_sources = _snapshot_changed_sources(base, manifest)
         assets = {
             name: _asset_evidence(staging / name)
             for name in (*CANONICAL_ASSETS, checksum_path.name)
@@ -1252,6 +1301,8 @@ def build_firmware_snapshot_release(
             "manifestReleaseId": manifest["release_id"],
             "assets": assets,
         }
+        if plan.get("preservedDataSources"):
+            provenance["preservedDataSources"] = sorted(plan["preservedDataSources"])
         _write_json(staging / PROVENANCE_NAME, provenance)
         verify_native_release(staging, plan, base_directory, target_directory)
         os.replace(staging, output)
@@ -1435,10 +1486,11 @@ def _verify_firmware_snapshot_release(
     expected_manifest = _snapshot_package_release(snapshot, base, base_directory, plan)
     if manifest != expected_manifest:
         raise ContractError("firmware snapshot catalog manifest differs")
-    if sha256(directory / "tumoflip-packages.zip") != sha256(
-        target_directory / "tumoflip-packages.zip"
-    ):
-        raise ContractError("firmware snapshot package ZIP differs")
+    with tempfile.TemporaryDirectory(prefix="snapshot-verify-") as temporary:
+        expected_zip = Path(temporary) / "expected.zip"
+        _write_snapshot_archive(expected_manifest, target_directory, base_directory, expected_zip)
+        if sha256(directory / "tumoflip-packages.zip") != sha256(expected_zip):
+            raise ContractError("firmware snapshot package ZIP differs")
     provenance = load_json(directory / PROVENANCE_NAME)
     checksum_name = f"{plan['tag']}-SHA256SUMS"
     expected_names = {*CANONICAL_ASSETS, checksum_name}
@@ -1467,12 +1519,14 @@ def _verify_firmware_snapshot_release(
             "packageZipSHA256": plan["targetFirmware"]["packageZipSHA256"],
             "manifestReleaseId": plan["targetFirmware"]["releaseId"],
         },
-        "changedSources": _snapshot_changed_sources(base, snapshot),
+        "changedSources": _snapshot_changed_sources(base, manifest),
         "manifestReleaseId": manifest["release_id"],
     }
     for key, value in exact.items():
         if provenance.get(key) != value:
             raise ContractError(f"firmware snapshot provenance {key} differs")
+    if provenance.get("preservedDataSources", []) != sorted(plan.get("preservedDataSources", {})):
+        raise ContractError("firmware snapshot preserved data provenance differs")
     assets = provenance.get("assets")
     if not isinstance(assets, dict) or set(assets) != expected_names:
         raise ContractError("firmware snapshot provenance asset set differs")
