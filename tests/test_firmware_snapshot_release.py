@@ -219,6 +219,33 @@ class FirmwareSnapshotReleaseTests(unittest.TestCase):
         with self.assertRaises(ContractError):
             build_firmware_snapshot_release(self.target, self.base, self.root / "missing", plan)
 
+    def test_snapshot_preserved_dictionary_tamper_is_rejected(self) -> None:
+        plan = self._preservation_plan()
+        output = self.root / "tampered"
+        build_firmware_snapshot_release(self.target, self.base, output, plan)
+        with zipfile.ZipFile(output / "tumoflip-packages.zip") as archive:
+            payloads = {name: archive.read(name) for name in archive.namelist()}
+        payloads["rfidfuzzer/tumoflip_utergrooll_em4100_v1.txt"] = b"0099999999\n"
+        with zipfile.ZipFile(output / "tumoflip-packages.zip", "w") as archive:
+            for name, data in payloads.items():
+                archive.writestr(name, data)
+        with self.assertRaises(ContractError):
+            verify_native_release(output, plan, self.base, self.target)
+
+    def test_snapshot_refuses_data_not_marked_preserve_existing(self) -> None:
+        self._preservation_plan()
+        path = self.base / "tumoflip-packages.json"
+        manifest = json.loads(path.read_text())
+        manifest["packages"]["base"][-1]["preserve_existing"] = False
+        manifest.pop("release_id", None)
+        manifest["release_id"] = manifest_release_id(manifest)
+        path.write_text(json.dumps(manifest))
+        (self.base / "fw-packages-stable-001-SHA256SUMS").write_text("".join(
+            f"{sha256(self.base / n)}  {n}\n" for n in ("tumoflip-packages.json", "tumoflip-packages.zip")))
+        plan = self._preservation_plan(add_data=False)
+        with self.assertRaises(ContractError):
+            build_firmware_snapshot_release(self.target, self.base, self.root / "unowned", plan)
+
     def test_snapshot_target_tamper_is_terminal_after_artifact_boundary(self) -> None:
         output = self.root / "stable002"
         build_firmware_snapshot_release(self.target, self.base, output, self.plan)
