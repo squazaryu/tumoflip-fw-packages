@@ -1,30 +1,37 @@
 # FW Packages Stable007 — Stable010 matching snapshot
 
-Preparation, not activation. Exact firmware source:
+Published and download-verified on 2026-11-12. Exact firmware source:
 b3e9aacd75a342d66fd0f9dea0467b1217726a59,
-[v1.0.10](https://github.com/squazaryu/tumoflip/releases/tag/v1.0.10), F7/API88.23.
+[v1.0.10](https://github.com/squazaryu/tumoflip/releases/tag/v1.0.10), F7 / API 88.23.
 All six firmware assets were anonymously downloaded, hashed and their native,
-SDK/API/embedded-source/updater/DfuSe4KiB boundaries revalidated before pinning.
+SDK/API/embedded-source/updater/DfuSe 4 KiB boundaries revalidated before pinning.
 
-Compose142 native payloads from that exact published firmware manifest/ZIP.
+Compose 142 native payloads from that exact published firmware manifest/ZIP.
 Preserve exactly the two hash-pinned, preserve_existing predecessor dictionaries
-utergrooll_em4100 andutergrooll_ds1990; do not remove previously shipped content
+utergrooll_em4100 and utergrooll_ds1990; do not remove previously shipped content
 merely because it is absent from the firmware-native archive. Native FAP/FAL
-bytes must remain byte-identical to the canonical firmware snapshot. Total144.
+bytes remain byte-identical to the canonical firmware snapshot. Total: 144.
 
 This is not a Community Pack binary import or protected acceptance update.
-Stable006 and Dev031 rollback contracts and all protected pins remain unchanged.
-The current Stable pointer remains006 until the new immutable assets have been
-downloaded/verified and a separate activation PR advances lineage/index/history.
+Stable006 and Dev031 rollback history and all protected pins remain unchanged.
+The separate activation advances the Stable pointer to 007 and the next revision
+to 008, while preserving every previous catalog-index entry and Dev031 unchanged.
+Published release 442368008 targets control 458ba3e05730a72151117fa21e4464a4d63d6b57.
+Manifest release ID: 7885dfac77074a33fbf547f74080fd160b8c8d48d23557a121e0a2fcabc3c487.
+All four assets were downloaded from the draft and again anonymously after
+publication, SHA256-checked and compared byte-for-byte with the composed result.
+The public archive also passed independent native-release reconstruction checks.
+The audit-target registry records these exact published identities for routing;
+it does not advance any protected source-acceptance decision.
 
 Use the existing firmwareSnapshot composition/verification helpers on the
 verified public firmware and immutable predecessor, at the exact merged control
 commit. No additional FAP/firmware build or on-device write is performed by this
-pure composition. Publish manifest,ZIP,SHA256SUMS andcatalog-provenance.json;
+pure composition. Published manifest, ZIP, SHA256SUMS and catalog-provenance.json;
 reverify every download and only then activate.
 
 Install Stable010 including native resources first, then Stable007 packages.
-TumoCompanion1.11.35 supports exact-version firmwareSnapshot catalogs. No reset,
+TumoCompanion 1.11.35 supports exact-version firmwareSnapshot catalogs. No reset,
 SD cleanup, iOS release or automatic board flash. Modified user dictionaries are
 not overwritten (preserve_existing remains true). Physical acceptance and fresh
 independent review are not claimed.

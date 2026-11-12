@@ -95,6 +95,7 @@ class AuditControlPlaneTests(unittest.TestCase):
                 425568156,
                 426496425,
                 431194924,
+                442368008,
             },
         )
         for tag, item in packages.items():
@@ -110,7 +111,7 @@ class AuditControlPlaneTests(unittest.TestCase):
                 "fw-packages-stable-006", "fw-packages-dev-023", "fw-packages-dev-024",
                 "fw-packages-dev-025", "fw-packages-dev-026", "fw-packages-dev-027",
                 "fw-packages-dev-028", "fw-packages-dev-029", "fw-packages-dev-030",
-                "fw-packages-dev-031",
+                "fw-packages-dev-031", "fw-packages-stable-007",
             }:
                 self.assertIn("catalogProvenance", item["assets"])
                 self.assertNotIn("migrationProvenance", item["assets"])
@@ -150,6 +151,29 @@ class AuditControlPlaneTests(unittest.TestCase):
                 {"repository": "squazaryu/tumoflip", "channel": "stable"},
                 {"repository": "squazaryu/tumoflip", "channel": "dev"},
             ],
+        )
+
+    def test_stable007_binds_verified_catalog_to_exact_stable010(self) -> None:
+        contract = validate_targets(
+            json.loads((self.root / "contracts/protected-audit-targets.json").read_text())
+        )
+        target = next(
+            item for item in contract["packages"]
+            if item["releaseTag"] == "fw-packages-stable-007"
+        )
+        self.assertEqual(target["githubReleaseId"], 442368008)
+        self.assertEqual(target["tagCommit"], "458ba3e05730a72151117fa21e4464a4d63d6b57")
+        self.assertEqual(target["manifestSourceCommit"], "b3e9aacd75a342d66fd0f9dea0467b1217726a59")
+        self.assertEqual(target["manifestReleaseId"], "7885dfac77074a33fbf547f74080fd160b8c8d48d23557a121e0a2fcabc3c487")
+        self.assertFalse(target["prerelease"])
+        self.assertEqual(
+            {key: asset["id"] for key, asset in target["assets"].items()},
+            {
+                "manifest": 737533334,
+                "archive": 737533338,
+                "checksums": 737533333,
+                "catalogProvenance": 737533339,
+            },
         )
 
     def test_target_contract_rejects_duplicate_release_identity(self) -> None:
