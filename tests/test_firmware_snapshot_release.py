@@ -170,6 +170,55 @@ class FirmwareSnapshotReleaseTests(unittest.TestCase):
         self.assertEqual(provenance["kind"], "firmwareSnapshotPackageRelease")
         self.assertEqual(provenance["changedSources"], ["apps/Tools/fixture.fap"])
 
+    def _preservation_plan(self, *, add_data: bool = True, name: str = "utergrooll_em4100") -> dict:
+        source = "rfidfuzzer/tumoflip_utergrooll_em4100_v1.txt"
+        if add_data:
+            data = b"0012345678\n"
+            manifest_path = self.base / "tumoflip-packages.json"
+            manifest = json.loads(manifest_path.read_text())
+            manifest["packages"]["base"].append({
+                "source": source, "target": "/ext/" + source, "bytes": len(data),
+                "sha256": hashlib.sha256(data).hexdigest(), "md5": hashlib.md5(data).hexdigest(),
+                "kind": "dictionary", "preserve_existing": True,
+            })
+            manifest.pop("release_id", None)
+            manifest["release_id"] = manifest_release_id(manifest)
+            manifest_path.write_text(json.dumps(manifest, sort_keys=True) + "\n")
+            with zipfile.ZipFile(self.base / "tumoflip-packages.zip", "a") as archive:
+                archive.writestr(source, data)
+            (self.base / "fw-packages-stable-001-SHA256SUMS").write_text("".join(
+                f"{sha256(self.base / n)}  {n}\n" for n in ("tumoflip-packages.json", "tumoflip-packages.zip")))
+        self._pin_contracts()
+        policy_path = self.control / "contracts/native-build-policy.json"
+        policy = json.loads(policy_path.read_text())
+        policy["releasePlans"]["fw-packages-stable-002"]["preserveDataOverlays"] = [name]
+        policy_path.write_text(json.dumps(policy))
+        return load_native_plan(self.control, "stable", 2, self.source_commit, self.publisher_commit)
+
+    def test_snapshot_retains_only_explicit_previous_dictionary_bytes(self) -> None:
+        plan = self._preservation_plan()
+        output = self.root / "retained"
+        build_firmware_snapshot_release(self.target, self.base, output, plan)
+        verify_native_release(output, plan, self.base, self.target)
+        manifest = json.loads((output / "tumoflip-packages.json").read_text())
+        entries = {entry["source"]: entry for values in manifest["packages"].values() for entry in values}
+        source = "rfidfuzzer/tumoflip_utergrooll_em4100_v1.txt"
+        self.assertTrue(entries[source]["preserve_existing"])
+        with zipfile.ZipFile(output / "tumoflip-packages.zip") as archive:
+            self.assertEqual(archive.read(source), b"0012345678\n")
+            self.assertEqual(archive.read("apps/Tools/fixture.fap"), b"new")
+        provenance = json.loads((output / "catalog-provenance.json").read_text())
+        self.assertNotIn(source, provenance["changedSources"])
+
+    def test_snapshot_preservation_rejects_unknown_policy_names(self) -> None:
+        with self.assertRaises(ContractError):
+            self._preservation_plan(name="unapproved")
+
+    def test_snapshot_preservation_requires_a_verified_predecessor_entry(self) -> None:
+        plan = self._preservation_plan(add_data=False)
+        with self.assertRaises(ContractError):
+            build_firmware_snapshot_release(self.target, self.base, self.root / "missing", plan)
+
     def test_snapshot_target_tamper_is_terminal_after_artifact_boundary(self) -> None:
         output = self.root / "stable002"
         build_firmware_snapshot_release(self.target, self.base, output, self.plan)
