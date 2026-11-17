@@ -42,7 +42,8 @@ class FirmwareSnapshotReleaseTests(unittest.TestCase):
         self.temporary.cleanup()
 
     def _release_directory(
-        self, name: str, payload: bytes, *, version: str, independent: bool
+        self, name: str, payload: bytes, *, version: str, independent: bool,
+        channel: str = "stable", revision: int = 1,
     ) -> Path:
         directory = self.root / name
         directory.mkdir()
@@ -54,18 +55,19 @@ class FirmwareSnapshotReleaseTests(unittest.TestCase):
             "md5": hashlib.md5(payload).hexdigest(),
         }
         package_release = None
+        tag = f"fw-packages-{channel}-{revision:03d}"
         if independent:
             package_release = {
                 "type": "package-only",
-                "id": "fw-packages-stable-001",
+                "id": tag,
                 "source_commit": "a" * 40,
                 "source_dirty": False,
                 "source_firmware_version": version,
                 "target_release_tag": "v1.0.4",
                 "firmware_flash_unchanged": True,
-                "catalog_channel": "stable",
-                "catalog_revision": 1,
-                "catalog_release_tag": "fw-packages-stable-001",
+                "catalog_channel": channel,
+                "catalog_revision": revision,
+                "catalog_release_tag": tag,
             }
         manifest = {
             "schema": 2,
@@ -82,7 +84,7 @@ class FirmwareSnapshotReleaseTests(unittest.TestCase):
         with zipfile.ZipFile(directory / "tumoflip-packages.zip", "w") as archive:
             archive.writestr(entry["source"], payload)
         if independent:
-            checksum = directory / "fw-packages-stable-001-SHA256SUMS"
+            checksum = directory / f"{tag}-SHA256SUMS"
             checksum.write_text(
                 "".join(
                     f"{sha256(directory / asset)}  {asset}\n"
@@ -153,6 +155,76 @@ class FirmwareSnapshotReleaseTests(unittest.TestCase):
             }
         }
         policy_path.write_text(json.dumps(policy))
+
+    def _dev_snapshot_plan(self) -> dict:
+        self.base = self._release_directory(
+            "dev-base", b"old", version="t-dev-009-034", independent=True,
+            channel="dev", revision=31,
+        )
+        self.target = self._release_directory(
+            "dev-target", b"new", version="t-dev-011-001", independent=False,
+        )
+        manifest = json.loads((self.base / "tumoflip-packages.json").read_text())
+        target = json.loads((self.target / "tumoflip-packages.json").read_text())
+        current_path = self.control / "contracts/current-releases.json"
+        current = json.loads(current_path.read_text())
+        current["channels"]["dev"].update({
+            "tag": "fw-packages-dev-031", "revision": 31, "prerelease": True,
+            "sourceCommit": "a" * 40, "targetFirmwareTag": "t-dev-009-034",
+            "targetFirmwareCommit": "a" * 40, "releaseId": manifest["release_id"],
+            "api": "88.0", "target": 7,
+            "assets": {name: sha256(self.base / name) for name in (
+                "fw-packages-dev-031-SHA256SUMS", "tumoflip-packages.json", "tumoflip-packages.zip")},
+        })
+        current_path.write_text(json.dumps(current))
+        lineage_path = self.control / "contracts/catalog-lineage.json"
+        lineage = json.loads(lineage_path.read_text())
+        lineage["channels"]["dev"].update({
+            "currentTag": "fw-packages-dev-031", "currentRevision": 31,
+            "nextNativeRevision": 32, "nextNativeTag": "fw-packages-dev-032",
+        })
+        lineage_path.write_text(json.dumps(lineage))
+        policy_path = self.control / "contracts/native-build-policy.json"
+        policy = json.loads(policy_path.read_text())
+        policy["releasePlans"]["fw-packages-dev-032"] = {
+            "mode": "firmwareSnapshot", "sourceCommit": self.source_commit,
+            "selectedOverlays": [], "targetFirmware": {
+                "firmwareTag": "t-dev-011-001", "firmwareVersion": "t-dev-011-001",
+                "firmwareCommit": self.source_commit, "firmwareReleaseId": target["release_id"],
+                "packageManifestSHA256": sha256(self.target / "tumoflip-packages.json"),
+                "packageZipSHA256": sha256(self.target / "tumoflip-packages.zip"),
+                "api": "88.0", "target": 7,
+            },
+        }
+        policy_path.write_text(json.dumps(policy))
+        return load_native_plan(self.control, "dev", 32, self.source_commit, self.publisher_commit)
+
+    def test_dev_snapshot_is_exact_and_does_not_become_a_loose_baseline(self) -> None:
+        plan = self._dev_snapshot_plan()
+        output = self.root / "dev032"
+        build_firmware_snapshot_release(self.target, self.base, output, plan)
+        verify_native_release(output, plan, self.base, self.target)
+        manifest = json.loads((output / "tumoflip-packages.json").read_text())
+        package = manifest["package_release"]
+        self.assertEqual(package["catalog_channel"], "dev")
+        self.assertEqual(package["catalog_install_scope"], "firmwareSnapshot")
+        self.assertEqual(package["target_release_tag"], "t-dev-011-001")
+        self.assertEqual(package["target_source_commit"], self.source_commit)
+        self.assertEqual(package["compatible_releases"], [])
+        self.assertEqual(sha256(output / "tumoflip-packages.zip"), sha256(self.target / "tumoflip-packages.zip"))
+        with (self.target / "tumoflip-packages.zip").open("ab") as stream:
+            stream.write(b"tamper")
+        with self.assertRaisesRegex(ContractError, "snapshot ZIP SHA-256 differs"):
+            verify_native_release(output, plan, self.base, self.target)
+
+    def test_dev_snapshot_source_must_match_its_exact_target_firmware(self) -> None:
+        self._dev_snapshot_plan()
+        policy_path = self.control / "contracts/native-build-policy.json"
+        policy = json.loads(policy_path.read_text())
+        policy["releasePlans"]["fw-packages-dev-032"]["targetFirmware"]["firmwareCommit"] = "c" * 40
+        policy_path.write_text(json.dumps(policy))
+        with self.assertRaisesRegex(ContractError, "source differs from target firmware"):
+            load_native_plan(self.control, "dev", 32, self.source_commit, self.publisher_commit)
 
     def test_snapshot_is_exact_atomic_and_independently_reverified(self) -> None:
         output = self.root / "stable002"
