@@ -22,7 +22,10 @@ firmware-source repository and commit.
   cumulative package-owned target allowlist, `baseline` exposes a complete
   firmware-owned package surface with zero managed overlays, while
   `firmwareSnapshot` exposes the complete firmware package snapshot and is
-  installable only on that exact firmware identity. A baseline is compatible by
+  installable only on that exact firmware identity, in either Stable or Dev.
+  Dev snapshots are required when matching private feature modules must travel
+  together; they never inherit a baseline's broad same-major compatibility.
+  A baseline is compatible by
   channel, API major, and hardware target; it is not pinned to one firmware
   release.
 - Compatibility is explicit: target `f7`, API range, firmware release ID, and
