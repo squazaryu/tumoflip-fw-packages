@@ -265,8 +265,6 @@ def load_native_plan(
         raise ContractError(f"native release {tag} has no exact non-empty data plan")
     if mode in {"baseline", "firmwareSnapshot"} and (selected_names or selected_data_names):
         raise ContractError(f"{mode} release must not contain overlays")
-    if mode == "firmwareSnapshot" and channel != "stable":
-        raise ContractError("firmware snapshot must be a stable release")
     authorized_source_commit = _exact_commit(
         release_policy.get("sourceCommit"), f"native release {tag} source commit"
     )
@@ -1250,7 +1248,7 @@ def build_firmware_snapshot_release(
     output: Path,
     plan: dict[str, Any],
 ) -> None:
-    """Atomically promote one exact stable firmware package snapshot."""
+    """Atomically promote one explicitly pinned stable or Dev package snapshot."""
 
     if plan.get("mode") != "firmwareSnapshot":
         raise ContractError("release plan is not a firmware snapshot")
