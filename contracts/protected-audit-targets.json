@@ -566,6 +566,41 @@
     },
     {
       "repository": "squazaryu/tumoflip-fw-packages",
+      "releaseTag": "fw-packages-dev-032",
+      "githubReleaseId": 448093116,
+      "tagCommit": "29756d596c8dc1198d7924653c4a6d7da0d215b2",
+      "prerelease": true,
+      "manifestSourceCommit": "76c5a734fb5988109f4258c08face7c77fd2b6b2",
+      "manifestReleaseId": "642c70445f3cbdeee5e2e7f07c1a4b4115cea3757723faaa9f789bdf0d6757bd",
+      "assets": {
+        "manifest": {
+          "id": 757517072,
+          "name": "tumoflip-packages.json",
+          "bytes": 52860,
+          "sha256": "7ae29d906915083e6c3254de265b7335a600836a2e482a823f164ab1c15550bd"
+        },
+        "archive": {
+          "id": 757517136,
+          "name": "tumoflip-packages.zip",
+          "bytes": 5956499,
+          "sha256": "c1ad8bbd9effb9acaf1961df3c44fa9fa2891105b63b8c7c031088927846a386"
+        },
+        "checksums": {
+          "id": 757517021,
+          "name": "fw-packages-dev-032-SHA256SUMS",
+          "bytes": 177,
+          "sha256": "11ee6d1bcf5750e51880bd5abe85d11187e7111ac5922e945d3c8ef249b0a455"
+        },
+        "catalogProvenance": {
+          "id": 757516974,
+          "name": "catalog-provenance.json",
+          "bytes": 8743,
+          "sha256": "85cfebcbe92c067581646b4efe3f689044c63c33f58ad445acd087ff5b0ec498"
+        }
+      }
+    },
+    {
+      "repository": "squazaryu/tumoflip-fw-packages",
       "releaseTag": "fw-packages-dev-031",
       "githubReleaseId": 431194924,
       "tagCommit": "67dd141b550afe18b56fb065e6d4c6a7b38b0327",
