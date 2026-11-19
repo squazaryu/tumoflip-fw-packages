@@ -1,4 +1,4 @@
-# FW Packages Dev033 — exact Dev011-002 snapshot plan
+# FW Packages Dev033 — exact Dev011-002 snapshot
 
 This reviewed plan binds the independent Dev033 catalog to the complete native
 package snapshot from firmware `t-dev-011-002`, commit
@@ -13,9 +13,10 @@ modules that include the shared settings loader receive the ignore-filter fix;
 the ARF menu hub is unchanged. Existing signals and user `apps_data` are not
 deleted or moved by this plan. No new protocol or attack feature is introduced.
 
-This plan does **not** publish or activate a catalog. Independently verify the
-firmware and all four catalog assets before publishing; then separately update
-the current release and append-only rollback index. Keep Stable007, Dev032,
+The [Dev033 release](https://github.com/squazaryu/tumoflip-fw-packages/releases/tag/fw-packages-dev-033)
+was published after the firmware and all four catalog assets were independently
+downloaded and verified. Catalog activation is a separate step in the current
+release and append-only rollback index. Keep Stable007, Dev032,
 older catalog entries and existing protected-audit decisions unchanged. The
 current Community protected-source review is not declared green by this plan.
 

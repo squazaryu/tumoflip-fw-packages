@@ -20,20 +20,20 @@
       }
     },
     "dev": {
-      "tag": "fw-packages-dev-032",
-      "revision": 32,
+      "tag": "fw-packages-dev-033",
+      "revision": 33,
       "prerelease": true,
-      "releaseId": "642c70445f3cbdeee5e2e7f07c1a4b4115cea3757723faaa9f789bdf0d6757bd",
-      "tagCommit": "29756d596c8dc1198d7924653c4a6d7da0d215b2",
-      "sourceCommit": "76c5a734fb5988109f4258c08face7c77fd2b6b2",
-      "targetFirmwareTag": "t-dev-011-001",
-      "targetFirmwareCommit": "76c5a734fb5988109f4258c08face7c77fd2b6b2",
+      "releaseId": "bd3082d7440626e98e8df2404841517bb1cc7a6008c40b017c30af6aeae0db5e",
+      "tagCommit": "d1f0436c94e6835f2080ad93e2ed5d68b79b53bb",
+      "sourceCommit": "1867a7e6774dcf180e2164ccbb735b4526c5922c",
+      "targetFirmwareTag": "t-dev-011-002",
+      "targetFirmwareCommit": "1867a7e6774dcf180e2164ccbb735b4526c5922c",
       "api": "88.23",
       "target": 7,
       "assets": {
-        "fw-packages-dev-032-SHA256SUMS": "11ee6d1bcf5750e51880bd5abe85d11187e7111ac5922e945d3c8ef249b0a455",
-        "tumoflip-packages.json": "7ae29d906915083e6c3254de265b7335a600836a2e482a823f164ab1c15550bd",
-        "tumoflip-packages.zip": "c1ad8bbd9effb9acaf1961df3c44fa9fa2891105b63b8c7c031088927846a386"
+        "fw-packages-dev-033-SHA256SUMS": "53c3c8368b40efcad7c0bab36070187b13e25f948df0337bb3fb8ff6b24fde61",
+        "tumoflip-packages.json": "ecb75b8af3757a4d366d78a50c718421cd53df16211e72a936a880b63ee31f25",
+        "tumoflip-packages.zip": "6a5f3ea0ca082afb49e48941719cfd6577966710d6560301812f29c4c8af8169"
       }
     }
   }
