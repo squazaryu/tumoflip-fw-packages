@@ -4,10 +4,10 @@ This repository is the distribution and audit control plane for Tumoflip FAP
 packages. Firmware source and firmware images remain in
 [`squazaryu/tumoflip`](https://github.com/squazaryu/tumoflip).
 
-Current paired sets: Stable010 / FW Packages Stable007, and Dev011-002 /
-FW Packages Dev033. Use **TumoCompanion 1.11.37 or later** through the existing
-Feather source, then install Dev011-002 with its native resources and Dev033.
-The Dev snapshot is bound to exact clean firmware1867a7e6/API88.23/F7;
+Current paired sets: Stable010 / FW Packages Stable007, and Dev011-003 /
+FW Packages Dev034. Use **TumoCompanion 1.11.37 or later** through the existing
+Feather source, then install Dev011-003 with its native resources and Dev034.
+The Dev snapshot is bound to exact clean firmware6ce06b32/API88.23/F7;
 old private feature FALs must not be mixed across ABI1004→1005. No app-data or
 capture migration, reset, SD cleanup or ESP32 reflash is required.
 
@@ -35,7 +35,7 @@ FW Packages is an overlay catalog, not a firmware release. A firmware version
 can advance without creating a package revision, and a package revision can be
 used by every compatible firmware build. Compatibility depends on the explicit
 install scope: independent `delta`/`baseline` catalogs use channel, target and
-API-major rules; `firmwareSnapshot` catalogs (including Stable007 and Dev033) require the
+API-major rules; `firmwareSnapshot` catalogs (including Stable007 and Dev034) require the
 exact clean firmware version, commit, API and target. For those snapshots the
 firmware identity is an installation constraint, not merely provenance.
 
