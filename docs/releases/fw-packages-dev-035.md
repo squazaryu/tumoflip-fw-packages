@@ -16,6 +16,8 @@ modified by this package release. Install firmware Dev 011-004 first, then
 select Dev035. API is unchanged; a new TumoCompanion or ESP32 release is not
 required by this package identity.
 
-Publication and activation are separate. Public byte verification and audit
-asset pins must complete before selecting this revision in the iOS catalog.
-Hardware BLE reconnect after reboot remains a Dev acceptance step.
+The [firmware](https://github.com/squazaryu/tumoflip/releases/tag/t-dev-011-004)
+and [Dev035 package](https://github.com/squazaryu/tumoflip-fw-packages/releases/tag/fw-packages-dev-035)
+were published and every public asset was anonymously downloaded and
+byte-verified. Catalog activation advances only Dev; Stable and all history
+are preserved. Hardware BLE reconnect remains a Dev acceptance step.
