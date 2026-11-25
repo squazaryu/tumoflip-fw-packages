@@ -4,10 +4,12 @@ This repository is the distribution and audit control plane for Tumoflip FAP
 packages. Firmware source and firmware images remain in
 [`squazaryu/tumoflip`](https://github.com/squazaryu/tumoflip).
 
-Current paired sets: Stable010 / FW Packages Stable007, and Dev011-004 /
-FW Packages Dev035. Use **TumoCompanion 1.11.37 or later** through the existing
-Feather source, then install Dev011-004 with its native resources and Dev035.
-The Dev snapshot is bound to exact clean firmware83f6f3a2/API88.23/F7;
+Current Stable pair: Stable010 / FW Packages Stable007. Current Dev packages:
+**Dev036**, an independent RAW Edit 1.10 update for the existing Dev011-004 /
+API88.23/F7 baseline. Use **TumoCompanion 1.12.0 or later** through the existing
+Feather source; no new firmware or iOS release is required. Dev036 retains the
+full 143-file archive and manages only RAW Edit. The historical Dev035 full
+snapshot remains available for exact clean firmware83f6f3a2/API88.23/F7;
 old private feature FALs must not be mixed across ABI1004→1005. No app-data or
 capture migration, reset, SD cleanup or ESP32 reflash is required.
 

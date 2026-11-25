@@ -24,3 +24,13 @@ Before activation: verify exact-source CI, standalone FAP imports, full
 archive/manifest hashes, the 143-file inventory, 142 byte-identical predecessor
 payloads, and the released TumoCompanion manifest projection. Physical-device
 UI acceptance remains a Dev test, not a claimed result of the host checks.
+
+Published at [fw-packages-dev-036](https://github.com/squazaryu/tumoflip-fw-packages/releases/tag/fw-packages-dev-036),
+release ID 457795305. Native Linux build
+[45570449217](https://github.com/squazaryu/tumoflip-fw-packages/actions/runs/45570449217)
+passed at source `8e89b9b1e390614c64629ab415f77b18cb6f2a54` and publisher
+`07163d59b48191104d2830feaca62143cd6d4f6a`. All four public assets were
+downloaded anonymously and byte-compared. The released TumoCompanion 1.12.0
+model validated all 143 entries, exposed one managed FAP, and accepted Dev
+channel/API/target compatibility without an exact version check. Stable and
+all historical catalogs are preserved by the separate activation.
