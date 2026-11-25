@@ -66,14 +66,18 @@ class TumoSpectrumReleaseTests(unittest.TestCase):
         )
         self.assertEqual(entry["compatibility"], {"targets": [7], "api_majors": [88]})
 
-    def test_full_api8815_baseline_pins_exact_firmware_snapshot(self):
+    def test_current_dev_baseline_pins_exact_firmware_snapshot(self):
         baselines = json.loads((ROOT / "contracts/catalog-baselines.json").read_text())
-        self.assertEqual(
-            baselines["channels"]["dev"]["firmwareTag"], "t-dev-009-018"
-        )
-        self.assertEqual(baselines["channels"]["dev"]["api"], "88.15")
-        self.assertEqual(baselines["channels"]["dev"]["packageManifestSHA256"],
-                         "d15480817521b88a4ee013e88cdd7dd637a7fae084bf7cb19ff1808bcca9295f")
+        self.assertEqual(baselines["channels"]["dev"], {
+            "firmwareTag": "t-dev-011-004",
+            "firmwareVersion": "t-dev-011-004",
+            "firmwareCommit": "83f6f3a24bd25f2a2b3726d5920e4c2d30e12d2c",
+            "firmwareReleaseId": "6dc14eb2c924356da47cef10cbfa11b883129436694a08df5d41bef823379563",
+            "packageManifestSHA256": "a22587e749099dbe8319cba20340ff0a6e70b5122927099cb33ea00a821df17b",
+            "packageZipSHA256": "2073be6f86bab3aaa85b3a417c56fd2dea0ef3cd1af8fb9ea89665805a757127",
+            "api": "88.23",
+            "target": 7,
+        })
 
 
 if __name__ == "__main__":
