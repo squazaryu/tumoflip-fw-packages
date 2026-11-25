@@ -13,13 +13,13 @@
       "target": 7
     },
     "dev": {
-      "firmwareTag": "t-dev-009-018",
-      "firmwareVersion": "t-dev-009-018",
-      "firmwareCommit": "1c99acf242fee7d9e30b3b7ee0a61d15599e5790",
-      "firmwareReleaseId": "1ea7131459db6995f846820f6008d1c11c435f0c9de75a012c2ac50171ccb997",
-      "packageManifestSHA256": "d15480817521b88a4ee013e88cdd7dd637a7fae084bf7cb19ff1808bcca9295f",
-      "packageZipSHA256": "898e2241edd146f6569e5f9c71f71061999f1b866fa97fc326a1b555a5871360",
-      "api": "88.15",
+      "firmwareTag": "t-dev-011-004",
+      "firmwareVersion": "t-dev-011-004",
+      "firmwareCommit": "83f6f3a24bd25f2a2b3726d5920e4c2d30e12d2c",
+      "firmwareReleaseId": "6dc14eb2c924356da47cef10cbfa11b883129436694a08df5d41bef823379563",
+      "packageManifestSHA256": "a22587e749099dbe8319cba20340ff0a6e70b5122927099cb33ea00a821df17b",
+      "packageZipSHA256": "2073be6f86bab3aaa85b3a417c56fd2dea0ef3cd1af8fb9ea89665805a757127",
+      "api": "88.23",
       "target": 7
     }
   }
