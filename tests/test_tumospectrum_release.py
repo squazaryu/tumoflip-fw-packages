@@ -69,12 +69,12 @@ class TumoSpectrumReleaseTests(unittest.TestCase):
     def test_current_dev_baseline_pins_exact_firmware_snapshot(self):
         baselines = json.loads((ROOT / "contracts/catalog-baselines.json").read_text())
         self.assertEqual(baselines["channels"]["dev"], {
-            "firmwareTag": "t-dev-011-004",
-            "firmwareVersion": "t-dev-011-004",
-            "firmwareCommit": "83f6f3a24bd25f2a2b3726d5920e4c2d30e12d2c",
-            "firmwareReleaseId": "6dc14eb2c924356da47cef10cbfa11b883129436694a08df5d41bef823379563",
-            "packageManifestSHA256": "a22587e749099dbe8319cba20340ff0a6e70b5122927099cb33ea00a821df17b",
-            "packageZipSHA256": "2073be6f86bab3aaa85b3a417c56fd2dea0ef3cd1af8fb9ea89665805a757127",
+            "firmwareTag": "t-dev-011-005",
+            "firmwareVersion": "t-dev-011-005",
+            "firmwareCommit": "85f6dbace5cb40e0420e290ff2ef4dd4136da2ea",
+            "firmwareReleaseId": "6b74e836044297302d447f9b782c5ad8759b0c7bf77aea4cb93bdbc0af0edc60",
+            "packageManifestSHA256": "b630971f7ecd96c9ce1edbaa64f28c10a8ab67b512788796876a05bb3ae35c84",
+            "packageZipSHA256": "88eec3e4be678fb825846b66a7ecc96a3aa4243e929ada4478cda54d6efa291b",
             "api": "88.23",
             "target": 7,
         })

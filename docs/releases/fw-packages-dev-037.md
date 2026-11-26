@@ -29,3 +29,11 @@ inventory/cleanup parity and the released TumoCompanion 1.12.0 model. Publish
 new immutable assets and activate the catalog in a separate PR. Stable007,
 historical catalogs and protected-audit findings are not changed or cleared.
 Physical-device UI, BLE reconnect and Field Tools acceptance remain Dev checks.
+
+Published at [fw-packages-dev-037](https://github.com/squazaryu/tumoflip-fw-packages/releases/tag/fw-packages-dev-037),
+release ID 459447446, publisher `0c80a25d6a0e84d876adb557d6c67345115bf4e9`.
+All four public assets were downloaded without authorization and byte-compared;
+the native verifier independently reproduced the full snapshot. The released
+Companion 1.12.0 model accepted exact clean 011-005, rejected incompatible
+identities and validated Field Tools old/new checksum states. The separate
+activation updates only Dev and retains every historical catalog entry.
