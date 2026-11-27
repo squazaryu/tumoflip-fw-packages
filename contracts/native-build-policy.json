@@ -104,27 +104,7 @@
     "totp_cli_update_plugin": "base",
     "totp_cli_version_plugin": "base"
   },
-  "releasePlans": {
-    "fw-packages-stable-008": {
-      "mode": "firmwareSnapshot",
-      "sourceCommit": "c550fb6c7ea0d4a857d9f6adf14a54409ef93ef4",
-      "selectedOverlays": [],
-      "preserveDataOverlays": [
-        "utergrooll_em4100",
-        "utergrooll_ds1990"
-      ],
-      "targetFirmware": {
-        "firmwareTag": "v1.0.11",
-        "firmwareVersion": "t-flppr-fw-011",
-        "firmwareCommit": "c550fb6c7ea0d4a857d9f6adf14a54409ef93ef4",
-        "firmwareReleaseId": "f1f1fd211c028e0917cafa9264c4e890b267aaa308669bde8c20c411dee39bf8",
-        "packageManifestSHA256": "c8b1c9d4778db0d2d90c5051969cd353c5a00d2942148ecec1f2ca91f0522baf",
-        "packageZipSHA256": "e9aa137fb064e34eb8b7b1a890e7216c943cc1bab0d2601556b6253e7a80255e",
-        "api": "88.23",
-        "target": 7
-      }
-    }
-  },
+  "releasePlans": {},
   "reviewedDevSourceAncestry": {
     "fw-packages-dev-023": {
       "sourceCommit": "42aad5d7e16cdb430fd7bbed1c37cf5164b3a334",

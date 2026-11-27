@@ -103,6 +103,7 @@ class AuditControlPlaneTests(unittest.TestCase):
                 457795305,
                 459447446,
                 460364260,
+                461094404,
             },
         )
         for tag, item in packages.items():
@@ -121,7 +122,7 @@ class AuditControlPlaneTests(unittest.TestCase):
                 "fw-packages-dev-031", "fw-packages-stable-007",
                 "fw-packages-dev-032", "fw-packages-dev-033", "fw-packages-dev-034",
                 "fw-packages-dev-035", "fw-packages-dev-036", "fw-packages-dev-037",
-                "fw-packages-dev-038",
+                "fw-packages-dev-038", "fw-packages-stable-008",
             }:
                 self.assertIn("catalogProvenance", item["assets"])
                 self.assertNotIn("migrationProvenance", item["assets"])
@@ -185,6 +186,21 @@ class AuditControlPlaneTests(unittest.TestCase):
                 "catalogProvenance": 737533339,
             },
         )
+
+    def test_stable008_binds_verified_catalog_to_exact_stable011(self) -> None:
+        contract = validate_targets(
+            json.loads((self.root / "contracts/protected-audit-targets.json").read_text())
+        )
+        target = next(item for item in contract["packages"] if item["releaseTag"] == "fw-packages-stable-008")
+        self.assertEqual(target["githubReleaseId"], 461094404)
+        self.assertEqual(target["tagCommit"], "cea43f2bd041ea2328ecb3bd162fb16652279b43")
+        self.assertEqual(target["manifestSourceCommit"], "c550fb6c7ea0d4a857d9f6adf14a54409ef93ef4")
+        self.assertEqual(target["manifestReleaseId"], "0d2138e5320cc5a5330014a4f627c74eea175f4039adc0a37ae37ecb46b0c3b1")
+        self.assertFalse(target["prerelease"])
+        self.assertEqual({key: asset["id"] for key, asset in target["assets"].items()}, {
+            "manifest": 802180917, "archive": 802180946,
+            "checksums": 802180880, "catalogProvenance": 802180853,
+        })
 
     def test_target_contract_rejects_duplicate_release_identity(self) -> None:
         contract = json.loads((self.root / "contracts/protected-audit-targets.json").read_text())
