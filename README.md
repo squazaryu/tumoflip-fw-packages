@@ -5,11 +5,12 @@ packages. Firmware source and firmware images remain in
 [`squazaryu/tumoflip`](https://github.com/squazaryu/tumoflip).
 
 Current Stable pair: Stable010 / FW Packages Stable007. Current Dev packages:
-**Dev037**, a complete 143-file snapshot for exact clean **Dev011-005** /
-commit `85f6dbac` / API88.23 / F7, including Field Tools 1.2. Install firmware 011-005
-first, then Dev037 with **TumoCompanion 1.12.0 or later** through the existing
-Feather source; no new iOS release is required. The optional Panel desktop and
-standard Desktop Settings arrive with the firmware updater. Dev036 remains an
+**Dev038**, a complete 143-file snapshot for exact clean **Dev011-006** /
+commit `950d5838` / API88.23 / F7, with Weather Editor2.6, RAW Edit1.10 and
+Field Tools1.1. Install firmware011-006 first, then Dev038 with
+**TumoCompanion 1.12.0 or later** through the existing Feather source; no new
+iOS release is required. This restores the working004-based runtime instead
+of rejected005's Panel/activity/library-LTO experiments. Dev036 remains an
 independent RAW Edit 1.10 delta; the historical Dev035 full snapshot remains
 available for exact clean firmware83f6f3a2/API88.23/F7;
 old private feature FALs must not be mixed across ABI1004→1005. No app-data or
@@ -39,7 +40,7 @@ FW Packages is an overlay catalog, not a firmware release. A firmware version
 can advance without creating a package revision, and a package revision can be
 used by every compatible firmware build. Compatibility depends on the explicit
 install scope: independent `delta`/`baseline` catalogs use channel, target and
-API-major rules; `firmwareSnapshot` catalogs (including Stable007 and Dev037) require the
+API-major rules; `firmwareSnapshot` catalogs (including Stable007 and Dev038) require the
 exact clean firmware version, commit, API and target. For those snapshots the
 firmware identity is an installation constraint, not merely provenance.
 

@@ -102,6 +102,7 @@ class AuditControlPlaneTests(unittest.TestCase):
                 456536160,
                 457795305,
                 459447446,
+                460364260,
             },
         )
         for tag, item in packages.items():
@@ -120,6 +121,7 @@ class AuditControlPlaneTests(unittest.TestCase):
                 "fw-packages-dev-031", "fw-packages-stable-007",
                 "fw-packages-dev-032", "fw-packages-dev-033", "fw-packages-dev-034",
                 "fw-packages-dev-035", "fw-packages-dev-036", "fw-packages-dev-037",
+                "fw-packages-dev-038",
             }:
                 self.assertIn("catalogProvenance", item["assets"])
                 self.assertNotIn("migrationProvenance", item["assets"])
