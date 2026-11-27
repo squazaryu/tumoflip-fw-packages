@@ -4,7 +4,11 @@ This repository is the distribution and audit control plane for Tumoflip FAP
 packages. Firmware source and firmware images remain in
 [`squazaryu/tumoflip`](https://github.com/squazaryu/tumoflip).
 
-Current Stable pair: Stable010 / FW Packages Stable007. Current Dev packages:
+Current Stable pair: **Stable011 / FW Packages Stable008**, an exact clean
+API88.23/F7 snapshot with143 native payloads plus two preserved publisher data
+files (145 total). The firmware includes the owner-tested optional Panel desktop;
+this catalog keeps the matching private feature ABI1005. Install Stable011 firmware/resources first,
+then Stable008; TumoCompanion1.12.0 needs no new IPA. Current Dev packages:
 **Dev038**, a complete 143-file snapshot for exact clean **Dev011-006** /
 commit `950d5838` / API88.23 / F7, with Weather Editor2.6, RAW Edit1.10 and
 Field Tools1.1. Install firmware011-006 first, then Dev038 with
@@ -40,7 +44,7 @@ FW Packages is an overlay catalog, not a firmware release. A firmware version
 can advance without creating a package revision, and a package revision can be
 used by every compatible firmware build. Compatibility depends on the explicit
 install scope: independent `delta`/`baseline` catalogs use channel, target and
-API-major rules; `firmwareSnapshot` catalogs (including Stable007 and Dev038) require the
+API-major rules; `firmwareSnapshot` catalogs (including Stable008, Stable007 and Dev038) require the
 exact clean firmware version, commit, API and target. For those snapshots the
 firmware identity is an installation constraint, not merely provenance.
 
@@ -78,8 +82,9 @@ application source, `fbt`, firmware builds, API checks, and firmware releases.
 Package workflows check out that repository by exact commit and never copy its
 source here.
 
-Stable004 was the first independent stable baseline; current Stable007 is an
-exact Stable010 snapshot. The index retains the
+Stable004 was the first independent stable baseline; current Stable008 is an
+exact Stable011 snapshot. Stable007 remains the Stable010 rollback snapshot.
+The index retains the
 historical legacy stable001 and dev revisions, so a compatible older package
 can be selected without restoring an old firmware image. Overlay builds start
 from a complete immutable catalog snapshot and may replace only reviewed paths,

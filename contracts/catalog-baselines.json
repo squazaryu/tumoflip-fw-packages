@@ -3,12 +3,12 @@
   "firmwareRepository": "squazaryu/tumoflip",
   "channels": {
     "stable": {
-      "firmwareTag": "v1.0.10",
-      "firmwareVersion": "t-flppr-fw-010",
-      "firmwareCommit": "b3e9aacd75a342d66fd0f9dea0467b1217726a59",
-      "firmwareReleaseId": "dab857ac2488e3f3f689c55e8cba96bba63283a68d0e1158249db3e6a1a53cf5",
-      "packageManifestSHA256": "eca72e8a37ab50197e5d2b9aac82706fadd596c1bdde7372705c5d734daf9684",
-      "packageZipSHA256": "bd0deb77483e84de379627294a2478fdc2a5bac33715917e8adf0a9eadb2f586",
+      "firmwareTag": "v1.0.11",
+      "firmwareVersion": "t-flppr-fw-011",
+      "firmwareCommit": "c550fb6c7ea0d4a857d9f6adf14a54409ef93ef4",
+      "firmwareReleaseId": "f1f1fd211c028e0917cafa9264c4e890b267aaa308669bde8c20c411dee39bf8",
+      "packageManifestSHA256": "c8b1c9d4778db0d2d90c5051969cd353c5a00d2942148ecec1f2ca91f0522baf",
+      "packageZipSHA256": "e9aa137fb064e34eb8b7b1a890e7216c943cc1bab0d2601556b6253e7a80255e",
       "api": "88.23",
       "target": 7
     },
